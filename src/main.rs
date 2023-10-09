@@ -1,13 +1,13 @@
 use bevy::{prelude::*, render::{render_resource::PrimitiveTopology, mesh::Indices}, pbr::wireframe::{WireframePlugin, Wireframe}};
-use bevy_inspector_egui::{quick::{WorldInspectorPlugin, ResourceInspectorPlugin}, prelude::ReflectInspectorOptions, InspectorOptions};
-use bevy_panorbit_camera::{PanOrbitCameraPlugin, PanOrbitCamera};
+use bevy_inspector_egui::{quick::ResourceInspectorPlugin, prelude::ReflectInspectorOptions, InspectorOptions};
+use bevy_flycam::*;
 
 fn main() {
     App::new()
     .add_plugins((
         DefaultPlugins,
         WireframePlugin,
-        PanOrbitCameraPlugin,
+        PlayerPlugin,
         ResourceInspectorPlugin::<Terrain>::default()
     ))
     .init_resource::<Terrain>()
@@ -43,19 +43,31 @@ fn setup(
         ..default()
     });
 
-    commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 1.5, 5.0)),
-            ..default()
-        },
-        //PanOrbitCamera::default(),
-    ));
+    // commands.spawn(PbrBundle {
+    //     mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+    //     material: materials.add(Color::rgb(0.2, 0.2, 0.2).into()),
+    //     transform: Transform::from_xyz(0.0, 0.5, 0.0),
+    //     ..Default::default()
+    // });
 
-    
+    // commands.spawn((
+    //     Camera3dBundle {
+    //         transform: Transform::from_translation(Vec3::new(0.0, 1.5, 5.0)),
+    //         ..default()
+    //     },
+    //     FlyCamera::default(),
+    // ));
 }
+
+use image::GenericImageView;
 
 fn create_subdivided_plane(subdivisions_x: usize, subdivisions_y: usize) -> Mesh {
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+    let img = image::open("assets/heightmap.jpg").unwrap();
+    let (width, height) = img.dimensions();
+    let width = width - 1;
+    let height = height - 1;
 
     let mut positions = Vec::new();
     let mut indices = Vec::new();
@@ -64,8 +76,15 @@ fn create_subdivided_plane(subdivisions_x: usize, subdivisions_y: usize) -> Mesh
         for y in 0..=subdivisions_y {
             let x0 = x as f32 / subdivisions_x as f32 - 0.5;
             let y0 = y as f32 / subdivisions_y as f32 - 0.5;
+
+            let height_x = (x as f32 / subdivisions_x as f32 * width as f32) as u32;
+            let height_y = (y as f32 / subdivisions_y as f32 * height as f32) as u32;
+            let pixel = img.get_pixel(height_x, height_y);
+            
+            let scale_factor = 0.2; 
+            let height_offset = ((pixel[0] as f32 / 255.0) - 0.5) * scale_factor;
     
-            positions.push([x0, 0.0, y0]);
+            positions.push([x0, height_offset, y0]);
         }
     }
     

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.11.3", features = ["dynamic_linking"] }
-bevy_panorbit_camera = "0.8.0"
+bevy_flycam = "0.11.0"
 bevy-inspector-egui = "0.19.0"
 bytemuck = "1.14.0"
 
@@ -16,3 +16,7 @@ opt-level = 1
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[dependencies.image]
+version = "0.24.7"
+features = ["png", "jpeg"]
