@@ -23,22 +23,15 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     terrain: Res<Terrain>,
 ) {
-    dbg!(terrain.subdivisions);
     let subdivisions = terrain.subdivisions as usize;
 
-    let mesh = create_subdivided_plane(subdivisions, subdivisions, 10.0);
+    let mesh = create_subdivided_plane(subdivisions, subdivisions);
     commands.spawn(PbrBundle {
         mesh: meshes.add(mesh),
         material: materials.add(Color::WHITE.into()),
+        transform: Transform::from_scale(Vec3::new(10.0, 10.0, 10.0)),
         ..Default::default()
     }).insert(Wireframe);
-
-
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb(1.0, 0.2, 0.3).into()),
-        ..Default::default()
-    });
 
     commands.spawn(PointLightBundle {
         point_light: PointLight {
@@ -61,7 +54,7 @@ fn setup(
     
 }
 
-fn create_subdivided_plane(subdivisions_x: usize, subdivisions_y: usize, size: f32) -> Mesh {
+fn create_subdivided_plane(subdivisions_x: usize, subdivisions_y: usize) -> Mesh {
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
     let mut positions = Vec::new();
@@ -69,8 +62,8 @@ fn create_subdivided_plane(subdivisions_x: usize, subdivisions_y: usize, size: f
 
     for x in 0..=subdivisions_x {
         for y in 0..=subdivisions_y {
-            let x0 = x as f32 / subdivisions_x as f32 * size - size / 2.0;
-            let y0 = y as f32 / subdivisions_y as f32 * size - size / 2.0;
+            let x0 = x as f32 / subdivisions_x as f32 - 0.5;
+            let y0 = y as f32 / subdivisions_y as f32 - 0.5;
     
             positions.push([x0, 0.0, y0]);
         }
@@ -104,12 +97,15 @@ fn create_subdivided_plane(subdivisions_x: usize, subdivisions_y: usize, size: f
 struct Terrain {
     #[inspector(min = 1, max = 1000)]
     subdivisions: i32,
+    #[inspector(min = 1.0, max = 1000.0)]
+    size: f32,
 }
 
 impl Default for Terrain {
     fn default() -> Self {
         Self {
             subdivisions: 1,
+            size: 10.0,
         }
     }
 }
@@ -117,17 +113,18 @@ impl Default for Terrain {
 fn update_mesh(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut query: Query<(&Handle<Mesh>, &Wireframe, Entity)>,
+    mut query: Query<(&Handle<Mesh>, &Wireframe, Entity, &mut Transform)>,
     terrain: Res<Terrain>,
 ) {
     if terrain.is_changed() {
         let subdivisions = terrain.subdivisions as usize;
 
-        for (mesh_handle, _wireframe, entity) in query.iter_mut() {
-            let mesh = create_subdivided_plane(subdivisions, subdivisions, 10.0);
+        for (mesh_handle, _wireframe, entity, mut transform) in query.iter_mut() {
+            let mesh = create_subdivided_plane(subdivisions, subdivisions);
             let new_handle = meshes.add(mesh);
 
             commands.entity(entity).insert(new_handle);
+            transform.scale = Vec3::new(terrain.size, terrain.size, terrain.size);
 
             meshes.remove(mesh_handle);
         }
