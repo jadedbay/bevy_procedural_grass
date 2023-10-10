@@ -24,7 +24,7 @@ fn generate_mesh_on_startup(
 }
 
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
-use image::GenericImageView;
+use noise::NoiseFn;
 
 #[derive(Reflect, Component, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]
@@ -33,41 +33,34 @@ pub struct Terrain {
     subdivisions: i32,
     #[inspector(min = 0.0001, max = 100.0)]
     height_scale: f32,
+    #[inspector(min = 1, max = 1000000000)]
+    seed: u32,
 }
 
 impl Terrain {
     fn create_subdivided_plane(&self) -> Mesh {
         let subdivisions_x = self.subdivisions as usize;
-        let subdivisions_y = self.subdivisions as usize;
+        let subdivisions_z = self.subdivisions as usize;
         let scale_factor = self.height_scale;
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     
-        let img = image::open("assets/heightmap.jpg").unwrap();
-        let (width, height) = img.dimensions();
-        let width = width - 1;
-        let height = height - 1;
-    
         let mut positions = Vec::new();
         let mut indices = Vec::new();
-    
+
         for x in 0..=subdivisions_x {
-            for y in 0..=subdivisions_y {
+            for z in 0..=subdivisions_z {
                 let x0 = x as f32 / subdivisions_x as f32 - 0.5;
-                let y0 = y as f32 / subdivisions_y as f32 - 0.5;
-    
-                let height_x = (x as f32 / subdivisions_x as f32 * width as f32) as u32;
-                let height_y = (y as f32 / subdivisions_y as f32 * height as f32) as u32;
-                let pixel = img.get_pixel(height_x, height_y);
+                let z0 = z as f32 / subdivisions_z as f32 - 0.5;
                 
-                let height_offset = (pixel[0] as f32 / 255.0) * scale_factor;
-        
-                positions.push([x0, height_offset, y0]);
+                let y_noise = noise::Perlin::new(self.seed).get([(x0 * 5.) as f64, (z0 * 5.) as f64]) as f32;
+                
+                positions.push([x0, y_noise * scale_factor, z0]);
             }
         }
         
         for x in 0..subdivisions_x {
-            for y in 0..subdivisions_y {
-                let i = x + y * (subdivisions_x + 1);
+            for z in 0..subdivisions_z {
+                let i = x + z * (subdivisions_x + 1);
         
                 indices.push(i as u32);
                 indices.push((i + 1) as u32);
@@ -94,6 +87,7 @@ impl Default for Terrain {
         Self {
             subdivisions: 1,
             height_scale: 0.2,
+            seed: 1,
         }
     }
 }
