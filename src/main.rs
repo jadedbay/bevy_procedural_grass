@@ -1,9 +1,9 @@
 use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, Wireframe}};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_flycam::*;
+use terrain::{TerrainPlugin, Terrain};
 
 pub mod terrain;
-use terrain::{TerrainPlugin, Terrain};
 
 fn main() {
     App::new()
@@ -21,6 +21,7 @@ fn main() {
 fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     commands.spawn((
         PbrBundle {
@@ -29,9 +30,16 @@ fn setup(
             ..Default::default()
         }, 
         Wireframe,
-        Terrain::default()
+        Terrain::default(),
     ));
 
+    // commands.spawn(PbrBundle {
+    //     //mesh: asset_server.load("meshes/grass_blade.glb#Mesh0/Primitive0"),
+    //     mesh: meshes.add(Mesh::from(shape::Plane { size: 1.0, subdivisions: 0 })),
+    //     material: materials.add(Color::GREEN.into()),
+    //     ..default()
+    // }).insert(Wireframe);
+     
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
@@ -41,19 +49,4 @@ fn setup(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
-
-    // commands.spawn(PbrBundle {
-    //     mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-    //     material: materials.add(Color::rgb(0.2, 0.2, 0.2).into()),
-    //     transform: Transform::from_xyz(0.0, 0.5, 0.0),
-    //     ..Default::default()
-    // });
-
-    // commands.spawn((
-    //     Camera3dBundle {
-    //         transform: Transform::from_translation(Vec3::new(0.0, 1.5, 5.0)),
-    //         ..default()
-    //     },
-    //     FlyCamera::default(),
-    // ));
 }
