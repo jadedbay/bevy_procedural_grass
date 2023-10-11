@@ -32,6 +32,8 @@ pub struct Terrain {
     subdivisions: u32,
     #[inspector(min = 0.0001, max = 100.0)]
     height_scale: f32,
+    #[inspector(min = 0.0001, max = 100.0)]
+    intensity: f32,
     #[inspector(min = 1, max = 1000000000)]
     seed: u32,
     #[inspector()]
@@ -43,6 +45,7 @@ impl Default for Terrain {
         Self {
             subdivisions: 0,
             height_scale: 0.05,
+            intensity: 5.,
             seed: 1,
             noise: true,
         }
@@ -65,11 +68,13 @@ fn update_mesh(
 
 fn generate_mesh(terrain: &Terrain) -> Mesh {
     let mut mesh = Mesh::from(shape::Plane { size: 1.0, subdivisions: terrain.subdivisions });
-    if let Some(positions) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-        if let VertexAttributeValues::Float32x3(positions) = positions {
-            for position in positions.iter_mut() {
-                let y = noise::Perlin::new(terrain.seed).get([(position[0] * 5.) as f64, (position[2] * 5.) as f64]) as f32;
-                position[1] += y * terrain.height_scale;
+    if terrain.noise {
+        if let Some(positions) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+            if let VertexAttributeValues::Float32x3(positions) = positions {
+                for position in positions.iter_mut() {
+                    let y = noise::Perlin::new(terrain.seed).get([(position[0] * terrain.intensity) as f64, (position[2] * terrain.intensity) as f64]) as f32;
+                    position[1] += y * terrain.height_scale;
+                }
             }
         }
     }
