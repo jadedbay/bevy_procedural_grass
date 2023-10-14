@@ -29,7 +29,7 @@ use noise::NoiseFn;
 #[reflect(Component, InspectorOptions)]
 pub struct Terrain {
     #[inspector(min = 0, max = 1000)]
-    subdivisions: u32,
+    pub subdivisions: u32,
     #[inspector(min = 0.0001, max = 100.0)]
     height_scale: f32,
     #[inspector(min = 0.0001, max = 100.0)]
