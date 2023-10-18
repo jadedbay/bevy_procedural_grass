@@ -11,6 +11,7 @@ bevy_flycam = "0.11.0"
 bevy-inspector-egui = "0.20.0"
 bytemuck = "1.14.0"
 noise = "0.8.2"
+rand = "0.8.5"
 
 [profile.dev]
 opt-level = 1

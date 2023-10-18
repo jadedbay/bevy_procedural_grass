@@ -6,12 +6,13 @@ impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app
             .register_type::<Terrain>()
+            .register_type::<Grass>()
             .add_systems(Startup, generate_mesh_on_startup)
-            .add_systems(Update, update_mesh); 
+            .add_systems(PostUpdate, update_mesh); 
     }
 }
 
-fn generate_mesh_on_startup(
+pub fn generate_mesh_on_startup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     query: Query<(Entity, &Terrain), Without<Handle<Mesh>>>,
@@ -24,6 +25,8 @@ fn generate_mesh_on_startup(
 
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use noise::NoiseFn;
+
+use super::grass::Grass;
 
 #[derive(Reflect, Component, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]
@@ -52,14 +55,13 @@ impl Default for Terrain {
     }
 }
 
-fn update_mesh(
+pub fn update_mesh(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut query: Query<(&Handle<Mesh>, Entity, &Terrain), Changed<Terrain>>,
 ) {
     for (mesh_handle, entity, terrain) in query.iter_mut() {
         let mesh = meshes.add(generate_mesh(terrain));
-
         commands.entity(entity).insert(mesh);
 
         meshes.remove(mesh_handle);
