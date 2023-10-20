@@ -32,7 +32,7 @@ use super::grass::Grass;
 #[reflect(Component, InspectorOptions)]
 pub struct Terrain {
     #[inspector(min = 0, max = 1000)]
-    pub subdivisions: u32,
+    subdivisions: u32,
     #[inspector(min = 0.0001, max = 100.0)]
     height_scale: f32,
     #[inspector(min = 0.0001, max = 100.0)]
@@ -41,6 +41,24 @@ pub struct Terrain {
     seed: u32,
     #[inspector()]
     noise: bool,
+}
+
+impl Terrain {
+    pub fn get_subdivisions(&self) -> u32 {
+        self.subdivisions
+    }
+
+    pub fn get_seed(&self) -> u32 {
+        self.seed
+    }
+
+    pub fn get_intensity(&self) -> f32 {
+        self.intensity
+    }
+
+    pub fn get_height_scale(&self) -> f32 {
+        self.height_scale
+    }
 }
 
 impl Default for Terrain {

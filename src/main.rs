@@ -37,8 +37,9 @@ fn setup(
         Terrain::default(),
         Grass {
             mesh: asset_server.load::<Mesh, &str>("meshes/grass_blade.glb#Mesh0/Primitive0"),
+            material_data: InstanceMaterialData::default(),
             density: 5,
-            material_data: InstanceMaterialData::default()
+            regenerate: false,
         }
     ));
      

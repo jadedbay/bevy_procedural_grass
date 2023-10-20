@@ -1,6 +1,7 @@
 use bevy::{prelude::*, pbr::{wireframe::{WireframePlugin, Wireframe}, SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshPipeline, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, mesh::{GpuBufferInfo, MeshVertexBufferLayout, VertexAttributeValues}, render_asset::RenderAssets, render_resource::{VertexFormat, VertexAttribute, VertexStepMode, VertexBufferLayout, SpecializedMeshPipelineError, RenderPipelineDescriptor, SpecializedMeshPipeline, BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::Transparent3d};
 use bevy_inspector_egui::{quick::WorldInspectorPlugin, prelude::ReflectInspectorOptions, InspectorOptions};
 use bytemuck::{Pod, Zeroable};
+use noise::NoiseFn;
 use rand::Rng;
 
 use super::terrain::Terrain;
@@ -8,120 +9,82 @@ use super::terrain::Terrain;
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
 pub struct Grass {
-    #[inspector()]
+    #[reflect(ignore)]
     pub mesh: Handle<Mesh>,
-    pub density: u32,
+    #[reflect(ignore)]
     pub material_data: InstanceMaterialData,
+    pub density: u32,
+    pub regenerate: bool,
 }
 
-pub fn generate_grass_data(
-    mut query: Query<(&Handle<Mesh>, &Terrain, &mut Grass)>,
-    meshes: Res<Assets<Mesh>>
-) {
-    for (mesh_handle, terrain, mut grass) in query.iter_mut() {
-        if let Some(mesh) = meshes.get(mesh_handle) {
-            grass.material_data = vertices_as_material_data(mesh);
-        }
-    }
-}
-
-pub fn spread_grass_blades(
+pub fn update_grass(
     mut commands: Commands,
-    mut query: Query<(&Handle<Mesh>, &Transform, &Terrain, &mut Grass, Option<&Children>), Or<(Changed<Terrain>, Changed<Transform>)>>,
-    meshes: Res<Assets<Mesh>>
+    mut query: Query<(Entity, &Transform, &mut Grass), With<Terrain>>,
+    grass_entity_query: Query<(Entity, &GrassEntity)>,
 ) {
-    for (mesh_handle, transform, terrain, mut grass, children) in query.iter_mut() {
-        if let Some(mesh) = meshes.get(mesh_handle) {
-            let mut data = Vec::new();
+    for (entity, transform, mut grass) in query.iter_mut() {
+        if grass.regenerate {
+            generate_grass_data(transform, &mut grass);
+            spawn_grass(&mut commands, entity, &grass);
 
-            let size = transform.scale / 2.0;
-
-            for x in -size.x as i32..=size.x as i32 {
-                for z in -size.y as i32..=size.y as i32 {
-                    data.push(InstanceData {
-                        position: Vec3::new(x as f32 / transform.scale.x, 0.0, z as f32/ transform.scale.y),
-                        scale: 0.1,
-                        color: Color::GREEN.into(),
-                    });
+            for (grass_entity, grass_component) in grass_entity_query.iter() {
+                if grass_component.0 == entity.index() {
+                    commands.entity(grass_entity).despawn();
                 }
             }
 
-            grass.material_data = InstanceMaterialData(data);
-
-            update_grass_object(&mut commands, &grass.material_data, &children);
+            grass.regenerate = false;
         }
     }
 }
 
-
-fn vertices_as_material_data(mesh: &Mesh) -> InstanceMaterialData {
-    if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-        return InstanceMaterialData(
-            positions.iter()
-                .map(|&position| InstanceData {
-                    position: Vec3::new(position[0], position[1], position[2]),
-                    scale: 0.1,
-                    color: Color::GREEN.into(),
-                })
-                .collect(),
-        );
+pub fn load_grass(
+    mut commands: Commands,
+    mut query: Query<(Entity, &Transform, &mut Grass), With<Terrain>>
+) {
+    for (entity, transform, mut grass) in query.iter_mut() {
+        generate_grass_data(transform, &mut grass);
+        spawn_grass(&mut commands, entity, &grass);
     }
-
-    InstanceMaterialData(Vec::new())
 }
 
-fn update_grass_object(commands: &mut Commands, data: &InstanceMaterialData, children: &Option<&Children>) {
-    if let Some(children) = children {
-        for child in children.iter() {
-            commands.entity(*child).insert(data.clone());
+pub fn generate_grass_data(
+    transform: &Transform,
+    grass: &mut Grass,
+) {
+    let mut data = Vec::new();
+
+    let size = transform.scale / 2.0;
+
+    for x in (-size.x as i32 * grass.density as i32)..=(size.x as i32 * grass.density as i32) {
+        for z in (-size.z as i32 * grass.density as i32)..=(size.z as i32 * grass.density as i32) {
+            data.push(InstanceData {
+                position: Vec3::new(x as f32 / grass.density as f32, 1.0, z as f32 / grass.density as f32),
+                scale: 1.0,
+                color: Color::GREEN.into(),
+            });
         }
     }
+
+    grass.material_data = InstanceMaterialData(data);
 }
 
 pub fn spawn_grass(
-    mut commands: Commands,
-    query: Query<(Entity, &Grass), With<Terrain>>,
+    commands: &mut Commands,
+    entity: Entity,
+    grass: &Grass,
 ) {
-    for (entity, grass) in query.iter() {
-        commands.entity(entity).with_children(|parent| { 
-            parent.spawn((
-                grass.mesh.clone(),
-                SpatialBundle::INHERITED_IDENTITY,
-                grass.material_data.clone(),
-                NoFrustumCulling,
-            ));
-        });
-    }
+    commands.spawn((
+        grass.mesh.clone(),
+        SpatialBundle::INHERITED_IDENTITY,
+        grass.material_data.clone(),
+        NoFrustumCulling,
+        GrassEntity(entity.index())
+    ));
 }
 
-
-pub fn update_grass_material_data(
-    mut commands: Commands,
-    mut query: Query<(Entity, &Handle<Mesh>, &Terrain, &mut Grass, Option<&Children>), Changed<Terrain>>,
-    meshes: Res<Assets<Mesh>>
-) {
-    for (entity, mesh_handle, terrain, mut grass, children) in query.iter_mut() {
-        if let Some(mesh) = meshes.get(mesh_handle) {
-            if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-                grass.material_data = InstanceMaterialData(
-                    positions.iter()
-                        .map(|&position| InstanceData {
-                            position: Vec3::new(position[0], position[1], position[2]),
-                            scale: 0.1,
-                            color: Color::GREEN.into(),
-                        })
-                        .collect(),
-                );
-            }
-        }
-
-        if let Some(children) = children {
-            for child in children.iter() {
-                commands.entity(*child).insert(grass.material_data.clone());
-            }
-        }
-    }
-}
+#[derive(Component)]
+pub struct GrassEntity(u32);
 
 #[derive(Component, Deref, Clone, Reflect)]
 pub struct InstanceMaterialData(Vec<InstanceData>);
