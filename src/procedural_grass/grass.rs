@@ -20,20 +20,28 @@ pub struct Grass {
 pub fn update_grass(
     mut commands: Commands,
     mut query: Query<(Entity, &Transform, &mut Grass), With<Terrain>>,
-    grass_entity_query: Query<(Entity, &GrassEntity)>,
+    grass_entity_query: Query<(Entity, &GrassId)>,
 ) {
     for (entity, transform, mut grass) in query.iter_mut() {
         if grass.regenerate {
             generate_grass_data(transform, &mut grass);
             spawn_grass(&mut commands, entity, &grass);
 
-            for (grass_entity, grass_component) in grass_entity_query.iter() {
-                if grass_component.0 == entity.index() {
-                    commands.entity(grass_entity).despawn();
-                }
-            }
+            remove_grass(&mut commands, &grass_entity_query, entity.index());
 
             grass.regenerate = false;
+        }
+    }
+}
+
+fn remove_grass(
+    commands: &mut Commands,
+    query: &Query<(Entity, &GrassId)>,
+    terrain_id: u32,
+) {
+    for (entity, grass_id) in query.iter() {
+        if grass_id.0 == terrain_id {
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -52,19 +60,26 @@ pub fn generate_grass_data(
     transform: &Transform,
     grass: &mut Grass,
 ) {
-    let mut data = Vec::new();
-
     let size = transform.scale / 2.0;
+    let density = grass.density;
 
-    for x in (-size.x as i32 * grass.density as i32)..=(size.x as i32 * grass.density as i32) {
-        for z in (-size.z as i32 * grass.density as i32)..=(size.z as i32 * grass.density as i32) {
-            data.push(InstanceData {
-                position: Vec3::new(x as f32 / grass.density as f32, 1.0, z as f32 / grass.density as f32),
-                scale: 1.0,
-                color: Color::GREEN.into(),
-            });
-        }
-    }
+    let rng = rand::thread_rng();
+
+    let data: Vec<InstanceData> = 
+    (-size.x as i32 * density as i32..=size.x as i32 * density as i32)
+    .flat_map(|x| {
+        let mut rng = rng.clone();
+        (-size.z as i32 * density as i32..=size.z as i32 * density as i32)
+        .map(move |z| {
+            let offset_x = rng.gen_range(-0.5..0.5);
+            let offset_z = rng.gen_range(-0.5..0.5);
+            InstanceData {
+                position: Vec3::new((x as f32 + offset_x) / density as f32, 1.0, (z as f32 + offset_z) / density as f32),
+            }
+        })
+    })
+    .collect();
+    dbg!(data.len());
 
     grass.material_data = InstanceMaterialData(data);
 }
@@ -79,12 +94,41 @@ pub fn spawn_grass(
         SpatialBundle::INHERITED_IDENTITY,
         grass.material_data.clone(),
         NoFrustumCulling,
-        GrassEntity(entity.index())
+        GrassId(entity.index())
     ));
 }
 
 #[derive(Component)]
-pub struct GrassEntity(u32);
+pub struct GrassId(u32);
+
+#[derive(Component, Clone, Reflect)]
+pub struct GrassColor {
+    ao: [f32; 4],
+    color_1: [f32; 4],
+    color_2: [f32; 4],
+    tip: [f32; 4],
+}
+
+impl Default for GrassColor {
+    fn default() -> Self {
+        Self {
+            ao: [0.11, 0.28, 0.07, 1.0],
+            color_1: [0.25, 0.72, 0.27, 1.0],
+            color_2: [0.32, 0.85, 0.49, 1.0],
+            tip: [0.81, 0.95, 0.78, 1.0]
+        }
+    }
+}
+
+impl ExtractComponent for GrassColor {
+    type Query = &'static GrassColor;
+    type Filter = ();
+    type Out = Self;
+
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
+        Some(item.clone())
+    }
+}
 
 #[derive(Component, Deref, Clone, Reflect)]
 pub struct InstanceMaterialData(Vec<InstanceData>);
@@ -131,8 +175,6 @@ impl Plugin for CustomMaterialPlugin {
 #[repr(C)]
 pub struct InstanceData {
     position: Vec3,
-    scale: f32,
-    color: [f32; 4],
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -240,15 +282,15 @@ impl SpecializedMeshPipeline for CustomPipeline {
             step_mode: VertexStepMode::Instance,
             attributes: vec![
                 VertexAttribute {
-                    format: VertexFormat::Float32x4,
+                    format: VertexFormat::Float32x3,
                     offset: 0,
                     shader_location: 3, // shader locations 0-2 are taken up by Position, Normal and UV attributes
                 },
-                VertexAttribute {
-                    format: VertexFormat::Float32x4,
-                    offset: VertexFormat::Float32x4.size(),
-                    shader_location: 4,
-                },
+                // VertexAttribute {
+                //     format: VertexFormat::Float32x4,
+                //     offset: VertexFormat::Float32x4.size(),
+                //     shader_location: 4,
+                // },
             ],
         });
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();

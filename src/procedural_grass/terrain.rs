@@ -6,7 +6,6 @@ impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app
             .register_type::<Terrain>()
-            .register_type::<Grass>()
             .add_systems(Startup, generate_mesh_on_startup)
             .add_systems(PostUpdate, update_mesh); 
     }
@@ -26,7 +25,22 @@ pub fn generate_mesh_on_startup(
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use noise::NoiseFn;
 
-use super::grass::Grass;
+#[derive(Reflect, InspectorOptions)]
+#[reflect(Default, InspectorOptions)]
+struct PerlinNoise {
+    seed: u32,
+    #[inspector(min = 0.0001, max = 100.0)]
+    intensity: f32,
+}
+
+impl Default for PerlinNoise {
+    fn default() -> Self {
+        Self {
+            seed: 1,
+            intensity: 5.,
+        }
+    }
+}
 
 #[derive(Reflect, Component, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]
@@ -35,25 +49,12 @@ pub struct Terrain {
     subdivisions: u32,
     #[inspector(min = 0.0001, max = 100.0)]
     height_scale: f32,
-    #[inspector(min = 0.0001, max = 100.0)]
-    intensity: f32,
-    #[inspector(min = 1, max = 1000000000)]
-    seed: u32,
-    #[inspector()]
-    noise: bool,
+    noise: Option<PerlinNoise>
 }
 
 impl Terrain {
     pub fn get_subdivisions(&self) -> u32 {
         self.subdivisions
-    }
-
-    pub fn get_seed(&self) -> u32 {
-        self.seed
-    }
-
-    pub fn get_intensity(&self) -> f32 {
-        self.intensity
     }
 
     pub fn get_height_scale(&self) -> f32 {
@@ -66,9 +67,7 @@ impl Default for Terrain {
         Self {
             subdivisions: 0,
             height_scale: 0.05,
-            intensity: 5.,
-            seed: 1,
-            noise: true,
+            noise: Some(PerlinNoise::default())
         }
     }
 }
@@ -88,11 +87,11 @@ pub fn update_mesh(
 
 fn generate_mesh(terrain: &Terrain) -> Mesh {
     let mut mesh = Mesh::from(shape::Plane { size: 1.0, subdivisions: terrain.subdivisions });
-    if terrain.noise {
+    if let Some(noise) = &terrain.noise {
         if let Some(positions) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             if let VertexAttributeValues::Float32x3(positions) = positions {
                 for position in positions.iter_mut() {
-                    let y = noise::Perlin::new(terrain.seed).get([(position[0] * terrain.intensity) as f64, (position[2] * terrain.intensity) as f64]) as f32;
+                    let y = noise::Perlin::new(noise.seed).get([(position[0] * noise.intensity) as f64, (position[2] * noise.intensity) as f64]) as f32;
                     position[1] += y * terrain.height_scale;
                 }
             }
