@@ -1,10 +1,11 @@
-use bevy::{prelude::*, pbr::{wireframe::{WireframePlugin, Wireframe}, SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshPipeline, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, mesh::{GpuBufferInfo, MeshVertexBufferLayout, VertexAttributeValues}, render_asset::RenderAssets, render_resource::{VertexFormat, VertexAttribute, VertexStepMode, VertexBufferLayout, SpecializedMeshPipelineError, RenderPipelineDescriptor, SpecializedMeshPipeline, BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::Transparent3d};
-use bevy_inspector_egui::{quick::WorldInspectorPlugin, prelude::ReflectInspectorOptions, InspectorOptions};
+use bevy::{prelude::*, pbr::{SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshPipeline, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, mesh::{GpuBufferInfo, MeshVertexBufferLayout}, render_asset::RenderAssets, render_resource::{VertexFormat, VertexAttribute, VertexStepMode, VertexBufferLayout, SpecializedMeshPipelineError, RenderPipelineDescriptor, SpecializedMeshPipeline, BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding, BindGroup}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::{Transparent3d, Opaque3d}};
+use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions, egui};
 use bytemuck::{Pod, Zeroable};
-use noise::NoiseFn;
 use rand::Rng;
 
-use super::terrain::Terrain;
+use crate::terrain::component::Terrain;
+
+use super::pipeline::CustomPipeline;
 
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -14,6 +15,7 @@ pub struct Grass {
     #[reflect(ignore)]
     pub material_data: InstanceMaterialData,
     pub density: u32,
+    pub color: GrassColor,
     pub regenerate: bool,
 }
 
@@ -25,23 +27,13 @@ pub fn update_grass(
     for (entity, transform, mut grass) in query.iter_mut() {
         if grass.regenerate {
             generate_grass_data(transform, &mut grass);
-            spawn_grass(&mut commands, entity, &grass);
-
-            remove_grass(&mut commands, &grass_entity_query, entity.index());
+            for (grass_entity, grass_id) in grass_entity_query.iter() {
+                if grass_id.0 == entity.index() {
+                    commands.entity(grass_entity).insert(grass.material_data.clone());
+                }
+            }
 
             grass.regenerate = false;
-        }
-    }
-}
-
-fn remove_grass(
-    commands: &mut Commands,
-    query: &Query<(Entity, &GrassId)>,
-    terrain_id: u32,
-) {
-    for (entity, grass_id) in query.iter() {
-        if grass_id.0 == terrain_id {
-            commands.entity(entity).despawn();
         }
     }
 }
@@ -73,6 +65,7 @@ pub fn generate_grass_data(
         .map(move |z| {
             let offset_x = rng.gen_range(-0.5..0.5);
             let offset_z = rng.gen_range(-0.5..0.5);
+
             InstanceData {
                 position: Vec3::new((x as f32 + offset_x) / density as f32, 1.0, (z as f32 + offset_z) / density as f32),
             }
@@ -93,6 +86,7 @@ pub fn spawn_grass(
         grass.mesh.clone(),
         SpatialBundle::INHERITED_IDENTITY,
         grass.material_data.clone(),
+        GrassColorData::from(grass.color),
         NoFrustumCulling,
         GrassId(entity.index())
     ));
@@ -101,27 +95,50 @@ pub fn spawn_grass(
 #[derive(Component)]
 pub struct GrassId(u32);
 
-#[derive(Component, Clone, Reflect)]
+#[derive(Reflect, Default, InspectorOptions, Clone, Copy)]
+#[reflect(InspectorOptions)]
 pub struct GrassColor {
+    ao: Color,
+    color_1: Color,
+    color_2: Color,
+    tip: Color,
+}
+
+
+#[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions)]
+#[reflect(Component, InspectorOptions)]
+#[repr(C)]
+pub struct GrassColorData {
     ao: [f32; 4],
     color_1: [f32; 4],
     color_2: [f32; 4],
     tip: [f32; 4],
 }
 
-impl Default for GrassColor {
+impl Default for GrassColorData {
     fn default() -> Self {
         Self {
-            ao: [0.11, 0.28, 0.07, 1.0],
-            color_1: [0.25, 0.72, 0.27, 1.0],
-            color_2: [0.32, 0.85, 0.49, 1.0],
-            tip: [0.81, 0.95, 0.78, 1.0]
+            ao: [0.24, 0.35, 0.2, 1.0],
+            color_1: [0.07, 0.6, 0.17, 1.0],
+            color_2: [1.0, 0.9, 0.76, 1.0],
+            tip: [1.0, 1.0, 1.0, 1.0]
         }
     }
 }
 
-impl ExtractComponent for GrassColor {
-    type Query = &'static GrassColor;
+impl From<GrassColor> for GrassColorData {
+    fn from(color: GrassColor) -> Self {
+        Self {
+            ao: color.ao.into(),
+            color_1: color.color_1.into(),
+            color_2: color.color_2.into(),
+            tip: color.tip.into(),
+        }
+    }
+}
+
+impl ExtractComponent for GrassColorData {
+    type Query = &'static GrassColorData;
     type Filter = ();
     type Out = Self;
 
@@ -154,6 +171,7 @@ pub struct CustomMaterialPlugin;
 impl Plugin for CustomMaterialPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ExtractComponentPlugin::<InstanceMaterialData>::default());
+        app.add_plugins(ExtractComponentPlugin::<GrassColorData>::default());
         app.sub_app_mut(RenderApp)
             .add_render_command::<Transparent3d, DrawCustom>()
             .init_resource::<SpecializedMeshPipelines<CustomPipeline>>()
@@ -162,6 +180,7 @@ impl Plugin for CustomMaterialPlugin {
                 (
                     queue_custom.in_set(RenderSet::Queue),
                     prepare_instance_buffers.in_set(RenderSet::Prepare),
+                    prepare_color_buffers.in_set(RenderSet::Prepare),
                 ),
             );
     }
@@ -177,7 +196,6 @@ pub struct InstanceData {
     position: Vec3,
 }
 
-#[allow(clippy::too_many_arguments)]
 fn queue_custom(
     transparent_3d_draw_functions: Res<DrawFunctions<Transparent3d>>,
     custom_pipeline: Res<CustomPipeline>,
@@ -237,73 +255,73 @@ fn prepare_instance_buffers(
     }
 }
 
-
-#[derive(Resource)]
-pub struct CustomPipeline {
-    shader: Handle<Shader>,
-    mesh_pipeline: MeshPipeline,
+#[derive(Component)]
+pub struct ColorBuffer {
+    bind_group: BindGroup,
 }
 
-impl FromWorld for CustomPipeline {
-    fn from_world(world: &mut World) -> Self {
-        let asset_server = world.resource::<AssetServer>();
-        let shader = asset_server.load("shaders/instancing.wgsl");
+fn prepare_color_buffers(
+    mut commands: Commands,
+    pipeline: Res<CustomPipeline>,
+    query: Query<(Entity, &GrassColorData)>,
+    render_device: Res<RenderDevice>,
+) {
+    for (entity, color) in &query {
+        let layout = pipeline.color_layout.clone();
 
-        let mesh_pipeline = world.resource::<MeshPipeline>();
-
-        CustomPipeline {
-            shader,
-            mesh_pipeline: mesh_pipeline.clone(),
-        }
-    }
-}
-
-impl SpecializedMeshPipeline for CustomPipeline {
-    type Key = MeshPipelineKey;
-
-    fn specialize(
-        &self,
-        key: Self::Key,
-        layout: &MeshVertexBufferLayout,
-    ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
-        let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
-
-        // meshes typically live in bind group 2. because we are using bindgroup 1
-        // we need to add MESH_BINDGROUP_1 shader def so that the bindings are correctly
-        // linked in the shader
-        descriptor
-            .vertex
-            .shader_defs
-            .push("MESH_BINDGROUP_1".into());
-
-        descriptor.vertex.shader = self.shader.clone();
-        descriptor.vertex.buffers.push(VertexBufferLayout {
-            array_stride: std::mem::size_of::<InstanceData>() as u64,
-            step_mode: VertexStepMode::Instance,
-            attributes: vec![
-                VertexAttribute {
-                    format: VertexFormat::Float32x3,
-                    offset: 0,
-                    shader_location: 3, // shader locations 0-2 are taken up by Position, Normal and UV attributes
-                },
-                // VertexAttribute {
-                //     format: VertexFormat::Float32x4,
-                //     offset: VertexFormat::Float32x4.size(),
-                //     shader_location: 4,
-                // },
-            ],
+        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            label: Some("color buffer"),
+            contents: bytemuck::cast_slice(&[color.clone()]),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
         });
-        descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
-        Ok(descriptor)
+        let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
+            label: Some("grass color bind group"),
+            layout: &layout,
+            entries: &[BindGroupEntry {
+                binding: 0,
+                resource: BindingResource::Buffer(BufferBinding {
+                    buffer: &buffer,
+                    offset: 0,
+                    size: None,
+                })
+            }],
+        });
+
+        commands.entity(entity).insert(ColorBuffer {
+            bind_group,
+        });
     }
 }
+
 
 type DrawCustom = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
     SetMeshBindGroup<1>,
+    SetColorBindGroup<2>,
     DrawMeshInstanced,
 );
+
+pub struct SetColorBindGroup<const I: usize>;
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetColorBindGroup<I> {
+    type Param = ();
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = Option<Read<ColorBuffer>>;
+
+    fn render<'w>(
+        _item: &P,
+        _view: (),
+        bind_group: Option<&'w ColorBuffer>,
+        _meshes: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let Some(bind_group) = bind_group else {
+            return RenderCommandResult::Failure;
+        };
+        pass.set_bind_group(I, &bind_group.bind_group, &[]);
+        RenderCommandResult::Success
+    }
+}
 
 pub struct DrawMeshInstanced;
 

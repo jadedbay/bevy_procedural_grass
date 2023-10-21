@@ -14,7 +14,9 @@ struct Color {
     color_1: vec4<f32>,
     color_2: vec4<f32>,
     tip: vec4<f32>,
-}
+};
+@group(2) @binding(0)
+var<uniform> color: Color;
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -37,19 +39,13 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    let ao = vec4<f32>(0.11, 0.28, 0.07, 1.0);
-    let color_1 = vec4<f32>(0.25, 0.72, 0.27, 1.0);
-    let color_2 = vec4<f32>(0.32, 0.85, 0.49, 1.0);
-    let tip = vec4<f32>(0.56, 0.95, 0.66, 1.0);
-
     // Normalize y position to range [0, 1]
     let y_normalized = clamp(in.y_position, 0.0, 1.0); 
 
     // Create a gradient from color_1 to color_2 based on the y position
-    let color_gradient = mix(color_1, color_2, y_normalized); 
-
-    // Additively blend top of mesh with tip and bottom with ao
-    //let final_color = mix(mix(ao, color_gradient, y_normalized), tip, y_normalized);
-
+    let color_gradient = mix(color.color_1, color.color_2, y_normalized); 
+    
+    // Blend color.ao upwards
+    let color_blend = mix(color.ao, color_gradient, y_normalized);
     return color_gradient;
 }

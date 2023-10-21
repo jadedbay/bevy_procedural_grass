@@ -1,27 +1,5 @@
 use bevy::{prelude::*, render::mesh::VertexAttributeValues};
 
-pub struct TerrainPlugin;
-
-impl Plugin for TerrainPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .register_type::<Terrain>()
-            .add_systems(Startup, generate_mesh_on_startup)
-            .add_systems(PostUpdate, update_mesh); 
-    }
-}
-
-pub fn generate_mesh_on_startup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    query: Query<(Entity, &Terrain), Without<Handle<Mesh>>>,
-) {
-    for (entity, terrain) in query.iter() {
-        let mesh_handle = meshes.add(generate_mesh(terrain));
-        commands.entity(entity).insert(mesh_handle);
-    }
-}
-
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use noise::NoiseFn;
 
@@ -69,6 +47,17 @@ impl Default for Terrain {
             height_scale: 0.05,
             noise: Some(PerlinNoise::default())
         }
+    }
+}
+
+pub fn generate_mesh_on_startup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    query: Query<(Entity, &Terrain), Without<Handle<Mesh>>>,
+) {
+    for (entity, terrain) in query.iter() {
+        let mesh_handle = meshes.add(generate_mesh(terrain));
+        commands.entity(entity).insert(mesh_handle);
     }
 }
 

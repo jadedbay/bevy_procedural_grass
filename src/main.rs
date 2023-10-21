@@ -1,11 +1,12 @@
-use bevy::{prelude::*, pbr::{wireframe::{WireframePlugin, Wireframe}, SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshPipeline, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, mesh::{GpuBufferInfo, MeshVertexBufferLayout, VertexAttributeValues}, render_asset::RenderAssets, render_resource::{VertexFormat, VertexAttribute, VertexStepMode, VertexBufferLayout, SpecializedMeshPipelineError, RenderPipelineDescriptor, SpecializedMeshPipeline, BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::Transparent3d};
+use bevy::{prelude::*, pbr::{wireframe::{WireframePlugin, Wireframe}}};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_flycam::*;
-use bytemuck::{Pod, Zeroable};
-use procedural_grass::{grass::{CustomMaterialPlugin, Grass, InstanceMaterialData, InstanceData}, GrassPlugin, terrain::TerrainPlugin};
-use procedural_grass::terrain::Terrain;
 
-pub mod procedural_grass;
+use grass::{grass::{CustomMaterialPlugin, Grass, InstanceMaterialData, GrassColorData, GrassColor}, GrassPlugin};
+use terrain::{TerrainPlugin, component::Terrain};
+
+pub mod grass;
+pub mod terrain;
 
 fn main() {
     App::new()
@@ -39,8 +40,9 @@ fn setup(
             mesh: asset_server.load::<Mesh, &str>("meshes/grass_blade.glb#Mesh0/Primitive0"),
             material_data: InstanceMaterialData::default(),
             density: 5,
+            color: GrassColor::default(),
             regenerate: false,
-        }
+        },
     ));
      
     commands.spawn(PointLightBundle {
