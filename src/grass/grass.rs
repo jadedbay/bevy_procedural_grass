@@ -38,6 +38,20 @@ pub fn update_grass(
     }
 }
 
+pub fn update_grass_color(
+    mut commands: Commands,
+    query: Query<(Entity, &Grass), Changed<Grass>>,
+    grass_entity_query: Query<(Entity, &GrassId)>,
+) {
+    for (entity, grass) in query.iter() {
+        for (grass_entity, grass_id) in grass_entity_query.iter() {
+            if grass_id.0 == entity.index() {
+                commands.entity(grass_entity).insert(GrassColorData::from(grass.color.clone()));
+            }
+        }
+    }
+}
+
 pub fn load_grass(
     mut commands: Commands,
     mut query: Query<(Entity, &Transform, &mut Grass), With<Terrain>>
@@ -95,13 +109,24 @@ pub fn spawn_grass(
 #[derive(Component)]
 pub struct GrassId(u32);
 
-#[derive(Reflect, Default, InspectorOptions, Clone, Copy)]
+#[derive(Reflect, InspectorOptions, Clone, Copy)]
 #[reflect(InspectorOptions)]
 pub struct GrassColor {
     ao: Color,
     color_1: Color,
     color_2: Color,
     tip: Color,
+}
+
+impl Default for GrassColor {
+    fn default() -> Self {
+        Self {
+            ao: [0.24, 0.35, 0.2, 1.0].into(),
+            color_1: [0.07, 0.6, 0.17, 1.0].into(),
+            color_2: [1.0, 0.9, 0.76, 1.0].into(),
+            tip: [1.0, 1.0, 1.0, 1.0].into(),
+        }
+    }
 }
 
 
@@ -173,7 +198,7 @@ impl Plugin for CustomMaterialPlugin {
         app.add_plugins(ExtractComponentPlugin::<InstanceMaterialData>::default());
         app.add_plugins(ExtractComponentPlugin::<GrassColorData>::default());
         app.sub_app_mut(RenderApp)
-            .add_render_command::<Transparent3d, DrawCustom>()
+            .add_render_command::<Opaque3d, DrawCustom>()
             .init_resource::<SpecializedMeshPipelines<CustomPipeline>>()
             .add_systems(
                 Render,
@@ -197,20 +222,20 @@ pub struct InstanceData {
 }
 
 fn queue_custom(
-    transparent_3d_draw_functions: Res<DrawFunctions<Transparent3d>>,
+    opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
     custom_pipeline: Res<CustomPipeline>,
     msaa: Res<Msaa>,
     mut pipelines: ResMut<SpecializedMeshPipelines<CustomPipeline>>,
     pipeline_cache: Res<PipelineCache>,
     meshes: Res<RenderAssets<Mesh>>,
     material_meshes: Query<(Entity, &MeshUniform, &Handle<Mesh>), With<InstanceMaterialData>>,
-    mut views: Query<(&ExtractedView, &mut RenderPhase<Transparent3d>)>,
+    mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
 ) {
-    let draw_custom = transparent_3d_draw_functions.read().id::<DrawCustom>();
+    let draw_custom = opaque_3d_draw_functions.read().id::<DrawCustom>();
 
     let msaa_key = MeshPipelineKey::from_msaa_samples(msaa.samples());
 
-    for (view, mut transparent_phase) in &mut views {
+    for (view, mut opaque_phase) in &mut views {
         let view_key = msaa_key | MeshPipelineKey::from_hdr(view.hdr);
         let rangefinder = view.rangefinder3d();
         for (entity, mesh_uniform, mesh_handle) in &material_meshes {
@@ -220,7 +245,7 @@ fn queue_custom(
                 let pipeline = pipelines
                     .specialize(&pipeline_cache, &custom_pipeline, key, &mesh.layout)
                     .unwrap();
-                transparent_phase.add(Transparent3d {
+                opaque_phase.add(Opaque3d {
                     entity,
                     pipeline,
                     draw_function: draw_custom,

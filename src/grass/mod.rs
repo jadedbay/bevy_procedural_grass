@@ -12,6 +12,6 @@ impl Plugin for GrassPlugin {
         app.register_type::<Grass>()
         .register_type::<GrassColorData>()
         .add_systems(PostStartup, grass::load_grass)
-        .add_systems(Update, grass::update_grass);
+        .add_systems(Update, (grass::update_grass, grass::update_grass_color));
     }
 }

@@ -43,9 +43,11 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let y_normalized = clamp(in.y_position, 0.0, 1.0); 
 
     // Create a gradient from color_1 to color_2 based on the y position
-    let color_gradient = mix(color.color_1, color.color_2, y_normalized); 
+    let color_gradient = mix(color.color_1, color.color_2, y_normalized);
+    let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0), y_normalized);
+    let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip, y_normalized * y_normalized);
+
+    let color = (color_gradient + tip) * ao;
     
-    // Blend color.ao upwards
-    let color_blend = mix(color.ao, color_gradient, y_normalized);
-    return color_gradient;
+    return color;
 }
