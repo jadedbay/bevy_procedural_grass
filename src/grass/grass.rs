@@ -1,6 +1,7 @@
 use bevy::{prelude::*, pbr::{SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, mesh::{GpuBufferInfo}, render_asset::RenderAssets, render_resource::{SpecializedMeshPipeline, BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding, BindGroup}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::{Opaque3d}};
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 use bytemuck::{Pod, Zeroable};
+use noise::NoiseFn;
 use rand::Rng;
 
 use crate::terrain::component::Terrain;
@@ -21,12 +22,12 @@ pub struct Grass {
 
 pub fn update_grass(
     mut commands: Commands,
-    mut query: Query<(Entity, &Transform, &mut Grass), With<Terrain>>,
+    mut query: Query<(Entity, &Transform, &Terrain, &mut Grass)>,
     grass_entity_query: Query<(Entity, &GrassId)>,
 ) {
-    for (entity, transform, mut grass) in query.iter_mut() {
+    for (entity, transform, terrain, mut grass) in query.iter_mut() {
         if grass.regenerate {
-            generate_grass_data(transform, &mut grass);
+            generate_grass_data(transform, terrain, &mut grass);
             for (grass_entity, grass_id) in grass_entity_query.iter() {
                 if grass_id.0 == entity.index() {
                     commands.entity(grass_entity).insert(grass.material_data.clone());
@@ -54,16 +55,17 @@ pub fn update_grass_color(
 
 pub fn load_grass(
     mut commands: Commands,
-    mut query: Query<(Entity, &Transform, &mut Grass), With<Terrain>>
+    mut query: Query<(Entity, &Transform, &Terrain, &mut Grass)>
 ) {
-    for (entity, transform, mut grass) in query.iter_mut() {
-        generate_grass_data(transform, &mut grass);
+    for (entity, transform, terrain, mut grass) in query.iter_mut() {
+        generate_grass_data(transform, terrain, &mut grass);
         spawn_grass(&mut commands, entity, &grass);
     }
 }
 
 pub fn generate_grass_data(
     transform: &Transform,
+    terrain: &Terrain, 
     grass: &mut Grass,
 ) {
     let size = transform.scale / 2.0;
@@ -80,8 +82,13 @@ pub fn generate_grass_data(
             let offset_x = rng.gen_range(-0.5..0.5);
             let offset_z = rng.gen_range(-0.5..0.5);
 
+            let mut y = 1.;
+            if let Some(noise) = &terrain.noise {
+                y += noise::Perlin::new(noise.seed).get([(((x as f32 + offset_x) / density as f32) * noise.intensity / transform.scale.x) as f64, (((z as f32 + offset_z) / density as f32) * noise.intensity / transform.scale.z) as f64]) as f32;
+            }
+
             InstanceData {
-                position: Vec3::new((x as f32 + offset_x) / density as f32, 1.0, (z as f32 + offset_z) / density as f32),
+                position: Vec3::new((x as f32 + offset_x) / density as f32, y * terrain.get_height_scale(), (z as f32 + offset_z) / density as f32),
             }
         })
     })

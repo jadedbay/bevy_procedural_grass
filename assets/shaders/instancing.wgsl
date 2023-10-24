@@ -32,11 +32,14 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var position = rotate_y(vertex.position, hash_id * 180.);
     position += vertex.i_pos.xyz;
 
+    position.y *= mix(0.99, 1.0, hash_id);
+
     var out: VertexOutput;
     out.clip_position = mesh_position_local_to_clip(
         mesh.model, 
         vec4<f32>(position, 1.0)
     );
+
     out.color = vec4(0.0, 1.0, 0.0, 1.0);
     out.uv = 1.0 - vertex.uv;
     return out;

@@ -31,10 +31,9 @@ fn setup(
     commands.spawn((
         PbrBundle {
             material: materials.add(Color::WHITE.into()),
-            transform: Transform::from_scale(Vec3::new(10.0, 10.0, 10.0)),
+            transform: Transform::from_scale(Vec3::new(100.0, 1.0, 100.0)),
             ..Default::default()
         }, 
-        Wireframe,
         Terrain::default(),
         Grass {
             mesh: asset_server.load::<Mesh, &str>("meshes/grass_blade.glb#Mesh0/Primitive0"),

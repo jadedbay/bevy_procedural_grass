@@ -5,10 +5,10 @@ use noise::NoiseFn;
 
 #[derive(Reflect, InspectorOptions)]
 #[reflect(Default, InspectorOptions)]
-struct PerlinNoise {
-    seed: u32,
+pub struct PerlinNoise {
+    pub seed: u32,
     #[inspector(min = 0.0001, max = 100.0)]
-    intensity: f32,
+    pub intensity: f32,
 }
 
 impl Default for PerlinNoise {
@@ -27,7 +27,7 @@ pub struct Terrain {
     subdivisions: u32,
     #[inspector(min = 0.0001, max = 100.0)]
     height_scale: f32,
-    noise: Option<PerlinNoise>
+    pub noise: Option<PerlinNoise>
 }
 
 impl Terrain {
@@ -43,8 +43,8 @@ impl Terrain {
 impl Default for Terrain {
     fn default() -> Self {
         Self {
-            subdivisions: 0,
-            height_scale: 0.05,
+            subdivisions: 100,
+            height_scale: 2.,
             noise: Some(PerlinNoise::default())
         }
     }
