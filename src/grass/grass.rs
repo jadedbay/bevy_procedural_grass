@@ -1,4 +1,4 @@
-use bevy::{prelude::*, pbr::{SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, mesh::{GpuBufferInfo}, render_asset::RenderAssets, render_resource::{SpecializedMeshPipeline, BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding, BindGroup}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::{Opaque3d}};
+use bevy::{prelude::*, pbr::{SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, render_asset::RenderAssets, render_resource::{BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding, BindGroup}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet, mesh::GpuBufferInfo}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::Opaque3d};
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 use bytemuck::{Pod, Zeroable};
 use noise::NoiseFn;
@@ -84,11 +84,11 @@ pub fn generate_grass_data(
 
             let mut y = 1.;
             if let Some(noise) = &terrain.noise {
-                y += noise::Perlin::new(noise.seed).get([(((x as f32 + offset_x) / density as f32) * noise.intensity / transform.scale.x) as f64, (((z as f32 + offset_z) / density as f32) * noise.intensity / transform.scale.z) as f64]) as f32;
+                y += (noise::Perlin::new(noise.seed).get([(((x as f32 + offset_x) / density as f32) * noise.intensity / transform.scale.x) as f64, (((z as f32 + offset_z) / density as f32) * noise.intensity / transform.scale.z) as f64]) as f32) * terrain.get_height_scale();
             }
 
             InstanceData {
-                position: Vec3::new((x as f32 + offset_x) / density as f32, y * terrain.get_height_scale(), (z as f32 + offset_z) / density as f32),
+                position: Vec3::new((x as f32 + offset_x) / density as f32, y, (z as f32 + offset_z) / density as f32),
             }
         })
     })
