@@ -30,9 +30,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     hash_id = hash(hash_id * 100000.);
 
     var position = rotate_y(vertex.position, hash_id * 180.);
+    
     position += vertex.i_pos.xyz;
-
-    position.y *= mix(0.99, 1.0, hash_id);
 
     var out: VertexOutput;
     out.clip_position = mesh_position_local_to_clip(
