@@ -2,7 +2,7 @@ use bevy::{prelude::*, pbr::{wireframe::{WireframePlugin, Wireframe}}};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_flycam::*;
 
-use grass::{grass::{CustomMaterialPlugin, Grass, InstanceMaterialData, GrassColorData, GrassColor}, GrassPlugin};
+use grass::{grass::{CustomMaterialPlugin, Grass, InstanceMaterialData, GrassColor}, GrassPlugin};
 use terrain::{TerrainPlugin, component::Terrain};
 
 pub mod grass;
@@ -51,7 +51,7 @@ fn setup(
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        transform: Transform::from_xyz(4., 8., 4.),
         ..default()
     });
 }

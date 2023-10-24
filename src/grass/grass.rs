@@ -1,5 +1,5 @@
-use bevy::{prelude::*, pbr::{SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshPipeline, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, mesh::{GpuBufferInfo, MeshVertexBufferLayout}, render_asset::RenderAssets, render_resource::{VertexFormat, VertexAttribute, VertexStepMode, VertexBufferLayout, SpecializedMeshPipelineError, RenderPipelineDescriptor, SpecializedMeshPipeline, BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding, BindGroup}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::{Transparent3d, Opaque3d}};
-use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions, egui};
+use bevy::{prelude::*, pbr::{SetMeshBindGroup, SetMeshViewBindGroup, MeshPipelineKey, MeshUniform}, render::{extract_component::{ExtractComponent, ExtractComponentPlugin}, render_phase::{RenderCommandResult, TrackedRenderPass, RenderCommand, PhaseItem, SetItemPipeline, RenderPhase, DrawFunctions, AddRenderCommand}, mesh::{GpuBufferInfo}, render_asset::RenderAssets, render_resource::{SpecializedMeshPipeline, BufferUsages, BufferInitDescriptor, Buffer, PipelineCache, SpecializedMeshPipelines, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding, BindGroup}, renderer::RenderDevice, view::{ExtractedView, NoFrustumCulling}, RenderApp, Render, RenderSet}, ecs::{query::QueryItem, system::{SystemParamItem, lifetimeless::{Read, SRes}}}, core_pipeline::core_3d::{Opaque3d}};
+use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 use bytemuck::{Pod, Zeroable};
 use rand::Rng;
 
@@ -121,16 +121,16 @@ pub struct GrassColor {
 impl Default for GrassColor {
     fn default() -> Self {
         Self {
-            ao: [0.24, 0.35, 0.2, 1.0].into(),
-            color_1: [0.07, 0.6, 0.17, 1.0].into(),
-            color_2: [1.0, 0.9, 0.76, 1.0].into(),
+            ao: [0.01, 0.02, 0.05, 1.0].into(),
+            color_1: [0.33, 0.57, 0.29, 1.0].into(),
+            color_2: [0.08, 0.43, 0.29, 1.0].into(),
             tip: [1.0, 1.0, 1.0, 1.0].into(),
         }
     }
 }
 
 
-#[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions)]
+#[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
 #[repr(C)]
 pub struct GrassColorData {
@@ -138,17 +138,6 @@ pub struct GrassColorData {
     color_1: [f32; 4],
     color_2: [f32; 4],
     tip: [f32; 4],
-}
-
-impl Default for GrassColorData {
-    fn default() -> Self {
-        Self {
-            ao: [0.24, 0.35, 0.2, 1.0],
-            color_1: [0.07, 0.6, 0.17, 1.0],
-            color_2: [1.0, 0.9, 0.76, 1.0],
-            tip: [1.0, 1.0, 1.0, 1.0]
-        }
-    }
 }
 
 impl From<GrassColor> for GrassColorData {
@@ -281,7 +270,7 @@ fn prepare_instance_buffers(
 }
 
 #[derive(Component)]
-pub struct ColorBuffer {
+pub struct ColorBindGroup {
     bind_group: BindGroup,
 }
 
@@ -312,12 +301,11 @@ fn prepare_color_buffers(
             }],
         });
 
-        commands.entity(entity).insert(ColorBuffer {
+        commands.entity(entity).insert(ColorBindGroup {
             bind_group,
         });
     }
 }
-
 
 type DrawCustom = (
     SetItemPipeline,
@@ -331,12 +319,12 @@ pub struct SetColorBindGroup<const I: usize>;
 impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetColorBindGroup<I> {
     type Param = ();
     type ViewWorldQuery = ();
-    type ItemWorldQuery = Option<Read<ColorBuffer>>;
+    type ItemWorldQuery = Option<Read<ColorBindGroup>>;
 
     fn render<'w>(
         _item: &P,
         _view: (),
-        bind_group: Option<&'w ColorBuffer>,
+        bind_group: Option<&'w ColorBindGroup>,
         _meshes: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
