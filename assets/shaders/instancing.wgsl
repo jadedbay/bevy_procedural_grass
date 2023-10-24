@@ -26,7 +26,12 @@ struct VertexOutput {
 
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
-    let position = vertex.position + vertex.i_pos.xyz;
+    var hash_id = hash(vertex.i_pos.x * 10000. + vertex.i_pos.y * 100. + vertex.i_pos.z * 0.05 + 2.);
+    hash_id = hash(hash_id * 100000.);
+
+    var position = rotate_y(vertex.position, hash_id * 180.);
+    position += vertex.i_pos.xyz;
+
     var out: VertexOutput;
     out.clip_position = mesh_position_local_to_clip(
         mesh.model, 
@@ -47,4 +52,20 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let final_color = (color_gradient + tip) * ao;
     
     return final_color;
+}
+
+const PI: f32 = 3.141592653589793238;
+
+fn rotate_y(vertex: vec3<f32>, degrees: f32) -> vec3<f32> {
+    let alpha: f32 = degrees * PI / 180.0;
+    let sina: f32 = sin(alpha);
+    let cosa: f32 = cos(alpha);
+    let m: mat2x2<f32> = mat2x2<f32>(cosa, -sina, sina, cosa);
+    let rotated_xz: vec2<f32> = m * vertex.xz;
+    return vec3<f32>(rotated_xz.x, vertex.y, rotated_xz.y);
+}
+
+fn hash(n: f32) -> f32 {
+    let x = fract(n * 0.1031);
+    return x * x * 33.33 + x;
 }
