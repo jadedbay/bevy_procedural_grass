@@ -31,7 +31,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     var position = rotate_y(vertex.position, hash_id * 180.);
 
-    let y_scale = mix(-0.005, 0.005, hash_id);
+    let y_scale = mix(0.0, 0.01, hash_id);
     position.y *= 1. + y_scale;
     position.y += y_scale;
     

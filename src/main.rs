@@ -1,8 +1,8 @@
-use bevy::{prelude::*, pbr::{wireframe::{WireframePlugin}}};
+use bevy::{prelude::*, pbr::wireframe::WireframePlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_flycam::*;
 
-use grass::{grass::{CustomMaterialPlugin, Grass, InstanceMaterialData, GrassColor}, GrassPlugin};
+use grass::{grass::{Grass, GrassColor}, GrassPlugin, extract::GrassInstanceData};
 use terrain::{TerrainPlugin, component::Terrain};
 
 pub mod grass;
@@ -17,7 +17,6 @@ fn main() {
         WorldInspectorPlugin::new(),
         TerrainPlugin,
         GrassPlugin,
-        CustomMaterialPlugin,
     ))
     .add_systems(Startup, setup)
     .run();
@@ -30,14 +29,14 @@ fn setup(
 ) {
     commands.spawn((
         PbrBundle {
-            material: materials.add(Color::WHITE.into()),
+            material: materials.add(Color::DARK_GREEN.into()),
             transform: Transform::from_scale(Vec3::new(100.0, 1.0, 100.0)),
             ..Default::default()
         }, 
         Terrain::default(),
         Grass {
-            mesh: asset_server.load::<Mesh, &str>("meshes/grass_blade.glb#Mesh0/Primitive0"),
-            material_data: InstanceMaterialData::default(),
+            mesh: asset_server.load::<Mesh, &str>("meshes/grass_blade_thin.glb#Mesh0/Primitive0"),
+            instance_data: GrassInstanceData::default(),
             density: 5,
             color: GrassColor::default(),
             regenerate: false,

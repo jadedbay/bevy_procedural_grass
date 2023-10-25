@@ -1,18 +1,18 @@
 use bevy::{prelude::*, pbr::{MeshPipeline, MeshPipelineKey}, render::{render_resource::{BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, SpecializedMeshPipeline, RenderPipelineDescriptor, SpecializedMeshPipelineError, VertexBufferLayout, VertexStepMode, VertexAttribute, VertexFormat}, renderer::RenderDevice, mesh::MeshVertexBufferLayout}};
 
-use super::grass::InstanceData;
+use super::extract::InstanceData;
 
 #[derive(Resource)]
-pub struct CustomPipeline {
+pub struct GrassPipeline {
     shader: Handle<Shader>,
     mesh_pipeline: MeshPipeline,
     pub color_layout: BindGroupLayout,
 }
 
-impl FromWorld for CustomPipeline {
+impl FromWorld for GrassPipeline {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.resource::<AssetServer>();
-        let shader = asset_server.load("shaders/instancing.wgsl");
+        let shader = asset_server.load("shaders/grass.wgsl");
         let render_device = world.get_resource::<RenderDevice>().unwrap();
 
         let mesh_pipeline = world.resource::<MeshPipeline>();
@@ -33,7 +33,7 @@ impl FromWorld for CustomPipeline {
             ]
         });
 
-        CustomPipeline {
+        GrassPipeline {
             shader,
             mesh_pipeline: mesh_pipeline.clone(),
             color_layout,
@@ -41,7 +41,7 @@ impl FromWorld for CustomPipeline {
     }
 }
 
-impl SpecializedMeshPipeline for CustomPipeline {
+impl SpecializedMeshPipeline for GrassPipeline {
     type Key = MeshPipelineKey;
 
     fn specialize(
