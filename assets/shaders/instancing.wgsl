@@ -30,6 +30,10 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     hash_id = hash(hash_id * 100000.);
 
     var position = rotate_y(vertex.position, hash_id * 180.);
+
+    let y_scale = mix(-0.005, 0.005, hash_id);
+    position.y *= 1. + y_scale;
+    position.y += y_scale;
     
     position += vertex.i_pos.xyz;
 
