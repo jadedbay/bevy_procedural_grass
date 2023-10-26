@@ -7,6 +7,7 @@ struct Vertex {
     @location(2) uv: vec2<f32>,
 
     @location(3) i_pos: vec3<f32>,
+    @location(4) i_uv: vec2<f32>
 };
 
 struct Color {
@@ -22,6 +23,7 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,
     @location(1) uv: vec2<f32>,
+    @location(2) world_uv: vec2<f32>,
 };
 
 @vertex
@@ -45,6 +47,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     out.color = vec4(0.0, 1.0, 0.0, 1.0);
     out.uv = 1.0 - vertex.uv;
+    out.world_uv = vertex.i_uv;
     return out;
 }
 
@@ -57,7 +60,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let final_color = (color_gradient + tip) * ao;
     
-    return final_color;
+    return vec4(in.world_uv, 0.0, 1.0);
+    //return final_color;
 }
 
 const PI: f32 = 3.141592653589793238;

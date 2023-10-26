@@ -35,10 +35,11 @@ impl ExtractComponent for GrassColorData {
     }
 }
 
-#[derive(Clone, Copy, Pod, Zeroable, Reflect)]
+#[derive(Clone, Copy, Pod, Zeroable, Reflect, Debug)]
 #[repr(C)]
 pub struct InstanceData {
     pub position: Vec3,
+    pub uv: Vec2,
 }
 
 #[derive(Component, Deref, Clone, Reflect)]

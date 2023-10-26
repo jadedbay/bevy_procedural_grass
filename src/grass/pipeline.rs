@@ -66,6 +66,11 @@ impl SpecializedMeshPipeline for GrassPipeline {
                     offset: 0,
                     shader_location: 3,
                 },
+                VertexAttribute {
+                    format: VertexFormat::Float32x2,
+                    offset: std::mem::size_of::<[f32; 3]>() as u64,
+                    shader_location: 4,
+                },
             ],
         });
         descriptor.layout.push(self.color_layout.clone());
