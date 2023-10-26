@@ -1,8 +1,8 @@
-use bevy::{prelude::*, pbr::wireframe::WireframePlugin};
+use bevy::{prelude::*, pbr::wireframe::WireframePlugin, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_flycam::*;
 
-use grass::{grass::{Grass, GrassColor}, GrassPlugin, extract::GrassInstanceData};
+use grass::{grass::{Grass, GrassColor}, GrassPlugin, extract::GrassInstanceData, wind::Wind};
 use terrain::{TerrainPlugin, component::Terrain};
 
 pub mod grass;
@@ -17,6 +17,8 @@ fn main() {
         WorldInspectorPlugin::new(),
         TerrainPlugin,
         GrassPlugin,
+        LogDiagnosticsPlugin::default(),
+        FrameTimeDiagnosticsPlugin,
     ))
     .add_systems(Startup, setup)
     .run();
@@ -35,10 +37,11 @@ fn setup(
         }, 
         Terrain::default(),
         Grass {
-            mesh: asset_server.load::<Mesh, &str>("meshes/grass_blade_thin.glb#Mesh0/Primitive0"),
+            mesh: asset_server.load::<Mesh, &str>("meshes/grass_blade.glb#Mesh0/Primitive0"),
             instance_data: GrassInstanceData::default(),
             density: 5,
             color: GrassColor::default(),
+            wind: Wind::default(),
             regenerate: false,
         },
     ));
@@ -53,4 +56,3 @@ fn setup(
         ..default()
     });
 }
-

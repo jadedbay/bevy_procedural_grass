@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::extract_component::ExtractComponent, ecs::query::
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use bytemuck::{Pod, Zeroable};
 
-use super::grass::GrassColor;
+use super::{grass::GrassColor, wind::Wind};
 
 #[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -58,5 +58,36 @@ impl ExtractComponent for GrassInstanceData {
 
     fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
         Some(GrassInstanceData(item.0.clone()))
+    }
+}
+
+#[derive(Component, Clone, Copy, Reflect, InspectorOptions, Default)]
+#[reflect(Component, InspectorOptions)]
+#[repr(C)]
+pub struct WindData {
+    pub frequency: f32,
+    pub speed: f32,
+    pub noise: f32,
+    pub strength: f32,
+}
+
+impl From<Wind> for WindData {
+    fn from(wind: Wind) -> Self {
+        Self {
+            frequency: wind.frequency,
+            speed: wind.speed,
+            noise: wind.noise,
+            strength: wind.strength,
+        }
+    }
+}
+
+impl ExtractComponent for WindData {
+    type Query = &'static WindData;
+    type Filter = ();
+    type Out = Self;
+
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
+        Some(item.clone())
     }
 }

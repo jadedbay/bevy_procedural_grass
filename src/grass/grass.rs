@@ -6,7 +6,7 @@ use rand::Rng;
 
 use crate::{terrain::component::Terrain, grass::extract::{GrassInstanceData, InstanceData}};
 
-use super::extract::GrassColorData;
+use super::{extract::{GrassColorData, WindData}, wind::Wind};
 
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -17,6 +17,7 @@ pub struct Grass {
     pub instance_data: GrassInstanceData,
     pub density: u32,
     pub color: GrassColor,
+    pub wind: Wind,
     pub regenerate: bool,
 }
 
@@ -39,7 +40,7 @@ pub fn update_grass(
     }
 }
 
-pub fn update_grass_color(
+pub fn update_grass_params(
     mut commands: Commands,
     query: Query<(Entity, &Grass), Changed<Grass>>,
     grass_entity_query: Query<(Entity, &GrassId)>,
@@ -47,7 +48,9 @@ pub fn update_grass_color(
     for (entity, grass) in query.iter() {
         for (grass_entity, grass_id) in grass_entity_query.iter() {
             if grass_id.0 == entity.index() {
-                commands.entity(grass_entity).insert(GrassColorData::from(grass.color.clone()));
+                commands.entity(grass_entity)
+                    .insert(GrassColorData::from(grass.color.clone()))
+                    .insert(WindData::from(grass.wind.clone()));
             }
         }
     }
@@ -116,7 +119,8 @@ pub fn spawn_grass(
         grass.instance_data.clone(),
         GrassColorData::from(grass.color),
         NoFrustumCulling,
-        GrassId(entity.index())
+        GrassId(entity.index()),
+        WindData::from(grass.wind),
     ));
 }
 
@@ -136,9 +140,9 @@ impl Default for GrassColor {
     fn default() -> Self {
         Self {
             ao: [0.01, 0.02, 0.05, 1.0].into(),
-            color_1: [0.33, 0.57, 0.29, 1.0].into(),
-            color_2: [0.08, 0.43, 0.29, 1.0].into(),
-            tip: [1.0, 1.0, 1.0, 1.0].into(),
+            color_1: [0.1, 0.23, 0.09, 1.0].into(),
+            color_2: [0.12, 0.39, 0.15, 1.0].into(),
+            tip: [0.7, 0.7, 0.7, 1.0].into(),
         }
     }
 }
