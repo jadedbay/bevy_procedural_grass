@@ -91,3 +91,21 @@ impl ExtractComponent for WindData {
         Some(item.clone())
     }
 }
+
+#[derive(Component, Pod, Zeroable, Clone, Copy, Reflect, Default, Debug)]
+#[reflect(Component)]
+#[repr(C)]
+pub struct LightData {
+    pub direction: Vec3,
+    _padding: f32,
+}
+
+impl ExtractComponent for LightData {
+    type Query = &'static LightData;
+    type Filter = ();
+    type Out = Self;
+
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
+        Some(item.clone())
+    }
+}

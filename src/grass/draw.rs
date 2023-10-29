@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use super::prepare::{ColorBindGroup, InstanceBuffer, WindBindGroup};
+use super::prepare::{ColorBindGroup, InstanceBuffer, WindBindGroup, LightBindGroup};
 
 pub type DrawGrass = (
     SetItemPipeline,
@@ -8,6 +8,7 @@ pub type DrawGrass = (
     SetMeshBindGroup<1>,
     SetColorBindGroup<2>,
     SetWindBindGroup<3>,
+    SetLightBindGroup<4>,
     DrawGrassInstanced,
 );
 
@@ -42,6 +43,28 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetWindBindGroup<I> {
         _item: &P,
         _view: (),
         bind_group: Option<&'w WindBindGroup>,
+        _meshes: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let Some(bind_group) = bind_group else {
+            return RenderCommandResult::Failure;
+        };
+        pass.set_bind_group(I, &bind_group.bind_group, &[]);
+        RenderCommandResult::Success
+    }
+}
+
+
+pub struct SetLightBindGroup<const I: usize>;
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetLightBindGroup<I> {
+    type Param = ();
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = Option<Read<LightBindGroup>>;
+
+    fn render<'w>(
+        _item: &P,
+        _view: (),
+        bind_group: Option<&'w LightBindGroup>,
         _meshes: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {

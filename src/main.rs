@@ -1,12 +1,12 @@
-use bevy::{prelude::*, pbr::wireframe::WireframePlugin, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
+
+use bevy::{prelude::*, pbr::wireframe::WireframePlugin, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_flycam::*;
 
 use grass::{grass::{Grass, GrassColor}, GrassPlugin, extract::GrassInstanceData, wind::Wind};
-use terrain::{TerrainPlugin, component::Terrain};
+use noise::NoiseFn;
 
 pub mod grass;
-pub mod terrain;
 
 fn main() {
     App::new()
@@ -15,7 +15,6 @@ fn main() {
         WireframePlugin,
         PlayerPlugin,
         WorldInspectorPlugin::new(),
-        TerrainPlugin,
         GrassPlugin,
         LogDiagnosticsPlugin::default(),
         FrameTimeDiagnosticsPlugin,
@@ -27,32 +26,41 @@ fn main() {
 fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
 ) {
+    let mut terrain_mesh = Mesh::from(shape::Plane { size: 1.0, subdivisions: 100 });
+    if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+        if let VertexAttributeValues::Float32x3(positions) = positions {
+            for position in positions.iter_mut() {
+                let y = noise::Perlin::new(1).get([(position[0] * 5.) as f64, (position[2] * 5.) as f64]) as f32;
+                position[1] += y * 2.;
+            }
+        }
+    }
+
     commands.spawn((
         PbrBundle {
-            material: materials.add(Color::DARK_GREEN.into()),
+            mesh: meshes.add(terrain_mesh),
+            material: materials.add(StandardMaterial {
+                base_color: Color::rgb(0.0, 0.1, 0.0),
+                reflectance: 0.0,
+                ..Default::default()
+            }),
             transform: Transform::from_scale(Vec3::new(100.0, 1.0, 100.0)),
             ..Default::default()
         }, 
-        Terrain::default(),
         Grass {
             mesh: asset_server.load::<Mesh, &str>("meshes/grass_blade.glb#Mesh0/Primitive0"),
-            instance_data: GrassInstanceData::default(),
-            density: 5,
-            color: GrassColor::default(),
-            wind: Wind::default(),
-            regenerate: false,
+            density: 24,
+            offset_strength: 0.5,
+            ..default()
         },
     ));
      
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(4., 8., 4.),
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight::default(),
+        transform: Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, 5., -5., 5.)),
         ..default()
     });
 }

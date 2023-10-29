@@ -1,12 +1,11 @@
-use bevy::{prelude::*, render::view::NoFrustumCulling};
+use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues}};
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
-use noise::NoiseFn;
 use rand::Rng;
 
-use crate::{terrain::component::Terrain, grass::extract::{GrassInstanceData, InstanceData}};
+use crate::grass::extract::{GrassInstanceData, InstanceData};
 
-use super::{extract::{GrassColorData, WindData}, wind::Wind};
+use super::{extract::{GrassColorData, WindData, LightData}, wind::Wind};
 
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -14,25 +13,23 @@ pub struct Grass {
     #[reflect(ignore)]
     pub mesh: Handle<Mesh>,
     #[reflect(ignore)]
-    pub instance_data: GrassInstanceData,
+    pub grass_entity: Option<Entity>,
     pub density: u32,
+    pub offset_strength: f32,
     pub color: GrassColor,
     pub wind: Wind,
     pub regenerate: bool,
 }
 
-pub fn update_grass(
+pub fn update_grass_data(
     mut commands: Commands,
-    mut query: Query<(Entity, &Transform, &Terrain, &mut Grass)>,
-    grass_entity_query: Query<(Entity, &GrassId)>,
+    mut query: Query<(&Transform, &mut Grass, &Handle<Mesh>), Changed<Grass>>,
+    meshes: Res<Assets<Mesh>>,
 ) {
-    for (entity, transform, terrain, mut grass) in query.iter_mut() {
+    for (transform, mut grass, mesh_handle) in query.iter_mut() {
         if grass.regenerate {
-            generate_grass_data(transform, terrain, &mut grass);
-            for (grass_entity, grass_id) in grass_entity_query.iter() {
-                if grass_id.0 == entity.index() {
-                    commands.entity(grass_entity).insert(grass.instance_data.clone());
-                }
+            if let (Some(grass_entity), Some(mesh)) = (grass.grass_entity, meshes.get(mesh_handle)) {
+                commands.entity(grass_entity).insert(generate_grass_data(&mut grass, transform, mesh));
             }
 
             grass.regenerate = false;
@@ -42,90 +39,90 @@ pub fn update_grass(
 
 pub fn update_grass_params(
     mut commands: Commands,
-    query: Query<(Entity, &Grass), Changed<Grass>>,
-    grass_entity_query: Query<(Entity, &GrassId)>,
+    query: Query<&Grass, Changed<Grass>>,
 ) {
-    for (entity, grass) in query.iter() {
-        for (grass_entity, grass_id) in grass_entity_query.iter() {
-            if grass_id.0 == entity.index() {
-                commands.entity(grass_entity)
-                    .insert(GrassColorData::from(grass.color.clone()))
-                    .insert(WindData::from(grass.wind.clone()));
-            }
+    for grass in query.iter() {
+        if let Some(grass_entity) = grass.grass_entity {
+            commands.entity(grass_entity)
+                .insert(GrassColorData::from(grass.color.clone()))
+                .insert(WindData::from(grass.wind.clone()));
+        }
+    }
+}
+
+pub fn update_light(
+    mut query: Query<&mut LightData>,
+    light_query: Query<&Transform, With<DirectionalLight>>,
+) {
+    for mut light_data in query.iter_mut() {
+        for transform in light_query.iter() {
+            let direction = transform.rotation.to_euler(EulerRot::XYZ);
+
+            light_data.direction = Vec3::new(direction.0, direction.1, direction.2);
         }
     }
 }
 
 pub fn load_grass(
     mut commands: Commands,
-    mut query: Query<(Entity, &Transform, &Terrain, &mut Grass)>
+    mut query: Query<(&Transform, &mut Grass, &Handle<Mesh>)>,
+    meshes: Res<Assets<Mesh>>,
 ) {
-    for (entity, transform, terrain, mut grass) in query.iter_mut() {
-        generate_grass_data(transform, terrain, &mut grass);
-        spawn_grass(&mut commands, entity, &grass);
+    for (transform, mut grass, mesh_handle) in query.iter_mut() {
+        spawn_grass(&mut commands, transform, &mut grass, meshes.get(mesh_handle).unwrap());
     }
 }
 
 pub fn generate_grass_data(
-    transform: &Transform,
-    terrain: &Terrain, 
     grass: &mut Grass,
-) {
-    let size = transform.scale / 2.0;
-    let density = grass.density;
+    transform: &Transform,
+    mesh: &Mesh,
+) -> GrassInstanceData {
+    let offset = grass.offset_strength;
 
-    let rng = rand::thread_rng();
+    let mut data: Vec<InstanceData> = vec![];
+    if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
+        data = positions.iter().flat_map(|position| {
+            (0..grass.density).map(move |_| {
+                let mut rng = rand::thread_rng();
+                let offset_x = rng.gen_range(-offset..offset);
+                let offset_z = rng.gen_range(-offset..offset);
+                let mut blade_position = Vec3::new(position[0], position[1], position[2]) * transform.scale;
+                blade_position += Vec3::new(offset_x, 1.0, offset_z);
 
-    let data: Vec<InstanceData> = 
-    (-size.x as i32 * density as i32..=size.x as i32 * density as i32)
-    .flat_map(|x| {
-        let mut rng = rng.clone();
-        (-size.z as i32 * density as i32..=size.z as i32 * density as i32)
-        .map(move |z| {
-            let offset_x = rng.gen_range(-0.5..0.5);
-            let offset_z = rng.gen_range(-0.5..0.5);
-
-            let pos_x = (x as f32 + offset_x) / density as f32;
-            let pos_z = (z as f32 + offset_z) / density as f32;
-
-            let mut y = 1.;
-            if let Some(noise) = &terrain.noise {
-                y += (noise::Perlin::new(noise.seed).get([(pos_x * noise.intensity / transform.scale.x) as f64, (pos_z * noise.intensity / transform.scale.z) as f64]) as f32) * terrain.get_height_scale();
-            }
-
-            InstanceData {
-                position: Vec3::new(pos_x, y, pos_z),
-                uv: Vec2::new(
-                    (pos_x / transform.scale.x) + 0.5,
-                    (pos_z / transform.scale.z) + 0.5,
-                ),
-            }
-        })
-    })
-    .collect();
+                InstanceData {
+                    position: blade_position,
+                    uv: Vec2::new(
+                        (position[0] / transform.scale.x) + 0.5,
+                        (position[2] / transform.scale.z) + 0.5,
+                    ),
+                }
+            })
+        }).collect();
+    }
     dbg!(data.len());
 
-    grass.instance_data = GrassInstanceData(data);
+    GrassInstanceData(data)
 }
 
 pub fn spawn_grass(
     commands: &mut Commands,
-    entity: Entity,
-    grass: &Grass,
+    transform: &Transform,
+    grass: &mut Grass,
+    mesh: &Mesh,
 ) {
-    commands.spawn((
+    let grass_entity = commands.spawn((
         grass.mesh.clone(),
         SpatialBundle::INHERITED_IDENTITY,
-        grass.instance_data.clone(),
+        generate_grass_data(grass, transform, mesh),
         GrassColorData::from(grass.color),
-        NoFrustumCulling,
-        GrassId(entity.index()),
         WindData::from(grass.wind),
-    ));
-}
+        LightData::default(),
+        NoFrustumCulling,
+    )).id();
 
-#[derive(Component)]
-pub struct GrassId(u32);
+    grass.grass_entity = Some(grass_entity);
+}
 
 #[derive(Reflect, InspectorOptions, Clone, Copy)]
 #[reflect(InspectorOptions)]

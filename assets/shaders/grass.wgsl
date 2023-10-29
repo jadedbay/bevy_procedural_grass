@@ -29,11 +29,21 @@ struct Wind {
 @group(3) @binding(0)
 var<uniform> wind: Wind;
 
+struct Light {
+    direction: vec3<f32>,
+}
+@group(4) @binding(0)
+var<uniform> light: Light;
+
+// struct Camera {
+    
+// }
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(1) uv: vec2<f32>,
     @location(2) world_uv: vec2<f32>,
-    @location(3) time: f32,
+    @location(3) normal: vec3<f32>,
 };
 
 @vertex
@@ -50,12 +60,13 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let t = sin(wind.frequency * ((-wind.time * wind.speed) + vertex.i_uv.x + vertex.i_uv.y + noise_value)); 
     
     let curve_variance = mix(1.5, 2.0, fract_id);
-    position.z += mix(uv.y * uv.y, uv.y * uv.y * curve_variance, fract_id);
+    position.z += mix(0.0, uv.y * uv.y * curve_variance, fract_id);
 
     position = rotate_y(position, hash_id * 180.); // rotation
 
     let wind_variance = wind.strength * mix(1.5, 2.0, fract_id);
     position.z += mix(uv.y * uv.y, uv.y * uv.y * wind_variance, t);
+    //position.y -= mix(0.0, wind_variance * position.z * uv.y * 0.5, t);
 
     let y_scale = mix(0., 0.4, fract_id); // height
     position.y *= 1. + y_scale;
@@ -71,14 +82,22 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     out.uv = uv;
     out.world_uv = vertex.i_uv;
-    out.time = t;
+
+    out.normal = vertex.normal;
 
     return out;
 }
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
+    // var normal = in.normal;
+    // let view_dir = normalize(camera_position - in.world_pos);
+    // if (dot(view_dir, normal) < 0.0) {
+    //     normal = -normal;
+    // }
+
     let color_gradient = mix(color.color_1, color.color_2, in.uv.y);
+    //let ndotl = clamp(dot(light.direction, in.normal), 0.0, 1.0);
 
     let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0),  in.uv.y);
     let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip,  in.uv.y * in.uv.y);
@@ -86,7 +105,6 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let final_color = (color_gradient + tip) * ao;
     
     return final_color;
-    //return vec4(in.time, in.time, in.time, 1.);
 }
 
 const PI: f32 = 3.141592653589793238;

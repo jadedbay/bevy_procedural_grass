@@ -8,6 +8,7 @@ pub struct GrassPipeline {
     mesh_pipeline: MeshPipeline,
     pub color_layout: BindGroupLayout,
     pub wind_layout: BindGroupLayout,
+    pub light_layout: BindGroupLayout,
 }
 
 impl FromWorld for GrassPipeline {
@@ -35,11 +36,27 @@ impl FromWorld for GrassPipeline {
         });
 
         let wind_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("time_layout"),
+            label: Some("wind_layout"),
             entries: &[
                 BindGroupLayoutEntry {
                     binding: 0,
                     visibility: ShaderStages::VERTEX,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ]
+        });
+
+        let light_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("light_layout"),
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -55,6 +72,7 @@ impl FromWorld for GrassPipeline {
             mesh_pipeline: mesh_pipeline.clone(),
             color_layout,
             wind_layout,
+            light_layout,
         }
     }
 }
@@ -93,6 +111,7 @@ impl SpecializedMeshPipeline for GrassPipeline {
         });
         descriptor.layout.push(self.color_layout.clone());
         descriptor.layout.push(self.wind_layout.clone());
+        descriptor.layout.push(self.light_layout.clone());
 
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
         descriptor.primitive.cull_mode = None;

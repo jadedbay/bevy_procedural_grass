@@ -8,20 +8,19 @@ pub mod queue;
 pub mod extract;
 pub mod wind;
 
-use self::{grass::Grass, draw::DrawGrass, pipeline::GrassPipeline, extract::{GrassColorData, GrassInstanceData, WindData}};
+use self::{grass::Grass, draw::DrawGrass, pipeline::GrassPipeline, extract::{GrassColorData, GrassInstanceData, WindData, LightData}};
 
 pub struct GrassPlugin;
 
 impl Plugin for GrassPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Grass>()
-        .register_type::<WindData>()
-        .register_type::<GrassColorData>()
         .add_systems(PostStartup, grass::load_grass)
-        .add_systems(Update, (grass::update_grass, grass::update_grass_params))
+        .add_systems(Update, (grass::update_grass_data, grass::update_grass_params, grass::update_light))
         .add_plugins(ExtractComponentPlugin::<GrassInstanceData>::default())
         .add_plugins(ExtractComponentPlugin::<GrassColorData>::default())
         .add_plugins(ExtractComponentPlugin::<WindData>::default())
+        .add_plugins(ExtractComponentPlugin::<LightData>::default())
         .sub_app_mut(RenderApp)
         .add_render_command::<Opaque3d, DrawGrass>()
         .init_resource::<SpecializedMeshPipelines<GrassPipeline>>()
@@ -32,6 +31,7 @@ impl Plugin for GrassPlugin {
                 prepare::prepare_instance_buffers.in_set(RenderSet::Prepare),
                 prepare::prepare_color_buffers.in_set(RenderSet::Prepare),
                 prepare::prepare_wind_buffers.in_set(RenderSet::Prepare),
+                prepare::prepare_light_buffers.in_set(RenderSet::Prepare),
             ),
         );
     }
