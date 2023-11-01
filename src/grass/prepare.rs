@@ -1,30 +1,8 @@
+use std::time::Instant;
+
 use bevy::{prelude::*, render::{render_resource::{Buffer, BufferInitDescriptor, BufferUsages, BindGroup, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding}, renderer::RenderDevice}};
 
 use super::{extract::{GrassInstanceData, GrassColorData, WindData, LightData}, pipeline::GrassPipeline};
-
-#[derive(Component)]
-pub struct InstanceBuffer {
-    pub buffer: Buffer,
-    pub length: usize,
-}
-
-pub(super) fn prepare_instance_buffers(
-    mut commands: Commands,
-    query: Query<(Entity, &GrassInstanceData)>,
-    render_device: Res<RenderDevice>,
-) {
-    for (entity, instance_data) in &query {
-        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some("instance data buffer"),
-            contents: bytemuck::cast_slice(instance_data.as_slice()),
-            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
-        });
-        commands.entity(entity).insert(InstanceBuffer {
-            buffer,
-            length: instance_data.len(),
-        });
-    }
-}
 
 #[derive(Component)]
 pub struct ColorBindGroup {

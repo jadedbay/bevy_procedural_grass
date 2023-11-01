@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::extract_component::ExtractComponent, ecs::query::QueryItem};
+use bevy::{prelude::*, render::{extract_component::ExtractComponent, Extract}, ecs::query::QueryItem, reflect::TypeUuid};
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use bytemuck::{Pod, Zeroable};
 
@@ -42,7 +42,8 @@ pub struct InstanceData {
     pub uv: Vec2,
 }
 
-#[derive(Component, Deref, Clone, Reflect)]
+#[derive(Component, Deref, Clone, Reflect, TypeUuid)]
+#[uuid = "81a29e63-ef6c-4561-b49c-4a138ff39c01"]
 pub struct GrassInstanceData(pub Vec<InstanceData>);
 
 impl Default for GrassInstanceData {
@@ -51,14 +52,15 @@ impl Default for GrassInstanceData {
     }
 }
 
-impl ExtractComponent for GrassInstanceData {
-    type Query = &'static GrassInstanceData;
-    type Filter = ();
-    type Out = Self;
-
-    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
-        Some(GrassInstanceData(item.0.clone()))
+pub fn extract_grass(
+    mut commands: Commands,
+    extract: Extract<Query<(Entity, &Handle<GrassInstanceData>)>>
+) {
+    let mut values = Vec::new();
+    for (entity, data) in extract.iter() {
+        values.push((entity, data.clone()))
     }
+    commands.insert_or_spawn_batch(values);
 }
 
 #[derive(Component, Clone, Copy, Reflect, InspectorOptions, Default)]

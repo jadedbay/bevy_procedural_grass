@@ -13,7 +13,7 @@ pub struct Wind {
 impl Default for Wind {
     fn default() -> Self {
         Self {
-            frequency: 15.,
+            frequency: 18.,
             speed: 0.05,
             strength: 1.,
             noise: 0.1,

@@ -9,7 +9,7 @@ pub(super) fn grass_queue(
     mut pipelines: ResMut<SpecializedMeshPipelines<GrassPipeline>>,
     pipeline_cache: Res<PipelineCache>,
     meshes: Res<RenderAssets<Mesh>>,
-    material_meshes: Query<(Entity, &MeshUniform, &Handle<Mesh>), With<GrassInstanceData>>,
+    material_meshes: Query<(Entity, &MeshUniform, &Handle<Mesh>), With<Handle<GrassInstanceData>>>,
     mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
 ) {
     let draw_custom = opaque_3d_draw_functions.read().id::<DrawGrass>();
