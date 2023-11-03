@@ -103,9 +103,14 @@ impl SpecializedMeshPipeline for GrassPipeline {
                     shader_location: 3,
                 },
                 VertexAttribute {
-                    format: VertexFormat::Float32x2,
+                    format: VertexFormat::Float32x3,
                     offset: std::mem::size_of::<[f32; 3]>() as u64,
                     shader_location: 4,
+                },
+                VertexAttribute {
+                    format: VertexFormat::Float32x2,
+                    offset: std::mem::size_of::<[f32; 6]>() as u64,
+                    shader_location: 5,
                 },
             ],
         });

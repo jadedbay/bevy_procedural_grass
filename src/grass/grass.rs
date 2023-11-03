@@ -98,9 +98,11 @@ pub fn generate_grass_data(
                 if triangle.len() == 3 {
                     let result = {
                         // Calculate the area of the triangle
-                        let v0 = Vec3::from(positions[triangle[0] as usize]);
-                        let v1 = Vec3::from(positions[triangle[1] as usize]);
-                        let v2 = Vec3::from(positions[triangle[2] as usize]);
+                        let v0 = Vec3::from(positions[triangle[0] as usize]) * transform.scale;
+                        let v1 = Vec3::from(positions[triangle[1] as usize]) * transform.scale;
+                        let v2 = Vec3::from(positions[triangle[2] as usize]) * transform.scale;
+
+                        let normal = (v1 - v0).cross(v2 - v0).normalize();
     
                         let v0_area = Vec3::new(v0.x, 0.0, v0.z);
                         let v1_area = Vec3::new(v1.x, 0.0, v1.z);
@@ -121,7 +123,6 @@ pub fn generate_grass_data(
     
                             // Calculate the position of the blade using the barycentric coordinates
                             let position = v0 * barycentric.x + v1 * barycentric.y + v2 * barycentric.z;
-                            let blade_position = position * transform.scale;
                         
                             let uv0 = Vec2::from(uvs[triangle[0] as usize]);
                             let uv1 = Vec2::from(uvs[triangle[1] as usize]);
@@ -129,7 +130,8 @@ pub fn generate_grass_data(
                             let uv = uv0 * barycentric.x + uv1 * barycentric.y + uv2 * barycentric.z;
 
                             Some(InstanceData {
-                                position: blade_position,
+                                position,
+                                normal,
                                 uv,
                             })
                         }).collect::<Vec<_>>()
@@ -163,6 +165,7 @@ pub fn spawn_grass(
     let grass_entity = commands.spawn((
         grass.mesh.clone(),
         SpatialBundle::INHERITED_IDENTITY,
+
         handle,
         GrassColorData::from(grass.color),
         WindData::from(grass.wind),

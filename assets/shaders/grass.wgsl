@@ -3,11 +3,11 @@
 
 struct Vertex {
     @location(0) position: vec3<f32>,
-    @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
 
     @location(3) i_pos: vec3<f32>,
-    @location(4) i_uv: vec2<f32>
+    @location(4) i_normal: vec3<f32>,
+    @location(5) i_uv: vec2<f32>
 };
 
 struct Color {
@@ -43,7 +43,6 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(1) uv: vec2<f32>,
     @location(2) world_uv: vec2<f32>,
-    @location(3) normal: vec3<f32>,
     @location(4) t: f32,
 };
 
@@ -60,30 +59,25 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let noise_value = noise(vertex.i_uv.x + vertex.i_uv.y) * wind.noise;
     let t = sin(wind.frequency * ((-wind.time * wind.speed) + vertex.i_uv.x + vertex.i_uv.y + noise_value)); 
 
-    // let curve_variance = mix(1.5, 2.0, fract_id);
-    // position.z += mix(0.0, uv.y * uv.y * curve_variance, fract_id);
+    let length = mix(1.5, 2.5, fract(hash(hash_id)));
+    let width = mix(1.5, 2.5, fract(hash(hash_id * 200. + 5.)));
 
-    let length = mix(1.5, 2.5, fract(hash(fract_id)));
-    let width = mix(2.5, 4., fract(hash(fract_id)));
+    let tilt = mix(0.8, length, fract(hash(hash_id * 10000.)));
+    let curve = mix(0.66, 1., fract(hash(hash_id * 8000. + 50.)));
 
-    let tilt = mix(0.5, 1.0, fract_id);
-    let curve = mix(0.66, 1., fract_id);
+    let sway = mix(0.5, 0.8, fract_id);
+    let p2 = mix(0.0, sway, t * uv.y);
 
-    let bezier = cubic_bezier(uv.y, vec2(0.0, 0.0), vec2(-curve + 1.33, curve), vec2(1.0, tilt), vec2(1.0, tilt));
-    position.z = bezier.x * length;
-    position.y = bezier.y  * length;
+    let bezier = cubic_bezier(uv.y * 0.8, vec2(0.0, 0.0), vec2(-curve + 1.33, curve), vec2(length, tilt - p2), vec2(length, tilt));
+    position.z = bezier.x;
+    position.y = bezier.y;
     position.x *= width;
 
-    position = rotate_y(position, hash_id * 3.); // rotation
+    position = rotate_y(position, hash_id * 3.);
 
-    // let wind_variance = wind.strength * mix(1.5, 2.0, fract_id);
-    // position.z += mix(uv.y * uv.y, uv.y * uv.y * wind_variance, t);
-    //position.y -= mix(0.0, wind_variance * position.z * uv.y * 0.5, t);
+    let rotation_matrix = rotate_align(vec3<f32>(0.0, 1.0, 0.0), vertex.i_normal);
+    position = rotation_matrix * position;
 
-    // let y_scale = mix(0., 0.4, fract_id); // height
-    // position.y *= 1. + y_scale;
-    // position.y += y_scale;
-    
     position += vertex.i_pos.xyz;
 
     var out: VertexOutput;
@@ -95,8 +89,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.uv = uv;
     out.world_uv = vertex.i_uv;
     out.t = t;
-
-    out.normal = vertex.normal;
 
     return out;
 }
@@ -140,12 +132,6 @@ fn noise(x: f32) -> f32 {
     return fract(sin(x) * 43758.5453);
 }
 
-fn rotate_vector(vec: vec3<f32>, axis: vec3<f32>, angle: f32) -> vec3<f32> {
-    let cos_angle = cos(angle);
-    let sin_angle = sin(angle);
-    return vec * cos_angle + cross(axis, vec) * sin_angle + axis * dot(axis, vec) * (1.0 - cos_angle);
-}
-
 fn cubic_bezier(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f32>) -> vec2<f32> {
     let u = 1.0 - t;
     let tt = t * t;
@@ -159,4 +145,19 @@ fn cubic_bezier(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f3
     p = p + ttt * p3; // t^3 * p3
 
     return p;
+}
+
+fn rotate_align(v1: vec3<f32>, v2: vec3<f32>) -> mat3x3<f32> {
+    let axis = cross(v1, v2);
+
+    let cos_a = dot(v1, v2);
+    let k = 1.0 / (1.0 + cos_a);
+
+    let result = mat3x3f( 
+            (axis.x * axis.x * k) + cos_a, (axis.x * axis.y * k) + axis.z, (axis.x * axis.z * k) - axis.y,
+            (axis.y * axis.x * k) - axis.z, (axis.y * axis.y * k) + cos_a,  (axis.y * axis.z * k) + axis.x, 
+            (axis.z * axis.x * k) + axis.y, (axis.z * axis.y * k) - axis.x, (axis.z * axis.z * k) + cos_a 
+        );
+
+    return result;
 }

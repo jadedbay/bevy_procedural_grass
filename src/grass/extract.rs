@@ -39,6 +39,7 @@ impl ExtractComponent for GrassColorData {
 #[repr(C)]
 pub struct InstanceData {
     pub position: Vec3,
+    pub normal: Vec3,
     pub uv: Vec2,
 }
 

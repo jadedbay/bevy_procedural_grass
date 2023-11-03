@@ -1,5 +1,5 @@
 
-use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, Wireframe}, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}, render::{mesh::{VertexAttributeValues, Indices}, render_resource::{Buffer, PrimitiveTopology}, RenderApp, renderer::RenderDevice}};
+use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, Wireframe}, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}, render::{mesh::{VertexAttributeValues, Indices}, render_resource::{Buffer, PrimitiveTopology}, RenderApp, renderer::RenderDevice, primitives}};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_flycam::*;
 
@@ -31,17 +31,18 @@ fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    asset_server: Res<AssetServer>,
 ) {
     let mut terrain_mesh = Mesh::from(shape::Plane { size: 1.0, subdivisions: 100 });
     if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
         if let VertexAttributeValues::Float32x3(positions) = positions {
             for position in positions.iter_mut() {
-                let y = noise::Perlin::new(1).get([(position[0] * 5.) as f64, (position[2] * 5.) as f64]) as f32;
-                position[1] += y * 2.;
+                let y = noise::Perlin::new(1).get([((position[0]) * 5.) as f64, ((position[2]) * 5.) as f64]) as f32;
+                position[1] += y;
             }
         }
     }
+
+    //let mut terrain_mesh = Mesh::try_from(shape::Icosphere { radius: 2.0, subdivisions: 32 }).unwrap();
 
     commands.spawn((
         PbrBundle {
@@ -51,12 +52,12 @@ fn setup(
                 reflectance: 0.0,
                 ..Default::default()
             }),
-            transform: Transform::from_scale(Vec3::new(100.0, 1.0, 100.0)),
+            transform: Transform::from_scale(Vec3::new(100.0, 2.0, 100.0)),
             ..Default::default()
         }, 
         Grass {
             mesh: meshes.add(grass_mesh()),
-            density: 250000,
+            density: 24,
             ..default()
         },
     ));
@@ -85,40 +86,24 @@ fn grass_mesh() -> Mesh {
         [-0.02, 0.48, 0.0],
         [0.013, 0.55, 0.0],
         [-0.013, 0.55, 0.0],
-        [0.0, 0.7, 0.0],
+        [0.0, 0.63, 0.0],
     ]);
-    grass_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-    ]);
+
     grass_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![
         [0.0, 0.0],
         [1.0, 0.0],
-        [1.0, 0.14 / 0.7],
-        [0.0, 0.14 / 0.7],
-        [0.0, 0.25 / 0.7],
-        [1.0, 0.25 / 0.7],
-        [0.0, 0.34 / 0.7],
-        [1.0, 0.34 / 0.7],
-        [0.0, 0.42 / 0.7],
-        [1.0, 0.42 / 0.7],
-        [0.0, 0.48 / 0.7],
-        [1.0, 0.48 / 0.7],
-        [0.0, 0.55 / 0.7],
-        [1.0, 0.55 / 0.7],
+        [1.0, 0.14 / 0.63],
+        [0.0, 0.14 / 0.63],
+        [0.0, 0.25 / 0.63],
+        [1.0, 0.25 / 0.63],
+        [0.0, 0.34 / 0.63],
+        [1.0, 0.34 / 0.63],
+        [0.0, 0.42 / 0.63],
+        [1.0, 0.42 / 0.63],
+        [0.0, 0.48 / 0.63],
+        [1.0, 0.48 / 0.63],
+        [0.0, 0.55 / 0.63],
+        [1.0, 0.55 / 0.63],
         [0.5, 1.0],
     ]);
     grass_mesh.set_indices(Some(Indices::U32(vec![

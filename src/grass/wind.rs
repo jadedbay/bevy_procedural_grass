@@ -14,7 +14,7 @@ impl Default for Wind {
     fn default() -> Self {
         Self {
             frequency: 18.,
-            speed: 0.05,
+            speed: 0.1,
             strength: 1.,
             noise: 0.1,
         }
