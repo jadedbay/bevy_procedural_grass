@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{extract_component::ExtractComponentPlugin, RenderApp, render_resource::{SpecializedMeshPipelines, Buffer}, Render, RenderSet, render_phase::AddRenderCommand, render_asset::RenderAssetPlugin}, core_pipeline::core_3d::Opaque3d};
+use bevy::{prelude::*, render::{extract_component::ExtractComponentPlugin, RenderApp, render_resource::{SpecializedMeshPipelines, Buffer}, Render, RenderSet, render_phase::AddRenderCommand, render_asset::RenderAssetPlugin, Extract}, core_pipeline::core_3d::Opaque3d};
 
 pub mod grass;
 pub mod pipeline;
@@ -8,7 +8,7 @@ pub mod queue;
 pub mod extract;
 pub mod wind;
 
-use self::{grass::Grass, draw::DrawGrass, pipeline::GrassPipeline, extract::{GrassColorData, GrassInstanceData, WindData, LightData}};
+use self::{grass::Grass, draw::DrawGrass, pipeline::GrassPipeline, extract::{GrassColorData, GrassInstanceData, WindData, LightData, BladeData}, wind::WindMap};
 
 pub struct GrassPlugin;
 
@@ -22,6 +22,8 @@ impl Plugin for GrassPlugin {
         .add_plugins(ExtractComponentPlugin::<GrassColorData>::default())
         .add_plugins(ExtractComponentPlugin::<WindData>::default())
         .add_plugins(ExtractComponentPlugin::<LightData>::default())
+        .add_plugins(ExtractComponentPlugin::<BladeData>::default())
+        .add_plugins(ExtractComponentPlugin::<WindMap>::default())
         .sub_app_mut(RenderApp)
         .add_render_command::<Opaque3d, DrawGrass>()
         .init_resource::<SpecializedMeshPipelines<GrassPipeline>>()
@@ -33,6 +35,8 @@ impl Plugin for GrassPlugin {
                 prepare::prepare_color_buffers.in_set(RenderSet::Prepare),
                 prepare::prepare_wind_buffers.in_set(RenderSet::Prepare),
                 prepare::prepare_light_buffers.in_set(RenderSet::Prepare),
+                prepare::prepare_blade_buffers.in_set(RenderSet::Prepare),
+                prepare::prepare_wind_map_buffers.in_set(RenderSet::Prepare),
             ),
         );
     }

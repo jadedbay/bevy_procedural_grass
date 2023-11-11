@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{extract_component::ExtractComponent, Extract}, e
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use bytemuck::{Pod, Zeroable};
 
-use super::{grass::GrassColor, wind::Wind};
+use super::{grass::{GrassColor, Blade}, wind::Wind};
 
 #[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -68,19 +68,19 @@ pub fn extract_grass(
 #[reflect(Component, InspectorOptions)]
 #[repr(C)]
 pub struct WindData {
-    pub frequency: f32,
     pub speed: f32,
-    pub noise: f32,
     pub strength: f32,
+    pub direction: f32,
+    pub force: f32,
 }
 
 impl From<Wind> for WindData {
     fn from(wind: Wind) -> Self {
         Self {
-            frequency: wind.frequency,
             speed: wind.speed,
-            noise: wind.noise,
             strength: wind.strength,
+            direction: wind.direction,
+            force: wind.force,
         }
     }
 }
@@ -105,6 +105,37 @@ pub struct LightData {
 
 impl ExtractComponent for LightData {
     type Query = &'static LightData;
+    type Filter = ();
+    type Out = Self;
+
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
+        Some(item.clone())
+    }
+}
+
+#[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
+#[reflect(Component, InspectorOptions)]
+#[repr(C)]
+pub struct BladeData {
+    pub length: f32,
+    pub width: f32,
+    pub tilt: f32,
+    pub bend: f32,
+}
+
+impl From<Blade> for BladeData {
+    fn from(blade: Blade) -> Self {
+        Self {
+            length: blade.length,
+            width: blade.width,
+            tilt: blade.tilt,
+            bend: blade.bend,
+        }
+    }
+}
+
+impl ExtractComponent for BladeData {
+    type Query = &'static BladeData;
     type Filter = ();
     type Out = Self;
 

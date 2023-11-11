@@ -1,5 +1,10 @@
 #import bevy_pbr::mesh_functions  mesh_position_local_to_clip
 #import bevy_pbr::mesh_bindings   mesh
+#import bevy_pbr::mesh_view_bindings globals
+#import bevy_pbr::mesh_view_bindings lights
+#import bevy_pbr::mesh_view_bindings view
+#import bevy_pbr::utils PI
+#import bevy_pbr::utils random1D
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -20,14 +25,22 @@ struct Color {
 var<uniform> color: Color;
 
 struct Wind {
-    frequency: f32,
     speed: f32,
-    noise: f32,
     strength: f32,
-    time: f32,
+    direction: f32,
+    force: f32,
 };
 @group(3) @binding(0)
 var<uniform> wind: Wind;
+
+struct Blade {
+    length: f32,
+    width: f32,
+    tilt: f32,
+    bend: f32,
+}
+@group(5) @binding(0)
+var<uniform> blade: Blade;
 
 struct Light {
     direction: vec3<f32>,
@@ -35,48 +48,81 @@ struct Light {
 @group(4) @binding(0)
 var<uniform> light: Light;
 
-// struct Camera {
-    
-// }
+@group(6) @binding(0)
+var t_wind_map: texture_2d<f32>;
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(1) uv: vec2<f32>,
     @location(2) world_uv: vec2<f32>,
-    @location(4) t: f32,
+    @location(3) t: f32,
+    @location(4) normal: vec3<f32>,
+    @location(5) world_position: vec3<f32>,
+    @location(6) world_normal: vec3<f32>,
 };
 
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     let uv = vertex.uv;
 
-    var hash_id = hash(vertex.i_pos.x * 10000. + vertex.i_pos.y * 100. + vertex.i_pos.z * 0.05 + 2.);
-    hash_id = hash(hash_id * 100000.);
-    let fract_id = fract(hash_id);
+    var hash_id = random1D(vertex.i_pos.x * 10000. + vertex.i_pos.y * 100. + vertex.i_pos.z * 0.05 + 2.);
+    hash_id = random1D(hash_id * 100000.);
 
     var position = vertex.position;
 
-    let noise_value = noise(vertex.i_uv.x + vertex.i_uv.y) * wind.noise;
-    let t = sin(wind.frequency * ((-wind.time * wind.speed) + vertex.i_uv.x + vertex.i_uv.y + noise_value)); 
+    let rad = wind.direction * PI / 180.0;
+    let wind_direction = vec2<f32>(cos(rad), sin(rad));
+    var facing = normalize(vec2<f32>(mix(-1., 1., hash_id), mix(-1., 1., random1D(hash_id * vertex.i_pos.x))));
 
-    let length = mix(1.5, 2.5, fract(hash(hash_id)));
-    let width = mix(1.5, 2.5, fract(hash(hash_id * 200. + 5.)));
+    let noise_value = noise(vertex.i_uv.x + vertex.i_uv.y);
+    let r = sample_wind_map(vertex.i_uv + hash_id).r;
 
-    let tilt = mix(0.8, length, fract(hash(hash_id * 10000.)));
-    let curve = mix(0.66, 1., fract(hash(hash_id * 8000. + 50.)));
+    //var t = remap(sample_wind_map(vertex.i_uv).r, 0.20, 0.8, 0.0, 1.0);
+    var t = sample_wind_map(vertex.i_uv).r;
 
-    let sway = mix(0.5, 0.8, fract_id);
-    let p2 = mix(0.0, sway, t * uv.y);
+    let width = blade.width;
+    let length = mix(blade.length, blade.length + 0.5, fract(hash_id));
+    let tilt = blade.tilt;
+    let bend = blade.bend;
 
-    let bezier = cubic_bezier(uv.y * 0.8, vec2(0.0, 0.0), vec2(-curve + 1.33, curve), vec2(length, tilt - p2), vec2(length, tilt));
-    position.z = bezier.x;
+    let p3y = tilt * length;
+    let p3x = sqrt(length * length - p3y * p3y);
+    
+    var p3 = vec3<f32>(p3x, p3y, 0.0);
+
+    var blade_dir = normalize(vec3<f32>(-p3y, p3x, 0.0));
+
+    var p0 = vec3<f32>(0.0, 0.0,  0.0);
+    var p1 = 0.33 * p3;
+    var p2 = 0.66 * p3;
+
+    p1 += blade_dir * bend;
+    p2 += blade_dir * bend;
+
+    var p2_offset = pow(0.66, wind.strength) * sin(r * 0.5) * wind.force;
+    var p3_offset = pow(1., wind.strength) * sin(r * 0.5) * wind.force;
+
+    p2 += blade_dir * p2_offset;
+    p3 += blade_dir * p3_offset;
+
+    facing = normalize(mix(facing, wind_direction, sin(t) * 0.8));
+
+    let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     position.y = bezier.y;
-    position.x *= width;
+    var facing_normal = vec2<f32>(-facing.y, facing.x);
+    let bezier_xz = bezier.x * facing;
+    let xz_pos = bezier_xz + (facing_normal * vertex.position.x * width);
+    position.x = xz_pos.x;
+    position.z = xz_pos.y;
 
-    position = rotate_y(position, hash_id * 3.);
+    let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
+    var normal = normalize(cross(tangent, vec3<f32>(facing_normal.x, 0.0, facing_normal.y)));
+    // normal.x += (uv.x * uv.x);
+    // normal.z += (uv.x * uv.x);
+    normal = normalize(normal);
 
-    let rotation_matrix = rotate_align(vec3<f32>(0.0, 1.0, 0.0), vertex.i_normal);
-    position = rotation_matrix * position;
+
+    //position = rotate_y(position, rotation_angle);
 
     position += vertex.i_pos.xyz;
 
@@ -88,31 +134,41 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     out.uv = uv;
     out.world_uv = vertex.i_uv;
-    out.t = t;
+    out.t = r;
+    out.normal = normal;
+    out.world_position = position;
+    out.world_normal = vertex.i_normal;
 
     return out;
 }
 
 @fragment
-fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    // var normal = in.normal;
-    // let view_dir = normalize(camera_position - in.world_pos);
-    // if (dot(view_dir, normal) < 0.0) {
-    //     normal = -normal;
-    // }
+fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @location(0) vec4<f32> {
+    var normal = in.normal;
+    if (!is_front) {
+        normal = -normal;
+    }
+
+    let spec_strength = 0.5;
+    let view_dir = normalize(view.world_position - in.clip_position.xyz);
+    let reflect_dir = reflect(lights.directional_lights[0].direction_to_light, normal);
+    let spec = pow(max(dot(view_dir, reflect_dir), 0.0), 16.);
+    let specular =  spec_strength * spec;
 
     let color_gradient = mix(color.color_1, color.color_2, in.uv.y);
-    //let ndotl = clamp(dot(light.direction, in.normal), 0.0, 1.0);
+    let ndotl_1 = clamp(dot(normal, -lights.directional_lights[0].direction_to_light), 0.2, 1.0);
+    let ndotl_2 = clamp(dot(-normal, -lights.directional_lights[0].direction_to_light), 0.2, 1.0);
+    let ndotl = max(ndotl_1, ndotl_2);
 
     let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0),  in.uv.y);
     let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip,  in.uv.y * in.uv.y);
 
-    let final_color = (color_gradient + tip) * ao;
+    let final_color = (color_gradient + spec) * ndotl * ao;
+    //let final_color = color.color_2 * ndotl;
     
     return final_color;
+    //return vec4(in.t, in.t, in.t, 1.0);
 }
-
-const PI: f32 = 3.141592653589793238;
 
 fn rotate_y(vertex: vec3<f32>, degrees: f32) -> vec3<f32> {
     let alpha: f32 = degrees * PI / 180.0;
@@ -123,16 +179,7 @@ fn rotate_y(vertex: vec3<f32>, degrees: f32) -> vec3<f32> {
     return vec3<f32>(rotated_xz.x, vertex.y, rotated_xz.y);
 }
 
-fn hash(n: f32) -> f32 {
-    let x = fract(n * 0.1031);
-    return x * x * 33.33 + x;
-}
-
-fn noise(x: f32) -> f32 {
-    return fract(sin(x) * 43758.5453);
-}
-
-fn cubic_bezier(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f32>) -> vec2<f32> {
+fn cubic_bezier(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>, p3: vec3<f32>) -> vec3<f32> {
     let u = 1.0 - t;
     let tt = t * t;
     let uu = u * u;
@@ -145,6 +192,63 @@ fn cubic_bezier(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f3
     p = p + ttt * p3; // t^3 * p3
 
     return p;
+}
+
+fn cubic_bezier_v2(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f32>) -> vec2<f32> {
+    let u = 1.0 - t;
+    let tt = t * t;
+    let uu = u * u;
+    let uuu = uu * u;
+    let ttt = tt * t;
+
+    var p = uuu * p0; // (1-t) ^ 3  * p0
+    p = p + 3.0 * uu * t * p1; // 3(1-t)^2 * t * p1
+    p = p + 3.0 * u * tt * p2; // 3(1-t) * t^2 * p2
+    p = p + ttt * p3; // t^3 * p3
+
+    return p;
+}
+
+fn bezier_derivative(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f32>) -> vec2<f32> {
+    let u = 1.0 - t;
+    let tt = t * t;
+    let uu = u * u;
+
+    var p = 3.0 * uu * (p1 - p0); // 3(1-t)^2 * (p1 - p0)
+    p = p + 6.0 * u * t * (p2 - p1); // 6(1-t) * t * (p2 - p1)
+    p = p + 3.0 * tt * (p3 - p2); // 3t^2 * (p3 - p2)
+
+    return p;
+}
+
+fn bezier_tangent_v2(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f32>) -> vec2<f32> {
+    let u = 1.0 - t;
+    let u2 = u * u;
+    let t2 = t * t;
+    
+    let tangent = -3.0 * u2 * p0
+        + 3.0 * u2 * p1
+        - 6.0 * u * t * p1
+        + 6.0 * u * t * p2
+        - 3.0 * t2 * p2
+        + 3.0 * t2 * p3;
+    
+    return tangent;
+}
+
+fn bezier_tangent(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>, p3: vec3<f32>) -> vec3<f32> {
+    let u = 1.0 - t;
+    let u2 = u * u;
+    let t2 = t * t;
+    
+    let tangent = -3.0 * u2 * p0
+        + 3.0 * u2 * p1
+        - 6.0 * u * t * p1
+        + 6.0 * u * t * p2
+        - 3.0 * t2 * p2
+        + 3.0 * t2 * p3;
+    
+    return tangent;
 }
 
 fn rotate_align(v1: vec3<f32>, v2: vec3<f32>) -> mat3x3<f32> {
@@ -160,4 +264,24 @@ fn rotate_align(v1: vec3<f32>, v2: vec3<f32>) -> mat3x3<f32> {
         );
 
     return result;
+}
+
+fn sample_wind_map(uv: vec2<f32>) -> vec4<f32> {
+    let texture_size = textureDimensions(t_wind_map);
+    
+    let rad = wind.direction * PI / 180.0;
+    let direction = vec2<f32>(cos(rad), sin(rad));
+    
+    let scrolled_uv = uv + direction * globals.time * wind.speed;
+    
+    let pixel_coords = vec2<i32>(fract(scrolled_uv) * vec2<f32>(texture_size));
+    return textureLoad(t_wind_map, pixel_coords, 0);
+}
+
+fn remap(value: f32, from_min: f32, from_max: f32, to_min: f32, to_max: f32) -> f32 {
+    return (value - from_min) / (from_max - from_min) * (to_max - to_min) + to_min;
+}
+
+fn noise(x: f32) -> f32 {
+    return fract(sin(x) * 43758.5453);
 }

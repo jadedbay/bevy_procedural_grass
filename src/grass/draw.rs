@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use super::{prepare::{ColorBindGroup, WindBindGroup, LightBindGroup}, extract::GrassInstanceData};
+use super::{prepare::{ColorBindGroup, WindBindGroup, LightBindGroup, BladeBindGroup, WindMapBindGroup}, extract::GrassInstanceData};
 
 pub type DrawGrass = (
     SetItemPipeline,
@@ -9,6 +9,8 @@ pub type DrawGrass = (
     SetColorBindGroup<2>,
     SetWindBindGroup<3>,
     SetLightBindGroup<4>,
+    SetBladeBindGroup<5>,
+    SetWindMapBindGroup<6>,
     DrawGrassInstanced,
 );
 
@@ -54,6 +56,27 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetWindBindGroup<I> {
     }
 }
 
+pub struct SetBladeBindGroup<const I: usize>;
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetBladeBindGroup<I> {
+    type Param = ();
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = Option<Read<BladeBindGroup>>;
+
+    fn render<'w>(
+        _item: &P,
+        _view: (),
+        bind_group: Option<&'w BladeBindGroup>,
+        _meshes: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let Some(bind_group) = bind_group else {
+            return RenderCommandResult::Failure;
+        };
+        pass.set_bind_group(I, &bind_group.bind_group, &[]);
+        RenderCommandResult::Success
+    }
+}
+
 
 pub struct SetLightBindGroup<const I: usize>;
 impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetLightBindGroup<I> {
@@ -75,6 +98,28 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetLightBindGroup<I> {
         RenderCommandResult::Success
     }
 }
+
+pub struct SetWindMapBindGroup<const I: usize>;
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetWindMapBindGroup<I> {
+    type Param = ();
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = Option<Read<WindMapBindGroup>>;
+
+    fn render<'w>(
+        _item: &P,
+        _view: (),
+        bind_group: Option<&'w WindMapBindGroup>,
+        _meshes: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let Some(bind_group) = bind_group else {
+            return RenderCommandResult::Failure;
+        };
+        pass.set_bind_group(I, &bind_group.bind_group, &[]);
+        RenderCommandResult::Success
+    }
+}
+
 
 pub struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
