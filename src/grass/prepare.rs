@@ -1,14 +1,19 @@
 use std::time::Instant;
 
-use bevy::{prelude::*, render::{render_resource::{Buffer, BufferInitDescriptor, BufferUsages, BindGroup, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding}, renderer::RenderDevice, texture::FallbackImage, render_asset::RenderAssets}};
+use bevy::{prelude::*, render::{render_resource::{Buffer, BufferInitDescriptor, BufferUsages, BindGroup, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding, BindGroupEntries}, renderer::RenderDevice, texture::FallbackImage, render_asset::RenderAssets}};
 
-use super::{extract::{GrassInstanceData, GrassColorData, WindData, LightData, BladeData}, pipeline::GrassPipeline, wind::{WindMap, self}};
+use super::{extract::{GrassInstanceData, GrassColorData, WindData, BladeData}, pipeline::GrassPipeline, wind::{WindMap, self}};
+
+#[derive(Component)]
+pub struct InstanceBuffer {
+    pub buffer: Buffer,
+    pub length: usize,
+}
 
 #[derive(Component)]
 pub struct ColorBindGroup {
     pub bind_group: BindGroup,
 }
-
 pub(super) fn prepare_color_buffers(
     mut commands: Commands,
     pipeline: Res<GrassPipeline>,
@@ -23,18 +28,15 @@ pub(super) fn prepare_color_buffers(
             contents: bytemuck::cast_slice(&[color.clone()]),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
         });
-        let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
-            label: Some("grass color bind group"),
-            layout: &layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: BindingResource::Buffer(BufferBinding {
-                    buffer: &buffer,
-                    offset: 0,
-                    size: None,
-                })
-            }],
-        });
+        let bind_group = render_device.create_bind_group(
+            Some("grass color bind group"),
+            &layout,
+            &BindGroupEntries::single(BufferBinding {
+                buffer: &buffer,
+                offset: 0,
+                size: None,
+            }),
+        );
 
         commands.entity(entity).insert(ColorBindGroup {
             bind_group,
@@ -61,18 +63,15 @@ pub(super) fn prepare_blade_buffers(
             contents: bytemuck::cast_slice(&[blade.clone()]),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
         });
-        let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
-            label: Some("blade bind group"),
-            layout: &layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: BindingResource::Buffer(BufferBinding {
-                    buffer: &buffer,
-                    offset: 0,
-                    size: None,
-                })
-            }],
-        });
+        let bind_group = render_device.create_bind_group(
+            Some("blade bind group"),
+            &layout,
+            &BindGroupEntries::single(BufferBinding {
+                buffer: &buffer,
+                offset: 0,
+                size: None,
+            })
+        );
 
         commands.entity(entity).insert(BladeBindGroup {
             bind_group,
@@ -96,61 +95,21 @@ pub(super) fn prepare_wind_buffers(
 
         let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("wind buffer"),
-            contents: bytemuck::cast_slice(&[wind.speed, wind.strength, wind.direction, wind.force]),
+            contents: bytemuck::cast_slice(&[wind.clone()]),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
         });
-        let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
-            label: Some("wind bind group"),
-            layout: &layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: BindingResource::Buffer(BufferBinding {
-                    buffer: &buffer,
-                    offset: 0,
-                    size: None,
-                })
-            }],
-        });
+
+        let bind_group = render_device.create_bind_group(
+            Some("wind bind group"), 
+            &layout,
+            &BindGroupEntries::single(BufferBinding {
+                buffer: &buffer,
+                offset: 0,
+                size: None,
+            })
+        );
 
         commands.entity(entity).insert(WindBindGroup {
-            bind_group,
-        });
-    }
-}
-
-#[derive(Component)]
-pub struct LightBindGroup {
-    pub bind_group: BindGroup,
-}
-
-pub(super) fn prepare_light_buffers(
-    mut commands: Commands,
-    pipeline: Res<GrassPipeline>,
-    query: Query<(Entity, &LightData)>,
-    render_device: Res<RenderDevice>,
-) {
-    for (entity, light_data) in &query {
-        let layout = pipeline.light_layout.clone();
-
-        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some("light buffer"),
-            contents: bytemuck::cast_slice(&[light_data.clone()]),
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
-        });
-        let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
-            label: Some("light bind group"),
-            layout: &layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: BindingResource::Buffer(BufferBinding {
-                    buffer: &buffer,
-                    offset: 0,
-                    size: None,
-                })
-            }],
-        });
-
-        commands.entity(entity).insert(LightBindGroup {
             bind_group,
         });
     }
@@ -160,7 +119,6 @@ pub(super) fn prepare_light_buffers(
 pub struct WindMapBindGroup {
     pub bind_group: BindGroup,
 }
-
 
 pub fn prepare_wind_map_buffers(
     mut commands: Commands,
@@ -179,16 +137,11 @@ pub fn prepare_wind_map_buffers(
             &fallback_img.d2.texture_view
         };
 
-        let bind_group_descriptor = BindGroupDescriptor {
-            label: Some("wind map descriptor"),
-            layout: &layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: BindingResource::TextureView(wind_map_texture),
-            }],
-        };
-
-        let bind_group = render_device.create_bind_group(&bind_group_descriptor);
+        let bind_group = render_device.create_bind_group(
+            Some("wind map bind group"),
+            &layout,
+            &BindGroupEntries::single(BindingResource::TextureView(&wind_map_texture))
+        );
         commands.entity(entity).insert(WindMapBindGroup{
             bind_group,
         });

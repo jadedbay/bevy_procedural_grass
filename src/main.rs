@@ -1,7 +1,7 @@
 
 use std::time::Duration;
 
-use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, Wireframe}, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}, render::{mesh::{VertexAttributeValues, Indices}, render_resource::{Buffer, PrimitiveTopology}, RenderApp, renderer::RenderDevice, primitives, texture::{ImageType, CompressedImageFormats}}, window::PresentMode, asset::ChangeWatcher};
+use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, Wireframe}, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}, render::{mesh::{VertexAttributeValues, Indices}, render_resource::{Buffer, PrimitiveTopology}, RenderApp, renderer::RenderDevice, primitives, texture::{ImageType, CompressedImageFormats, ImageSampler}}, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_flycam::*;
 
@@ -19,10 +19,6 @@ fn main() {
                 ..default()
             }),
             ..default()
-        })
-        .set(AssetPlugin {
-            watch_for_changes: ChangeWatcher::with_delay(Duration::from_secs(1)),
-            ..Default::default()
         }),
         WireframePlugin,
         PlayerPlugin,
@@ -56,10 +52,11 @@ fn setup(
         ImageType::Extension("png"),
         CompressedImageFormats::default(),
         false,
+        ImageSampler::Default,
     ).unwrap();
     let image_handle = images.add(wind_map_image);
 
-    //let terrain_mesh = Mesh::try_from(shape::UVSphere { radius: 1.0, sectors: 10, stacks: 10 }).unwrap();
+    //let terrain_mesh = Mesh::try_from(shape::Icosphere { radius: 1.0, subdivisions: 20 }).unwrap();
 
     commands.spawn((
         PbrBundle {
@@ -79,11 +76,6 @@ fn setup(
             ..default()
         },
     ));
-
-    // commands.spawn(PointLightBundle {
-    //     transform:  Transform::from_translation(Vec3::new(0.0, 5.0, 0.0)),
-    //     ..default()
-    // });
      
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight::default(),
@@ -135,7 +127,7 @@ fn grass_mesh() -> Mesh {
         [0.5, 1.0],
     ]);
     grass_mesh.set_indices(Some(Indices::U32(vec![
-        2, 0, 1, 1, 3, 2, 4, 2, 3, 3, 5, 4, 6, 4, 5, 5, 7, 6, 8, 6, 7, 7, 9, 8, 10, 8, 9, 9, 11,  10, 12, 10, 11, 11,13, 12, 14, 12, 13
+        2, 0, 1, 1, 3, 2, 4, 2, 3, 3, 5, 4, 6, 4, 5, 5, 7, 6, 8, 6, 7, 7, 9, 8, 10, 8, 9, 9, 11, 10, 12, 10, 11, 11, 13, 12, 14, 12, 13
     ])));
 
     grass_mesh

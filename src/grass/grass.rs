@@ -1,11 +1,11 @@
-use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, render_asset::{RenderAsset, PrepareAssetError}, renderer::RenderDevice, texture::{ImageType, CompressedImageFormats}}, ecs::system::{lifetimeless::SRes, SystemParamItem}, pbr::wireframe::Wireframe};
+use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, render_asset::{RenderAsset, PrepareAssetError}, renderer::RenderDevice, texture::{ImageType, CompressedImageFormats}, primitives::Aabb}, ecs::system::{lifetimeless::SRes, SystemParamItem}, pbr::wireframe::Wireframe};
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
 use rand::Rng;
 
 use crate::grass::extract::{GrassInstanceData, InstanceData};
 
-use super::{extract::{GrassColorData, WindData, LightData, BladeData}, wind::{Wind, WindMap}};
+use super::{extract::{GrassColorData, WindData, BladeData}, wind::{Wind, WindMap}};
 
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -54,10 +54,7 @@ pub fn update_grass_data(
     for (transform, mut grass, mesh_handle) in query.iter_mut() {
         if grass.regenerate {
             if let (Some(grass_entity), Some(mesh)) = (grass.grass_entity, meshes.get(mesh_handle)) {
-                grass_asset.remove(grass.grass_handle.clone().unwrap());
-                let handle = generate_grass_data(&mut grass, transform, mesh, &mut grass_asset);
-                grass.grass_handle = Some(handle.clone());
-                commands.entity(grass_entity).insert(handle);
+                commands.entity(grass_entity).insert(generate_grass_data(&mut grass, transform, mesh, &mut grass_asset));
             }
 
             grass.regenerate = false;
@@ -79,25 +76,11 @@ pub fn update_grass_params(
     }
 }
 
-pub fn update_light(
-    mut query: Query<&mut LightData>,
-    light_query: Query<&Transform, With<DirectionalLight>>,
-) {
-    for mut light_data in query.iter_mut() {
-        for transform in light_query.iter() {
-            let direction = transform.rotation.to_euler(EulerRot::XYZ);
-
-            light_data.direction = Vec3::new(direction.0, direction.1, direction.2);
-        }
-    }
-}
-
 pub fn load_grass(
     mut commands: Commands,
     mut query: Query<(&Transform, &mut Grass, &Handle<Mesh>)>,
     meshes: Res<Assets<Mesh>>,
     mut grass_asset: ResMut<Assets<GrassInstanceData>>,
-    mut images: ResMut<Assets<Image>>,
 ) {
     for (transform, mut grass, mesh_handle) in query.iter_mut() {
         spawn_grass(&mut commands, transform, &mut grass, meshes.get(mesh_handle).unwrap(), &mut grass_asset);
@@ -185,7 +168,6 @@ pub fn spawn_grass(
         GrassColorData::from(grass.color),
         WindData::from(grass.wind),
         BladeData::from(grass.blade),
-        LightData::default(),
         WindMap {
             wind_map: grass.wind_map_handle.clone(),
         },
@@ -219,33 +201,4 @@ impl Default for GrassColor {
 pub struct GrassDataBuffer {
     pub buffer: Buffer,
     pub length: usize,
-}
-
-impl RenderAsset for GrassInstanceData {
-    type ExtractedAsset = GrassInstanceData;
-    type PreparedAsset = GrassDataBuffer;
-    type Param = SRes<RenderDevice>;
-
-    fn extract_asset(&self) -> Self::ExtractedAsset {
-        dbg!("extract");
-        GrassInstanceData(self.0.clone())
-    }
-
-    fn prepare_asset(
-            extracted_asset: Self::ExtractedAsset,
-            param: &mut SystemParamItem<Self::Param>,
-        ) -> Result<Self::PreparedAsset, PrepareAssetError<Self::ExtractedAsset>> {
-        let render_device = param;
-
-        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some("instance data buffer"),
-            contents: bytemuck::cast_slice(extracted_asset.as_slice()),
-            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
-        });
-        
-        Ok(GrassDataBuffer {
-            buffer,
-            length: extracted_asset.len(),
-        })
-    }
 }

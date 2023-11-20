@@ -1,10 +1,10 @@
-#import bevy_pbr::mesh_functions  mesh_position_local_to_clip
-#import bevy_pbr::mesh_bindings   mesh
-#import bevy_pbr::mesh_view_bindings globals
-#import bevy_pbr::mesh_view_bindings lights
-#import bevy_pbr::mesh_view_bindings view
-#import bevy_pbr::utils PI
-#import bevy_pbr::utils random1D
+#import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip}
+#import bevy_pbr::mesh_bindings::mesh
+#import bevy_pbr::mesh_view_bindings::globals
+#import bevy_pbr::mesh_view_bindings::lights
+#import bevy_pbr::mesh_view_bindings::view
+#import bevy_pbr::utils::PI
+#import bevy_pbr::utils::random1D
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -12,7 +12,7 @@ struct Vertex {
 
     @location(3) i_pos: vec3<f32>,
     @location(4) i_normal: vec3<f32>,
-    @location(5) i_uv: vec2<f32>
+    @location(5) i_uv: vec2<f32>,
 };
 
 struct Color {
@@ -39,16 +39,10 @@ struct Blade {
     tilt: f32,
     bend: f32,
 }
-@group(5) @binding(0)
+@group(4) @binding(0)
 var<uniform> blade: Blade;
 
-struct Light {
-    direction: vec3<f32>,
-}
-@group(4) @binding(0)
-var<uniform> light: Light;
-
-@group(6) @binding(0)
+@group(5) @binding(0)
 var t_wind_map: texture_2d<f32>;
 
 struct VertexOutput {
@@ -59,10 +53,13 @@ struct VertexOutput {
     @location(4) normal: vec3<f32>,
     @location(5) world_position: vec3<f32>,
     @location(6) world_normal: vec3<f32>,
+    @location(7) curved_normal: vec3<f32>,
 };
 
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
+    var out: VertexOutput;
+
     let uv = vertex.uv;
 
     var hash_id = random1D(vertex.i_pos.x * 10000. + vertex.i_pos.y * 100. + vertex.i_pos.z * 0.05 + 2.);
@@ -75,15 +72,15 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var facing = normalize(vec2<f32>(mix(-1., 1., hash_id), mix(-1., 1., random1D(hash_id * vertex.i_pos.x))));
 
     let noise_value = noise(vertex.i_uv.x + vertex.i_uv.y);
-    let r = sample_wind_map(vertex.i_uv + hash_id).r;
+    let r = sample_wind_map(vertex.i_uv * hash_id, 0.1).r;
 
-    //var t = remap(sample_wind_map(vertex.i_uv).r, 0.20, 0.8, 0.0, 1.0);
-    var t = sample_wind_map(vertex.i_uv).r;
+    //var t = remap(sample_wind_map(vertex.i_uv, wind.speed).r, 0.20, 0.8, 0.0, 1.0);
+    var t = sample_wind_map(vertex.i_uv, wind.speed).r;
 
     let width = blade.width;
-    let length = mix(blade.length, blade.length + 0.5, fract(hash_id));
-    let tilt = blade.tilt;
-    let bend = blade.bend;
+    let length = mix(blade.length, blade.length + 0.6, fract(hash_id));
+    let tilt = mix(blade.tilt, blade.tilt + 0.2, fract(hash_id * 5000. + 2.));
+    let bend = mix(blade.bend, blade.bend + 0.2, fract(hash_id * 200. + 4.));
 
     let p3y = tilt * length;
     let p3x = sqrt(length * length - p3y * p3y);
@@ -105,7 +102,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     p2 += blade_dir * p2_offset;
     p3 += blade_dir * p3_offset;
 
-    facing = normalize(mix(facing, wind_direction, sin(t) * 0.8));
+    facing = normalize(mix(facing, wind_direction, sin(t)));
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     position.y = bezier.y;
@@ -115,27 +112,27 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     position.x = xz_pos.x;
     position.z = xz_pos.y;
 
+    let rotation_matrix = rotate_align(vec3<f32>(0.0, 1.0, 0.0), vertex.i_normal);
+    position = rotation_matrix * position;
+
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
     var normal = normalize(cross(tangent, vec3<f32>(facing_normal.x, 0.0, facing_normal.y)));
-    // normal.x += (uv.x * uv.x);
-    // normal.z += (uv.x * uv.x);
+    out.normal = normal;
+    normal.x += pow(uv.x * uv.x, 0.5);
+    normal.z += pow(uv.x * uv.x, 0.5);
     normal = normalize(normal);
-
-
-    //position = rotate_y(position, rotation_angle);
 
     position += vertex.i_pos.xyz;
 
-    var out: VertexOutput;
     out.clip_position = mesh_position_local_to_clip(
-        mesh.model, 
+        get_model_matrix(0u), 
         vec4<f32>(position, 1.0)
     );
 
     out.uv = uv;
     out.world_uv = vertex.i_uv;
     out.t = r;
-    out.normal = normal;
+    out.curved_normal = normal;
     out.world_position = position;
     out.world_normal = vertex.i_normal;
 
@@ -144,26 +141,26 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
 @fragment
 fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @location(0) vec4<f32> {
-    var normal = in.normal;
+    var normal = in.curved_normal;
     if (!is_front) {
         normal = -normal;
     }
 
-    let spec_strength = 0.5;
+    let spec_strength = 1.;
     let view_dir = normalize(view.world_position - in.clip_position.xyz);
-    let reflect_dir = reflect(lights.directional_lights[0].direction_to_light, normal);
-    let spec = pow(max(dot(view_dir, reflect_dir), 0.0), 16.);
+    let reflect_dir = reflect(lights.directional_lights[0].direction_to_light, in.normal);
+    let spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32.);
     let specular =  spec_strength * spec;
 
     let color_gradient = mix(color.color_1, color.color_2, in.uv.y);
-    let ndotl_1 = clamp(dot(normal, -lights.directional_lights[0].direction_to_light), 0.2, 1.0);
-    let ndotl_2 = clamp(dot(-normal, -lights.directional_lights[0].direction_to_light), 0.2, 1.0);
+    let ndotl_1 = clamp(dot(normal, -lights.directional_lights[0].direction_to_light), 0.3, 1.0);
+    let ndotl_2 = clamp(dot(-normal, -lights.directional_lights[0].direction_to_light), 0.3, 1.0);
     let ndotl = max(ndotl_1, ndotl_2);
 
     let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0),  in.uv.y);
     let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip,  in.uv.y * in.uv.y);
 
-    let final_color = (color_gradient + spec) * ndotl * ao;
+    let final_color = (color_gradient + specular) * ndotl * ao;
     //let final_color = color.color_2 * ndotl;
     
     return final_color;
@@ -266,13 +263,13 @@ fn rotate_align(v1: vec3<f32>, v2: vec3<f32>) -> mat3x3<f32> {
     return result;
 }
 
-fn sample_wind_map(uv: vec2<f32>) -> vec4<f32> {
+fn sample_wind_map(uv: vec2<f32>, speed: f32) -> vec4<f32> {
     let texture_size = textureDimensions(t_wind_map);
     
     let rad = wind.direction * PI / 180.0;
     let direction = vec2<f32>(cos(rad), sin(rad));
     
-    let scrolled_uv = uv + direction * globals.time * wind.speed;
+    let scrolled_uv = uv + direction * globals.time * speed;
     
     let pixel_coords = vec2<i32>(fract(scrolled_uv) * vec2<f32>(texture_size));
     return textureLoad(t_wind_map, pixel_coords, 0);

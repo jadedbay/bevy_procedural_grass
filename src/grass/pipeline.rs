@@ -9,7 +9,6 @@ pub struct GrassPipeline {
     pub color_layout: BindGroupLayout,
     pub wind_layout: BindGroupLayout,
     pub blade_layout: BindGroupLayout,
-    pub light_layout: BindGroupLayout,
     pub wind_map_layout: BindGroupLayout,
 }
 
@@ -41,7 +40,7 @@ impl FromWorld for GrassPipeline {
             label: Some("wind_layout"),
             entries: &[
                 BindGroupLayoutEntry {
-                    binding: 0,
+                binding: 0,
                     visibility: ShaderStages::VERTEX,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
@@ -59,22 +58,6 @@ impl FromWorld for GrassPipeline {
                 BindGroupLayoutEntry {
                     binding: 0,
                     visibility: ShaderStages::VERTEX,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }
-            ]
-        });
-
-        let light_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("light_layout"),
-            entries: &[
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -107,7 +90,6 @@ impl FromWorld for GrassPipeline {
             color_layout,
             wind_layout,
             blade_layout,
-            light_layout,
             wind_map_layout,
         }
     }
@@ -152,7 +134,6 @@ impl SpecializedMeshPipeline for GrassPipeline {
         });
         descriptor.layout.push(self.color_layout.clone());
         descriptor.layout.push(self.wind_layout.clone());
-        descriptor.layout.push(self.light_layout.clone());
         descriptor.layout.push(self.blade_layout.clone());
         descriptor.layout.push(self.wind_map_layout.clone());
 
