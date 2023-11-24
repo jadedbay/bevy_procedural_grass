@@ -13,6 +13,7 @@ struct Vertex {
     @location(3) i_pos: vec3<f32>,
     @location(4) i_normal: vec3<f32>,
     @location(5) i_uv: vec2<f32>,
+    @location(6) i_chunk: vec3<f32>,
 };
 
 struct Color {
@@ -54,6 +55,7 @@ struct VertexOutput {
     @location(5) world_position: vec3<f32>,
     @location(6) world_normal: vec3<f32>,
     @location(7) curved_normal: vec3<f32>,
+    @location(8) color: vec3<f32>,
 };
 
 @vertex
@@ -64,6 +66,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     var hash_id = random1D(vertex.i_pos.x * 10000. + vertex.i_pos.y * 100. + vertex.i_pos.z * 0.05 + 2.);
     hash_id = random1D(hash_id * 100000.);
+
+    let random_color = vec3<f32>(random1D(vertex.i_chunk.x), random1D(vertex.i_chunk.y), random1D(vertex.i_chunk.z));
 
     var position = vertex.position;
 
@@ -135,6 +139,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.curved_normal = normal;
     out.world_position = position;
     out.world_normal = vertex.i_normal;
+    out.color = random_color;
 
     return out;
 }
@@ -160,9 +165,11 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0),  in.uv.y);
     let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip,  in.uv.y * in.uv.y);
 
-    let final_color = (color_gradient + specular) * ndotl * ao;
+    //let final_color = (color_gradient + specular) * ndotl * ao;
     //let final_color = color.color_2 * ndotl;
     
+    let final_color = vec4(in.color, 1.);
+
     return final_color;
     //return vec4(in.t, in.t, in.t, 1.0);
 }

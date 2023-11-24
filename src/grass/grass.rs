@@ -1,11 +1,11 @@
-use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, render_asset::{RenderAsset, PrepareAssetError}, renderer::RenderDevice, texture::{ImageType, CompressedImageFormats}, primitives::Aabb}, ecs::system::{lifetimeless::SRes, SystemParamItem}, pbr::wireframe::Wireframe};
+use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, render_asset::{RenderAsset, PrepareAssetError}, renderer::RenderDevice, texture::{ImageType, CompressedImageFormats}, primitives::Aabb, extract_component::ExtractComponent}, ecs::system::{lifetimeless::SRes, SystemParamItem}, pbr::wireframe::Wireframe, utils::HashMap};
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
 use rand::Rng;
 
 use crate::grass::extract::{GrassInstanceData, InstanceData};
 
-use super::{extract::{GrassColorData, WindData, BladeData}, wind::{Wind, WindMap}};
+use super::{extract::{GrassColorData, WindData, BladeData}, wind::{Wind, WindMap}, chunk::{GrassChunks, GrassToDraw, self}};
 
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -18,6 +18,8 @@ pub struct Grass {
     pub grass_handle: Option<Handle<GrassInstanceData>>,
     #[reflect(ignore)]
     pub wind_map_handle: Handle<Image>,
+    #[reflect(ignore)]
+    pub chunks: GrassChunks,
     pub density: u32,
     pub color: GrassColor,
     pub blade: Blade,
@@ -78,12 +80,12 @@ pub fn update_grass_params(
 
 pub fn load_grass(
     mut commands: Commands,
-    mut query: Query<(&Transform, &mut Grass, &Handle<Mesh>)>,
+    mut query: Query<(Entity, &Transform, &mut Grass, &Handle<Mesh>)>,
     meshes: Res<Assets<Mesh>>,
     mut grass_asset: ResMut<Assets<GrassInstanceData>>,
 ) {
-    for (transform, mut grass, mesh_handle) in query.iter_mut() {
-        spawn_grass(&mut commands, transform, &mut grass, meshes.get(mesh_handle).unwrap(), &mut grass_asset);
+    for (entity, transform, mut grass, mesh_handle) in query.iter_mut() {
+        spawn_grass(&mut commands, transform, &entity, &mut grass, meshes.get(mesh_handle).unwrap(), &mut grass_asset);
     }
 }
 
@@ -92,16 +94,18 @@ pub fn generate_grass_data(
     transform: &Transform,
     mesh: &Mesh,
     grass_asset: &mut ResMut<Assets<GrassInstanceData>>,
-) -> Handle<GrassInstanceData> {
-    let mut data: Vec<InstanceData> = vec![];
+) -> GrassChunks {
+    let mut chunks: HashMap<(i32, i32, i32), GrassInstanceData> = HashMap::new();
+    let chunk_size = 30.0; // Define your chunk size
+
     if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
         if let Some(VertexAttributeValues::Float32x2(uvs)) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
             if let Some(indices) = mesh.indices() {
                 let mut triangle = Vec::new();
-                data = indices.iter().filter_map(|index| {
+                for index in indices.iter() {
                     triangle.push(index);
                     if triangle.len() == 3 {
-                        let result = {
+                        let result: Vec<InstanceData> = {
                             // Calculate the area of the triangle
                             let v0 = Vec3::from(positions[triangle[0] as usize]) * transform.scale;
                             let v1 = Vec3::from(positions[triangle[1] as usize]) * transform.scale;
@@ -130,41 +134,62 @@ pub fn generate_grass_data(
                                 let uv2 = Vec2::from(uvs[triangle[2] as usize]);
                                 let uv = uv0 * barycentric.x + uv1 * barycentric.y + uv2 * barycentric.z;
 
-                                Some(InstanceData {
+                                let chunk_coords = (
+                                    (position.x / chunk_size).floor() as i32,
+                                    //(position.y / chunk_size).floor() as i32,
+                                    0,
+                                    (position.z / chunk_size).floor() as i32,
+                                );
+
+                                let instance = InstanceData {
                                     position,
                                     normal,
                                     uv,
-                                })
+                                    chunk: Vec3::new(chunk_coords.0 as f32,chunk_coords.1 as f32, chunk_coords.2 as f32),
+                                };
+
+                                // Add instance to the appropriate chunk
+                                chunks.entry(chunk_coords).or_insert_with(|| {GrassInstanceData(Vec::new())}).0.push(instance);
+
+                                None
                             }).collect::<Vec<_>>()
                         };
                         triangle.clear();
-                        Some(result)
-                    } else {
-                        None
                     }
-                }).flatten().collect();
+                }
             }
         }
     }
-    dbg!(data.len());
 
-    grass_asset.add(GrassInstanceData(data))
+    // let mut loaded_chunks = HashMap::new();
+    // for (chunk_coords, instance) in &chunks {
+    //     let handle = grass_asset.add(instance.clone());
+    //     loaded_chunks.insert(*chunk_coords, handle);
+    // }
+
+    GrassChunks {
+        chunk_size: 30.,
+        chunks,
+        //loaded: loaded_chunks,
+        ..default()
+    }
 }
 
 pub fn spawn_grass(
     commands: &mut Commands,
     transform: &Transform,
+    entity: &Entity, 
     grass: &mut Grass,
     mesh: &Mesh,
     grass_asset: &mut ResMut<Assets<GrassInstanceData>>,
 ) {
-    let handle = generate_grass_data(grass, transform, mesh, grass_asset);
-    grass.grass_handle = Some(handle.clone());
+    let grass_handles = generate_grass_data(grass, transform, mesh, grass_asset);
+    commands.entity(*entity).insert(grass_handles);
 
     let grass_entity = commands.spawn((
         grass.mesh.clone(),
         SpatialBundle::INHERITED_IDENTITY,
-        handle,
+        GrassToDraw::default(),
         GrassColorData::from(grass.color),
         WindData::from(grass.wind),
         BladeData::from(grass.blade),

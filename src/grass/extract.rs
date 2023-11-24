@@ -41,9 +41,10 @@ pub struct InstanceData {
     pub position: Vec3,
     pub normal: Vec3,
     pub uv: Vec2,
+    pub chunk: Vec3,
 }
 
-#[derive(Component, Deref, Asset, TypeUuid, TypePath)]
+#[derive(Component, Deref, Clone, Asset, TypeUuid, TypePath)]
 #[uuid = "81a29e63-ef6c-4561-b49c-4a138ff39c01"]
 pub struct GrassInstanceData(pub Vec<InstanceData>);
 
@@ -83,17 +84,18 @@ impl RenderAsset for GrassInstanceData {
     }
 }
 
-pub fn extract_grass(
-    mut commands: Commands,
-    extract: Extract<Query<(Entity, &Handle<GrassInstanceData>)>>
-) {
-    //dbg!("hi");
-    let mut values = Vec::new();
-    for (entity, data) in extract.iter() {
-        values.push((entity, data.clone()))
-    }
-    commands.insert_or_spawn_batch(values);
-}
+// pub fn extract_grass(
+//     mut commands: Commands,
+//     extract: Extract<Query<(Entity, &GrassHandles)>>
+// ) {
+//     let mut values = Vec::new();
+//     for (entity, data) in extract.iter() {
+//         values.push((entity, data.clone()))
+//     }
+//     commands.insert_or_spawn_batch(values);
+// }
+
+
 
 #[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]

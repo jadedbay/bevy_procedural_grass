@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup, RenderMeshInstances}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use super::{prepare::{ColorBindGroup, WindBindGroup, BladeBindGroup, WindMapBindGroup, InstanceBuffer}, extract::GrassInstanceData, compute_pipeline::GrassDataBindGroup};
+use super::{prepare::{ColorBindGroup, WindBindGroup, BladeBindGroup, WindMapBindGroup, InstanceBuffer}, extract::GrassInstanceData, compute_pipeline::GrassDataBindGroup, chunk::{GrassChunks, GrassToDraw}};
 
 pub type DrawGrass = (
     SetItemPipeline,
@@ -102,13 +102,13 @@ pub struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<Mesh>>, SRes<RenderMeshInstances>, SRes<RenderAssets<GrassInstanceData>>);
     type ViewWorldQuery = ();
-    type ItemWorldQuery = Read<Handle<GrassInstanceData>>;
+    type ItemWorldQuery = Read<GrassToDraw>;
 
     #[inline]
     fn render<'w>(
         item: &P,
         _view: (),
-        grass_handle: &'w Handle<GrassInstanceData>,
+        chunks: &'w GrassToDraw,
         (meshes, render_mesh_instances, grass_data): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
@@ -119,15 +119,18 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             Some(gpu_mesh) => gpu_mesh,
             None => return RenderCommandResult::Failure,
         };
-        // let gpu_grass = match grass_data.into_inner().get(grass_handle) {
-        //     Some(gpu_grass) => gpu_grass,
-        //     None =>  return RenderCommandResult::Failure,
-        // };
+
+        let grass_data_inner = grass_data.into_inner();
 
         pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
 
-        for data in grass_data.into_inner().iter() {
-            pass.set_vertex_buffer(1, data.1.buffer.slice(..));
+        for handle in &chunks.0 {
+            let gpu_grass = match grass_data_inner.get(handle) {
+                Some(gpu_grass) => gpu_grass,
+                None => return RenderCommandResult::Failure,
+            };
+
+            pass.set_vertex_buffer(1, gpu_grass.buffer.slice(..));
 
             match &gpu_mesh.buffer_info {
                 GpuBufferInfo::Indexed {
@@ -136,13 +139,31 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                     count,
                 } => {
                     pass.set_index_buffer(buffer.slice(..), 0, *index_format);
-                    pass.draw_indexed(0..*count, 0, 0..data.1.length as u32);
+                    pass.draw_indexed(0..*count, 0, 0..gpu_grass.length as u32);
                 }
                 GpuBufferInfo::NonIndexed => {
-                    pass.draw(0..gpu_mesh.vertex_count, 0..data.1.length as u32);
+                    pass.draw(0..gpu_mesh.vertex_count, 0..gpu_grass.length as u32);
                 }
             }
         }
+
+        // for data in grass_data.into_inner().iter() {
+        //     pass.set_vertex_buffer(1, data.1.buffer.slice(..));
+
+        //     match &gpu_mesh.buffer_info {
+        //         GpuBufferInfo::Indexed {
+        //             buffer,
+        //             index_format,
+        //             count,
+        //         } => {
+        //             pass.set_index_buffer(buffer.slice(..), 0, *index_format);
+        //             pass.draw_indexed(0..*count, 0, 0..data.1.length as u32);
+        //         }
+        //         GpuBufferInfo::NonIndexed => {
+        //             pass.draw(0..gpu_mesh.vertex_count, 0..data.1.length as u32);
+        //         }
+        //     }
+        // }
         
         RenderCommandResult::Success
     }
