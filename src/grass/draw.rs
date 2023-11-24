@@ -146,24 +146,6 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                 }
             }
         }
-
-        // for data in grass_data.into_inner().iter() {
-        //     pass.set_vertex_buffer(1, data.1.buffer.slice(..));
-
-        //     match &gpu_mesh.buffer_info {
-        //         GpuBufferInfo::Indexed {
-        //             buffer,
-        //             index_format,
-        //             count,
-        //         } => {
-        //             pass.set_index_buffer(buffer.slice(..), 0, *index_format);
-        //             pass.draw_indexed(0..*count, 0, 0..data.1.length as u32);
-        //         }
-        //         GpuBufferInfo::NonIndexed => {
-        //             pass.draw(0..gpu_mesh.vertex_count, 0..data.1.length as u32);
-        //         }
-        //     }
-        // }
         
         RenderCommandResult::Success
     }

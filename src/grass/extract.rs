@@ -60,7 +60,6 @@ impl RenderAsset for GrassInstanceData {
     type Param = SRes<RenderDevice>;
 
     fn extract_asset(&self) -> Self::ExtractedAsset {
-        dbg!("extract");
         GrassInstanceData(self.0.clone())
     }
 
@@ -68,7 +67,6 @@ impl RenderAsset for GrassInstanceData {
             extracted_asset: Self::ExtractedAsset,
             param: &mut bevy::ecs::system::SystemParamItem<Self::Param>,
         ) -> Result<Self::PreparedAsset, bevy::render::render_asset::PrepareAssetError<Self::ExtractedAsset>> {
-        dbg!("prepare");
         let render_device = param;
 
         let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {

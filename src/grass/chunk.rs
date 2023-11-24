@@ -38,49 +38,47 @@ impl ExtractComponent for GrassToDraw {
     }
 }
 
-pub fn grass_frustum_cull(
+pub fn grass_culling(
     mut query: Query<(&Grass, &mut GrassChunks)>,
     mut grass_query: Query<(Entity, &mut GrassToDraw)>,
-    camera_query: Query<(&Transform, &Frustum), (With<Camera>, Changed<Transform>)>,
+    camera_query: Query<&Frustum>,
     mut grass_asset: ResMut<Assets<GrassInstanceData>>,
 ) {
     for (grass, mut chunks) in query.iter_mut() {
         for (entity, mut grass_handles) in grass_query.iter_mut() {
-            for (tranform, frustum) in camera_query.iter() {
-                let to_load: Vec<((i32, i32, i32), Handle<GrassInstanceData>)> = 
-                    chunks.chunks.iter()
-                        .filter(|(chunk_coords, _)| !chunks.loaded.contains_key(*chunk_coords))
-                        .map(|(chunk_coords, instance)| {
-                            let handle = grass_asset.add(instance.clone());
-                            (*chunk_coords, handle)
-                        })
-                        .collect();
-
-                for (chunk_coords, handle) in to_load {
-                    chunks.loaded.insert(chunk_coords, handle);
-                }
-
+            for frustum in camera_query.iter() {
                 if grass.grass_entity == Some(entity) {
-                    let aabbs: Vec<((i32, i32, i32), Aabb)> = chunks.loaded.iter()
+                    let aabbs: Vec<((i32, i32, i32), Aabb)> = chunks.chunks.iter()
                         .map(|(chunk_coords, _)| {
                             let (x, y, z) = *chunk_coords;
-                            (*chunk_coords,
-                            Aabb {
-                                center: Vec3A::new(x as f32 * chunks.chunk_size + chunks.chunk_size / 2., y as f32 * chunks.chunk_size + chunks.chunk_size / 2., z as f32 * chunks.chunk_size + chunks.chunk_size / 2.),
-                                half_extents: Vec3A::splat(chunks.chunk_size / 2.),
-                            })
+                            let center = Vec3A::new(x as f32, y as f32, z as f32) * chunks.chunk_size + Vec3A::splat(chunks.chunk_size / 2.);
+                            let half_extents = Vec3A::splat(chunks.chunk_size / 2.);
+                            (*chunk_coords, Aabb { center, half_extents })
                         }).collect();
-                    
-                    grass_handles.0.clear();
-                    for (chunk_coords, aabb) in aabbs {
-                        let model_to_world = Affine3A::IDENTITY;
-                        if frustum.intersects_obb(&aabb, &model_to_world, true, true) {
-                            if let Some(handle) = chunks.loaded.get(&chunk_coords) {
-                                grass_handles.0.push(handle.clone());
-                            }
+                
+                    let model_to_world = Affine3A::IDENTITY;
+                
+                    let (chunks_inside, chunks_outside): (Vec<_>, Vec<_>) = aabbs.iter()
+                        .partition(|(_, aabb)| frustum.intersects_obb(&aabb, &model_to_world, true, true));
+                
+                    for (chunk_coords, _) in chunks_outside {
+                        chunks.loaded.remove(&chunk_coords);
+                    }
+                
+                    for (chunk_coords, _) in chunks_inside.iter() {
+                        if !chunks.loaded.contains_key(chunk_coords) {
+                            let instance = chunks.chunks.get(chunk_coords);
+                            let handle = grass_asset.add(instance.clone().unwrap().clone());
+                            chunks.loaded.insert(*chunk_coords, handle);
                         }
                     }
-                    //grass_handles.0 = chunks.loaded.values().cloned().collect();
+                
+                    grass_handles.0.clear();
+                    for (chunk_coords, _) in chunks_inside {
+                        if let Some(handle) = chunks.loaded.get(&chunk_coords) {
+                            grass_handles.0.push(handle.clone());
+                        }
+                    }
                 }
             }
         }

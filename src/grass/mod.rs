@@ -18,7 +18,7 @@ impl Plugin for GrassPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Grass>()
         .add_systems(PostStartup, grass::load_grass)
-        .add_systems(Update, (grass::update_grass_data, grass::update_grass_params, chunk::grass_frustum_cull))
+        .add_systems(Update, (grass::update_grass_data, grass::update_grass_params, chunk::grass_culling))
         .init_asset::<GrassInstanceData>()
         .add_plugins(RenderAssetPlugin::<GrassInstanceData>::default())
         .add_plugins(ExtractComponentPlugin::<GrassColorData>::default())
