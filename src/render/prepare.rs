@@ -1,8 +1,10 @@
-use std::time::Instant;
+use std::marker::PhantomData;
 
-use bevy::{prelude::*, render::{render_resource::{Buffer, BufferInitDescriptor, BufferUsages, BindGroup, BindGroupDescriptor, BindGroupEntry, BindingResource, BufferBinding, BindGroupEntries}, renderer::RenderDevice, texture::FallbackImage, render_asset::RenderAssets}};
+use bevy::{prelude::*, render::{render_resource::{Buffer, BufferInitDescriptor, BufferUsages, BindGroup, BindingResource, BufferBinding, BindGroupEntries}, renderer::RenderDevice, texture::FallbackImage, render_asset::RenderAssets}};
 
-use super::{extract::{GrassInstanceData, GrassColorData, WindData, BladeData}, pipeline::GrassPipeline, wind::{WindMap, self}};
+use crate::grass::wind::WindMap;
+
+use super::{extract::{GrassColorData, WindData, BladeData}, pipeline::GrassPipeline};
 
 #[derive(Component)]
 pub struct InstanceBuffer {
@@ -11,10 +13,21 @@ pub struct InstanceBuffer {
 }
 
 #[derive(Component)]
-pub struct ColorBindGroup {
+pub struct BufferBindGroup<T> {
     pub bind_group: BindGroup,
+    _marker: PhantomData<T>,
 }
-pub(super) fn prepare_color_buffers(
+
+impl<T> BufferBindGroup<T> {
+    pub fn new(bind_group: BindGroup) -> Self {
+        Self {
+            bind_group,
+            _marker:  PhantomData,
+        }
+    }
+}
+
+pub(crate) fn prepare_color_buffers(
     mut commands: Commands,
     pipeline: Res<GrassPipeline>,
     query: Query<(Entity, &GrassColorData)>,
@@ -38,18 +51,11 @@ pub(super) fn prepare_color_buffers(
             }),
         );
 
-        commands.entity(entity).insert(ColorBindGroup {
-            bind_group,
-        });
+        commands.entity(entity).insert(BufferBindGroup::<GrassColorData>::new(bind_group));
     }
 }
 
-#[derive(Component)]
-pub struct BladeBindGroup {
-    pub bind_group: BindGroup,
-}
-
-pub(super) fn prepare_blade_buffers(
+pub(crate) fn prepare_blade_buffers(
     mut commands: Commands,
     pipeline: Res<GrassPipeline>,
     query: Query<(Entity, &BladeData)>,
@@ -73,18 +79,11 @@ pub(super) fn prepare_blade_buffers(
             })
         );
 
-        commands.entity(entity).insert(BladeBindGroup {
-            bind_group,
-        });
+        commands.entity(entity).insert(BufferBindGroup::<BladeData>::new(bind_group));
     }
 }
 
-#[derive(Component)]
-pub struct WindBindGroup {
-    pub bind_group: BindGroup,
-}
-
-pub(super) fn prepare_wind_buffers(
+pub(crate) fn prepare_wind_buffers(
     mut commands: Commands,
     pipeline: Res<GrassPipeline>,
     query: Query<(Entity, &WindData)>,
@@ -109,18 +108,11 @@ pub(super) fn prepare_wind_buffers(
             })
         );
 
-        commands.entity(entity).insert(WindBindGroup {
-            bind_group,
-        });
+        commands.entity(entity).insert(BufferBindGroup::<WindData>::new(bind_group));
     }
 }
 
-#[derive(Component)]
-pub struct WindMapBindGroup {
-    pub bind_group: BindGroup,
-}
-
-pub fn prepare_wind_map_buffers(
+pub(crate) fn prepare_wind_map_buffers(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
     pipeline: Res<GrassPipeline>,
@@ -142,8 +134,6 @@ pub fn prepare_wind_map_buffers(
             &layout,
             &BindGroupEntries::single(BindingResource::TextureView(&wind_map_texture))
         );
-        commands.entity(entity).insert(WindMapBindGroup{
-            bind_group,
-        });
+        commands.entity(entity).insert(BufferBindGroup::<WindMap>::new(bind_group));
     }
 }

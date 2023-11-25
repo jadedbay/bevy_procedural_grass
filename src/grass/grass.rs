@@ -1,11 +1,11 @@
-use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, render_asset::{RenderAsset, PrepareAssetError}, renderer::RenderDevice, texture::{ImageType, CompressedImageFormats}, primitives::Aabb, extract_component::ExtractComponent}, ecs::system::{lifetimeless::SRes, SystemParamItem}, pbr::wireframe::Wireframe, utils::HashMap};
+use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues}, utils::HashMap};
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
 use rand::Rng;
 
-use crate::grass::extract::{GrassInstanceData, InstanceData};
+use crate::render::instance::{GrassInstanceData, InstanceData};
 
-use super::{extract::{GrassColorData, WindData, BladeData}, wind::{Wind, WindMap}, chunk::{GrassChunks, GrassToDraw, self}};
+use super::{super::render::extract::{GrassColorData, WindData, BladeData}, wind::{Wind, WindMap}, chunk::{GrassChunks, GrassToDraw}, mesh::GrassMesh};
 
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -93,10 +93,10 @@ pub fn generate_grass_data(
     grass: &mut Grass,
     transform: &Transform,
     mesh: &Mesh,
-    grass_asset: &mut ResMut<Assets<GrassInstanceData>>,
+    _grass_asset: &mut ResMut<Assets<GrassInstanceData>>,
 ) -> GrassChunks {
     let mut chunks: HashMap<(i32, i32, i32), GrassInstanceData> = HashMap::new();
-    let chunk_size = 30.0; // Define your chunk size
+    let chunk_size = 12.0; // Define your chunk size
 
     if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
         if let Some(VertexAttributeValues::Float32x2(uvs)) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
@@ -105,7 +105,7 @@ pub fn generate_grass_data(
                 for index in indices.iter() {
                     triangle.push(index);
                     if triangle.len() == 3 {
-                        let result: Vec<InstanceData> = {
+                        let _result: Vec<InstanceData> = {
                             // Calculate the area of the triangle
                             let v0 = Vec3::from(positions[triangle[0] as usize]) * transform.scale;
                             let v1 = Vec3::from(positions[triangle[1] as usize]) * transform.scale;
@@ -145,7 +145,6 @@ pub fn generate_grass_data(
                                     position,
                                     normal,
                                     uv,
-                                    chunk: Vec3::new(chunk_coords.0 as f32,chunk_coords.1 as f32, chunk_coords.2 as f32),
                                 };
 
                                 // Add instance to the appropriate chunk
@@ -161,16 +160,8 @@ pub fn generate_grass_data(
         }
     }
 
-    // let mut loaded_chunks = HashMap::new();
-    // for (chunk_coords, instance) in &chunks {
-    //     let handle = grass_asset.add(instance.clone());
-    //     loaded_chunks.insert(*chunk_coords, handle);
-    // }
-
     GrassChunks {
-        chunk_size: 30.,
         chunks,
-        //loaded: loaded_chunks,
         ..default()
     }
 }
@@ -220,10 +211,4 @@ impl Default for GrassColor {
             tip: [0.7, 0.7, 0.7, 1.0].into(),
         }
     }
-}
-
-
-pub struct GrassDataBuffer {
-    pub buffer: Buffer,
-    pub length: usize,
 }

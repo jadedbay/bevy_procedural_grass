@@ -1,8 +1,10 @@
-use bevy::{prelude::*, render::{render_phase::{DrawFunctions, RenderPhase}, render_resource::{SpecializedMeshPipelines, PipelineCache}, render_asset::RenderAssets, view::ExtractedView}, core_pipeline::core_3d::Opaque3d, pbr::{MeshUniform, MeshPipelineKey, RenderMeshInstances}};
+use bevy::{prelude::*, render::{render_phase::{DrawFunctions, RenderPhase}, render_resource::{SpecializedMeshPipelines, PipelineCache}, render_asset::RenderAssets, view::ExtractedView}, core_pipeline::core_3d::Opaque3d, pbr::{MeshPipelineKey, RenderMeshInstances}};
 
-use super::{pipeline::GrassPipeline, extract::GrassInstanceData, draw::DrawGrass, chunk::{GrassChunks, GrassToDraw}};
+use crate::grass::chunk::GrassToDraw;
 
-pub(super) fn grass_queue(
+use super::{pipeline::GrassPipeline, draw::DrawGrass};
+
+pub(crate) fn grass_queue(
     opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
     custom_pipeline: Res<GrassPipeline>,
     msaa: Res<Msaa>,

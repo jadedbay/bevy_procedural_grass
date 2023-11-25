@@ -1,6 +1,6 @@
 use bevy::{prelude::*, pbr::{MeshPipeline, MeshPipelineKey}, render::{render_resource::{BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, SpecializedMeshPipeline, RenderPipelineDescriptor, SpecializedMeshPipelineError, VertexBufferLayout, VertexStepMode, VertexAttribute, VertexFormat, TextureSampleType, TextureViewDimension}, renderer::RenderDevice, mesh::MeshVertexBufferLayout}};
 
-use super::extract::InstanceData;
+use super::instance::InstanceData;
 
 #[derive(Resource)]
 pub struct GrassPipeline {
@@ -129,11 +129,6 @@ impl SpecializedMeshPipeline for GrassPipeline {
                     format: VertexFormat::Float32x2,
                     offset: std::mem::size_of::<[f32; 6]>() as u64,
                     shader_location: 5,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Float32x3,
-                    offset: std::mem::size_of::<[f32; 8]>() as u64,
-                    shader_location: 6,
                 },
             ],
         });

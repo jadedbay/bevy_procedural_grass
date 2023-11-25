@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap, render::{primitives::{Frustum, Aabb}, extract_component::ExtractComponent}, ecs::query::QueryItem, math::{Vec3A, Affine3A}};
 
-use super::{extract::{InstanceData, GrassInstanceData}, grass::{GrassColor, Blade, Grass}};
+use super::{super::render::instance::{InstanceData, GrassInstanceData}, grass::{GrassColor, Blade, Grass}};
 
 #[derive(Component, Clone)]
 pub struct GrassChunks {
@@ -15,7 +15,7 @@ pub struct GrassToDraw(pub Vec<Handle<GrassInstanceData>>);
 impl Default for GrassChunks {
     fn default() -> Self {
         Self {
-            chunk_size: 30.,
+            chunk_size: 12.,
             chunks: HashMap::new(),
             loaded: HashMap::new(),
         }
@@ -48,33 +48,35 @@ pub fn grass_culling(
         for (entity, mut grass_handles) in grass_query.iter_mut() {
             for frustum in camera_query.iter() {
                 if grass.grass_entity == Some(entity) {
-                    let aabbs: Vec<((i32, i32, i32), Aabb)> = chunks.chunks.iter()
-                        .map(|(chunk_coords, _)| {
-                            let (x, y, z) = *chunk_coords;
-                            let center = Vec3A::new(x as f32, y as f32, z as f32) * chunks.chunk_size + Vec3A::splat(chunks.chunk_size / 2.);
-                            let half_extents = Vec3A::splat(chunks.chunk_size / 2.);
-                            (*chunk_coords, Aabb { center, half_extents })
-                        }).collect();
+                    let aabb = Aabb {
+                        center: Vec3A::splat(chunks.chunk_size / 2.),
+                        half_extents: Vec3A::splat(chunks.chunk_size / 2.) + Vec3A::new(0., 2., 0.),
+                    };
+                    
+                    let chunk_coords: Vec<(i32, i32, i32)> = chunks.chunks.keys().cloned().collect();
+                    
+                    let (chunks_inside, chunks_outside): (Vec<_>, Vec<_>) = chunk_coords.iter()
+                        .cloned()
+                        .partition(|&chunk_coords| {
+                            let (x, y, z) = chunk_coords;
+                            let world_pos = Affine3A::from_translation(Vec3::new(x as f32, y as f32, z as f32) * chunks.chunk_size);
+                            frustum.intersects_obb(&aabb, &world_pos, false, false)
+                        });
                 
-                    let model_to_world = Affine3A::IDENTITY;
-                
-                    let (chunks_inside, chunks_outside): (Vec<_>, Vec<_>) = aabbs.iter()
-                        .partition(|(_, aabb)| frustum.intersects_obb(&aabb, &model_to_world, true, true));
-                
-                    for (chunk_coords, _) in chunks_outside {
+                    for chunk_coords in chunks_outside {
                         chunks.loaded.remove(&chunk_coords);
                     }
                 
-                    for (chunk_coords, _) in chunks_inside.iter() {
+                    for chunk_coords in chunks_inside.iter() {
                         if !chunks.loaded.contains_key(chunk_coords) {
-                            let instance = chunks.chunks.get(chunk_coords);
-                            let handle = grass_asset.add(instance.clone().unwrap().clone());
+                            let instance = chunks.chunks.get(chunk_coords).unwrap();
+                            let handle = grass_asset.add(instance.clone());
                             chunks.loaded.insert(*chunk_coords, handle);
                         }
                     }
                 
                     grass_handles.0.clear();
-                    for (chunk_coords, _) in chunks_inside {
+                    for chunk_coords in chunks_inside {
                         if let Some(handle) = chunks.loaded.get(&chunk_coords) {
                             grass_handles.0.push(handle.clone());
                         }

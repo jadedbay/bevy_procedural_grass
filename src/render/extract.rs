@@ -1,8 +1,8 @@
-use bevy::{prelude::*, render::{extract_component::ExtractComponent, Extract, render_asset::RenderAsset, renderer::RenderDevice, render_resource::{BufferInitDescriptor, BufferUsages}}, ecs::{query::QueryItem, system::lifetimeless::SRes}, reflect::TypeUuid};
+use bevy::{prelude::*, render::{extract_component::ExtractComponent, render_asset::RenderAsset, renderer::RenderDevice, render_resource::{BufferInitDescriptor, BufferUsages}}, ecs::{query::QueryItem, system::lifetimeless::SRes}, reflect::TypeUuid};
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use bytemuck::{Pod, Zeroable};
 
-use super::{grass::{GrassColor, Blade, GrassDataBuffer}, wind::Wind};
+use crate::grass::{grass::{GrassColor, Blade}, wind::Wind};
 
 #[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -34,66 +34,6 @@ impl ExtractComponent for GrassColorData {
         Some(item.clone())
     }
 }
-
-#[derive(Clone, Copy, Pod, Zeroable, Reflect, Debug)]
-#[repr(C)]
-pub struct InstanceData {
-    pub position: Vec3,
-    pub normal: Vec3,
-    pub uv: Vec2,
-    pub chunk: Vec3,
-}
-
-#[derive(Component, Deref, Clone, Asset, TypeUuid, TypePath)]
-#[uuid = "81a29e63-ef6c-4561-b49c-4a138ff39c01"]
-pub struct GrassInstanceData(pub Vec<InstanceData>);
-
-impl Default for GrassInstanceData {
-    fn default() -> Self {
-        Self(Vec::new())
-    }
-}
-
-impl RenderAsset for GrassInstanceData {
-    type ExtractedAsset = GrassInstanceData;
-    type PreparedAsset = GrassDataBuffer;
-    type Param = SRes<RenderDevice>;
-
-    fn extract_asset(&self) -> Self::ExtractedAsset {
-        GrassInstanceData(self.0.clone())
-    }
-
-    fn prepare_asset(
-            extracted_asset: Self::ExtractedAsset,
-            param: &mut bevy::ecs::system::SystemParamItem<Self::Param>,
-        ) -> Result<Self::PreparedAsset, bevy::render::render_asset::PrepareAssetError<Self::ExtractedAsset>> {
-        let render_device = param;
-
-        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: None,
-            contents:  bytemuck::cast_slice(extracted_asset.as_slice()),
-            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST | BufferUsages::STORAGE
-        });
-
-        Ok(GrassDataBuffer {
-            buffer,
-            length: extracted_asset.len(),
-        })
-    }
-}
-
-// pub fn extract_grass(
-//     mut commands: Commands,
-//     extract: Extract<Query<(Entity, &GrassHandles)>>
-// ) {
-//     let mut values = Vec::new();
-//     for (entity, data) in extract.iter() {
-//         values.push((entity, data.clone()))
-//     }
-//     commands.insert_or_spawn_batch(values);
-// }
-
-
 
 #[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]

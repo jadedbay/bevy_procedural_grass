@@ -13,7 +13,6 @@ struct Vertex {
     @location(3) i_pos: vec3<f32>,
     @location(4) i_normal: vec3<f32>,
     @location(5) i_uv: vec2<f32>,
-    @location(6) i_chunk: vec3<f32>,
 };
 
 struct Color {
@@ -55,7 +54,7 @@ struct VertexOutput {
     @location(5) world_position: vec3<f32>,
     @location(6) world_normal: vec3<f32>,
     @location(7) curved_normal: vec3<f32>,
-    @location(8) color: vec3<f32>,
+    @location(8) bezier_tangent: vec3<f32>,
 };
 
 @vertex
@@ -66,8 +65,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     var hash_id = random1D(vertex.i_pos.x * 10000. + vertex.i_pos.y * 100. + vertex.i_pos.z * 0.05 + 2.);
     hash_id = random1D(hash_id * 100000.);
-
-    let random_color = vec3<f32>(random1D(vertex.i_chunk.x), random1D(vertex.i_chunk.y), random1D(vertex.i_chunk.z));
 
     var position = vertex.position;
 
@@ -122,9 +119,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
     var normal = normalize(cross(tangent, vec3<f32>(facing_normal.x, 0.0, facing_normal.y)));
     out.normal = normal;
-    normal.x += pow(uv.x * uv.x, 0.5);
-    normal.z += pow(uv.x * uv.x, 0.5);
-    normal = normalize(normal);
+
+
+    // normal.x += pow(uv.x * uv.x, 0.5);
+    // normal.z += pow(uv.x * uv.x, 0.5);
+    //normal = normalize(normal);
 
     position += vertex.i_pos.xyz;
 
@@ -139,7 +138,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.curved_normal = normal;
     out.world_position = position;
     out.world_normal = vertex.i_normal;
-    out.color = random_color;
+    out.bezier_tangent = tangent;
 
     return out;
 }
@@ -147,6 +146,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 @fragment
 fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @location(0) vec4<f32> {
     var normal = in.curved_normal;
+
+    let uv_x_transformed = in.uv.x * 2.0 - 1.0;
+    let normal_curve = 15. * -1.;
+    normal = normalize(rotate_vector(normal, in.bezier_tangent, normal_curve * uv_x_transformed));
+    
     if (!is_front) {
         normal = -normal;
     }
@@ -158,17 +162,12 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     let specular =  spec_strength * spec;
 
     let color_gradient = mix(color.color_1, color.color_2, in.uv.y);
-    let ndotl_1 = clamp(dot(normal, -lights.directional_lights[0].direction_to_light), 0.3, 1.0);
-    let ndotl_2 = clamp(dot(-normal, -lights.directional_lights[0].direction_to_light), 0.3, 1.0);
-    let ndotl = max(ndotl_1, ndotl_2);
-
+    let ndotl = clamp(dot(normal, -lights.directional_lights[0].direction_to_light), 0.3, 1.0);
     let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0),  in.uv.y);
     let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip,  in.uv.y * in.uv.y);
 
-    //let final_color = (color_gradient + specular) * ndotl * ao;
+    let final_color = (color_gradient + specular) * ndotl * ao;
     //let final_color = color.color_2 * ndotl;
-    
-    let final_color = vec4(in.color, 1.);
 
     return final_color;
     //return vec4(in.t, in.t, in.t, 1.0);
@@ -181,6 +180,14 @@ fn rotate_y(vertex: vec3<f32>, degrees: f32) -> vec3<f32> {
     let m: mat2x2<f32> = mat2x2<f32>(cosa, -sina, sina, cosa);
     let rotated_xz: vec2<f32> = m * vertex.xz;
     return vec3<f32>(rotated_xz.x, vertex.y, rotated_xz.y);
+}
+
+fn rotate_vector(v: vec3<f32>, n: vec3<f32>, degrees: f32) -> vec3<f32> {
+    let theta = degrees * PI / 180.;
+    let cosTheta = cos(theta);
+    let sinTheta = sin(theta);
+
+    return v * cosTheta + cross(n, v) * sinTheta + n * dot(n, v) * (1.0 - cosTheta);
 }
 
 fn cubic_bezier(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>, p3: vec3<f32>) -> vec3<f32> {
