@@ -5,7 +5,7 @@ use rand::Rng;
 
 use crate::render::instance::{GrassInstanceData, InstanceData};
 
-use super::{super::render::extract::{GrassColorData, WindData, BladeData}, wind::{Wind, WindMap}, chunk::{GrassChunks, GrassToDraw}, mesh::GrassMesh};
+use super::{super::render::extract::{GrassColorData, WindData, BladeData}, wind::{Wind, WindMap, GrassWind}, chunk::{GrassChunks, GrassChunkHandles}};
 
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -14,16 +14,9 @@ pub struct Grass {
     pub mesh: Handle<Mesh>,
     #[reflect(ignore)]
     pub grass_entity: Option<Entity>,
-    #[reflect(ignore)]
-    pub grass_handle: Option<Handle<GrassInstanceData>>,
-    #[reflect(ignore)]
-    pub wind_map_handle: Handle<Image>,
-    #[reflect(ignore)]
-    pub chunks: GrassChunks,
     pub density: u32,
     pub color: GrassColor,
     pub blade: Blade,
-    pub wind: Wind,
     pub regenerate: bool,
 }
 
@@ -72,7 +65,6 @@ pub fn update_grass_params(
         if let Some(grass_entity) = grass.grass_entity {
             commands.entity(grass_entity)
                 .insert(GrassColorData::from(grass.color.clone()))
-                .insert(WindData::from(grass.wind.clone()))
                 .insert(BladeData::from(grass.blade.clone()));
         }
     }
@@ -83,9 +75,10 @@ pub fn load_grass(
     mut query: Query<(Entity, &Transform, &mut Grass, &Handle<Mesh>)>,
     meshes: Res<Assets<Mesh>>,
     mut grass_asset: ResMut<Assets<GrassInstanceData>>,
+    wind: Res<GrassWind>,
 ) {
     for (entity, transform, mut grass, mesh_handle) in query.iter_mut() {
-        spawn_grass(&mut commands, transform, &entity, &mut grass, meshes.get(mesh_handle).unwrap(), &mut grass_asset);
+        spawn_grass(&mut commands, transform, &entity, &mut grass, meshes.get(mesh_handle).unwrap(), &mut grass_asset, &wind);
     }
 }
 
@@ -96,7 +89,7 @@ pub fn generate_grass_data(
     _grass_asset: &mut ResMut<Assets<GrassInstanceData>>,
 ) -> GrassChunks {
     let mut chunks: HashMap<(i32, i32, i32), GrassInstanceData> = HashMap::new();
-    let chunk_size = 12.0; // Define your chunk size
+    let chunk_size = 12.0;
 
     if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
         if let Some(VertexAttributeValues::Float32x2(uvs)) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
@@ -106,7 +99,6 @@ pub fn generate_grass_data(
                     triangle.push(index);
                     if triangle.len() == 3 {
                         let _result: Vec<InstanceData> = {
-                            // Calculate the area of the triangle
                             let v0 = Vec3::from(positions[triangle[0] as usize]) * transform.scale;
                             let v1 = Vec3::from(positions[triangle[1] as usize]) * transform.scale;
                             let v2 = Vec3::from(positions[triangle[2] as usize]) * transform.scale;
@@ -115,18 +107,15 @@ pub fn generate_grass_data(
         
                             let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
         
-                            // Scale the density by the area of the triangle
                             let scaled_density = (grass.density as f32 * area).ceil() as u32;
         
                             (0..scaled_density).filter_map(|_| {
                                 let mut rng = rand::thread_rng();
         
-                                // Generate random barycentric coordinates
                                 let r1 = rng.gen::<f32>().sqrt();
                                 let r2 = rng.gen::<f32>();
                                 let barycentric = Vec3::new(1.0 - r1, r1 * (1.0 - r2), r1 * r2);
         
-                                // Calculate the position of the blade using the barycentric coordinates
                                 let position = v0 * barycentric.x + v1 * barycentric.y + v2 * barycentric.z;
                             
                                 let uv0 = Vec2::from(uvs[triangle[0] as usize]);
@@ -136,8 +125,8 @@ pub fn generate_grass_data(
 
                                 let chunk_coords = (
                                     (position.x / chunk_size).floor() as i32,
-                                    //(position.y / chunk_size).floor() as i32,
-                                    0,
+                                    (position.y / chunk_size).floor() as i32,
+                                    //0,
                                     (position.z / chunk_size).floor() as i32,
                                 );
 
@@ -173,6 +162,7 @@ pub fn spawn_grass(
     grass: &mut Grass,
     mesh: &Mesh,
     grass_asset: &mut ResMut<Assets<GrassInstanceData>>,
+    wind: &Res<GrassWind>,
 ) {
     let grass_handles = generate_grass_data(grass, transform, mesh, grass_asset);
     commands.entity(*entity).insert(grass_handles);
@@ -180,12 +170,12 @@ pub fn spawn_grass(
     let grass_entity = commands.spawn((
         grass.mesh.clone(),
         SpatialBundle::INHERITED_IDENTITY,
-        GrassToDraw::default(),
+        GrassChunkHandles::default(),
         GrassColorData::from(grass.color),
-        WindData::from(grass.wind),
+        WindData::from(wind.wind_data),
         BladeData::from(grass.blade),
         WindMap {
-            wind_map: grass.wind_map_handle.clone(),
+            wind_map: wind.wind_map.clone()
         },
         NoFrustumCulling,
     )).id();

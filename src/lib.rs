@@ -1,10 +1,11 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet}, core_pipeline::core_3d::Opaque3d};
 
-use grass::{grass::Grass, chunk::GrassToDraw, wind::WindMap};
+use grass::{grass::Grass, chunk::GrassChunkHandles, wind::WindMap};
 use render::{instance::GrassInstanceData, extract::{GrassColorData, WindData, BladeData}, pipeline::GrassPipeline, draw::DrawGrass};
 
 pub mod grass;
 pub mod render;
+
 pub struct ProceduralGrassPlugin;
 
 impl Plugin for ProceduralGrassPlugin {
@@ -17,7 +18,7 @@ impl Plugin for ProceduralGrassPlugin {
         .add_plugins(ExtractComponentPlugin::<GrassColorData>::default())
         .add_plugins(ExtractComponentPlugin::<WindData>::default())
         .add_plugins(ExtractComponentPlugin::<BladeData>::default())
-        .add_plugins(ExtractComponentPlugin::<GrassToDraw>::default())
+        .add_plugins(ExtractComponentPlugin::<GrassChunkHandles>::default())
         .add_plugins(ExtractComponentPlugin::<WindMap>::default());
 
         let render_app = app.sub_app_mut(RenderApp);

@@ -1,7 +1,7 @@
-use bevy::{prelude::*, window::PresentMode, pbr::wireframe::WireframePlugin, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::{mesh::VertexAttributeValues, texture::{ImageType, CompressedImageFormats, ImageSampler}}};
+use bevy::{prelude::*, window::PresentMode, pbr::wireframe::WireframePlugin, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{grass::Grass, mesh::GrassMesh}};
+use procedural_grass::{ProceduralGrassPlugin, grass::{grass::Grass, mesh::GrassMesh, wind::GrassWind}};
 
 use noise::NoiseFn;
 
@@ -42,7 +42,13 @@ fn setup(
         }
     }
 
-    let wind_map  = asset_server.load("images/wind_map.png");
+    //GrassWind::save_perlin_noise_image_as_png(512, 512, "test.png");
+
+    commands.insert_resource(GrassWind {
+        wind_map: asset_server.add(GrassWind::generate_wind_map()),
+        ..default()
+    });
+    //let wind_map  = asset_server.load("images/wind_map.png");
 
     commands.spawn((
         PbrBundle {
@@ -52,13 +58,12 @@ fn setup(
                 reflectance: 0.0,
                 ..Default::default()
             }),
-            transform: Transform::from_scale(Vec3::new(300.0, 3.0, 300.0)),
+            transform: Transform::from_scale(Vec3::new(100.0, 3.0, 100.0)),
             ..Default::default()
         }, 
         Grass {
             mesh: meshes.add(GrassMesh::mesh()),
             density: 25,
-            wind_map_handle: wind_map,
             ..default()
         },
     ));

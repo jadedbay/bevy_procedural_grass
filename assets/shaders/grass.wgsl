@@ -70,10 +70,13 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let rad = wind.direction * PI / 180.0;
     let wind_direction = vec2<f32>(cos(rad), sin(rad));
-    var facing = normalize(vec2<f32>(mix(-1., 1., hash_id), mix(-1., 1., random1D(hash_id * vertex.i_pos.x))));
+    var facing = normalize(vec2<f32>(mix(-1., 1., random1D(fract(hash_id) * 5000.)), mix(-1., 1., random1D(hash_id * vertex.i_pos.x))));
 
-    let noise_value = noise(vertex.i_uv.x + vertex.i_uv.y);
-    let r = sample_wind_map(vertex.i_uv * hash_id, 0.1).r;
+    //let noise_value = noise(vertex.i_uv.x + vertex.i_uv.y);
+    //let r = sample_wind_map(fract(vertex.i_uv * hash_id), 0.1).r;
+    let random_point = vec2<f32>(fract(vertex.i_pos.x * 0.1 * hash_id), fract(vertex.i_pos.y * 0.1 * hash_id));
+    let r = sample_wind_map(random_point, wind.speed).r;
+    
 
     //var t = remap(sample_wind_map(vertex.i_uv, wind.speed).r, 0.20, 0.8, 0.0, 1.0);
     var t = sample_wind_map(vertex.i_uv, wind.speed).r;
@@ -103,7 +106,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     p2 += blade_dir * p2_offset;
     p3 += blade_dir * p3_offset;
 
-    facing = normalize(mix(facing, wind_direction, sin(t)));
+    //facing = normalize(mix(facing, wind_direction, sin(t)));
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     position.y = bezier.y;
@@ -118,12 +121,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
     var normal = normalize(cross(tangent, vec3<f32>(facing_normal.x, 0.0, facing_normal.y)));
+    normal = rotation_matrix * normal;
     out.normal = normal;
-
-
-    // normal.x += pow(uv.x * uv.x, 0.5);
-    // normal.z += pow(uv.x * uv.x, 0.5);
-    //normal = normalize(normal);
 
     position += vertex.i_pos.xyz;
 

@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{extract_component::ExtractComponent, render_asset::RenderAsset, renderer::RenderDevice, render_resource::{BufferInitDescriptor, BufferUsages}}, ecs::{query::QueryItem, system::lifetimeless::SRes}, reflect::TypeUuid};
+use bevy::{prelude::*, render::extract_component::ExtractComponent, ecs::query::QueryItem};
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use bytemuck::{Pod, Zeroable};
 

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_flycam::PlayerPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{grass::Grass, mesh::GrassMesh}};
+use procedural_grass::{ProceduralGrassPlugin, grass::{grass::Grass, mesh::GrassMesh, wind::GrassWind}};
 
 fn main() {
     let mut app = App::new();
@@ -21,7 +21,10 @@ fn setup(
 ) {
     let terrain_mesh = Mesh::try_from(shape::Icosphere { radius: 1.0, subdivisions: 20 }).unwrap();
 
-    let wind_map  = asset_server.load("images/wind_map.png");
+    commands.insert_resource(GrassWind {
+        wind_map: asset_server.add(GrassWind::generate_wind_map()),
+        ..default()
+    });
 
     commands.spawn((
         PbrBundle {
@@ -37,7 +40,6 @@ fn setup(
         Grass {
             mesh: meshes.add(GrassMesh::mesh()),
             density: 25,
-            wind_map_handle: wind_map,
             ..default()
         },
     ));

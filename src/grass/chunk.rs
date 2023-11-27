@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap, render::{primitives::{Frustum, Aabb}, extract_component::ExtractComponent}, ecs::query::QueryItem, math::{Vec3A, Affine3A}};
 
-use super::{super::render::instance::{InstanceData, GrassInstanceData}, grass::{GrassColor, Blade, Grass}};
+use super::{super::render::instance::GrassInstanceData, grass::Grass};
 
 #[derive(Component, Clone)]
 pub struct GrassChunks {
@@ -8,9 +8,6 @@ pub struct GrassChunks {
     pub chunks: HashMap<(i32, i32, i32), GrassInstanceData>,
     pub loaded: HashMap<(i32, i32, i32), Handle<GrassInstanceData>>,
 }
-
-#[derive(Component, Default, Clone)]
-pub struct GrassToDraw(pub Vec<Handle<GrassInstanceData>>);
 
 impl Default for GrassChunks {
     fn default() -> Self {
@@ -28,8 +25,11 @@ impl GrassChunks {
     }
 }
 
-impl ExtractComponent for GrassToDraw {
-    type Query = &'static GrassToDraw;
+#[derive(Component, Default, Clone)]
+pub struct GrassChunkHandles(pub Vec<Handle<GrassInstanceData>>);
+
+impl ExtractComponent for GrassChunkHandles {
+    type Query = &'static GrassChunkHandles;
     type Filter = ();
     type Out = Self;
 
@@ -40,7 +40,7 @@ impl ExtractComponent for GrassToDraw {
 
 pub fn grass_culling(
     mut query: Query<(&Grass, &mut GrassChunks)>,
-    mut grass_query: Query<(Entity, &mut GrassToDraw)>,
+    mut grass_query: Query<(Entity, &mut GrassChunkHandles)>,
     camera_query: Query<&Frustum>,
     mut grass_asset: ResMut<Assets<GrassInstanceData>>,
 ) {
@@ -50,7 +50,7 @@ pub fn grass_culling(
                 if grass.grass_entity == Some(entity) {
                     let aabb = Aabb {
                         center: Vec3A::splat(chunks.chunk_size / 2.),
-                        half_extents: Vec3A::splat(chunks.chunk_size / 2.) + Vec3A::new(0., 2., 0.),
+                        half_extents: Vec3A::splat(chunks.chunk_size / 2.) + Vec3A::new(2., 2., 2.),
                     };
                     
                     let chunk_coords: Vec<(i32, i32, i32)> = chunks.chunks.keys().cloned().collect();
