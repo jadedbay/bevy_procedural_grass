@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup, RenderMeshInstances}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use crate::grass::{wind::WindMap, chunk::GrassChunkHandles};
+use crate::grass::{wind::WindMap, chunk::RenderGrassChunks};
 
 use super::{extract::{GrassColorData, WindData, BladeData}, prepare::BufferBindGroup, instance::GrassInstanceData};
 
@@ -48,13 +48,13 @@ pub struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<Mesh>>, SRes<RenderMeshInstances>, SRes<RenderAssets<GrassInstanceData>>);
     type ViewWorldQuery = ();
-    type ItemWorldQuery = Read<GrassChunkHandles>;
+    type ItemWorldQuery = Read<RenderGrassChunks>;
 
     #[inline]
     fn render<'w>(
         item: &P,
         _view: (),
-        chunks: &'w GrassChunkHandles,
+        chunks: &'w RenderGrassChunks,
         (meshes, render_mesh_instances, grass_data): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
@@ -67,7 +67,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
         };
 
         let grass_data_inner = grass_data.into_inner();
-
+        
         pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
 
         for handle in &chunks.0 {

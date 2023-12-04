@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_phase::{DrawFunctions, RenderPhase}, render_resource::{SpecializedMeshPipelines, PipelineCache}, render_asset::RenderAssets, view::ExtractedView}, core_pipeline::core_3d::Opaque3d, pbr::{MeshPipelineKey, RenderMeshInstances}};
 
-use crate::grass::chunk::GrassChunkHandles;
+use crate::grass::chunk::{RenderGrassChunks};
 
 use super::{pipeline::GrassPipeline, draw::DrawGrass};
 
@@ -12,7 +12,7 @@ pub(crate) fn grass_queue(
     pipeline_cache: Res<PipelineCache>,
     meshes: Res<RenderAssets<Mesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
-    material_meshes: Query<Entity, With<GrassChunkHandles>>,
+    material_meshes: Query<Entity, With<RenderGrassChunks>>,
     mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
 ) {
     let draw_custom = opaque_3d_draw_functions.read().id::<DrawGrass>();

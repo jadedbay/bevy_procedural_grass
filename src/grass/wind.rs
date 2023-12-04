@@ -25,7 +25,7 @@ impl Default for Wind {
     }
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 pub struct WindMap {
     pub wind_map: Handle<Image>,
 }
