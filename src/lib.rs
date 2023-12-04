@@ -1,19 +1,24 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet, extract_resource::ExtractResourcePlugin}, core_pipeline::core_3d::Opaque3d};
 
-use grass::{chunk::GrassChunks, grass::Grass, wind::GrassWind};
+use grass::{chunk::GrassChunks, grass::Grass, wind::GrassWind, config::GrassConfig};
 use render::{instance::GrassInstanceData, pipeline::GrassPipeline, draw::DrawGrass};
 
 pub mod grass;
 pub mod render;
 
-#[derive(Default)]
-pub struct ProceduralGrassPlugin;
+#[derive(Default, Clone)]
+pub struct ProceduralGrassPlugin {
+    pub config: GrassConfig,
+    pub wind: GrassWind,
+}
 
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Grass>()
         .register_type::<GrassWind>()
-        .init_resource::<GrassWind>()
+        .register_type::<GrassConfig>()
+        .insert_resource(self.wind.clone())
+        .insert_resource(self.config)
         .add_systems(Startup, grass::wind::create_wind_map)
         .add_systems(PostStartup, grass::grass::generate_grass)
         .add_systems(Update, grass::chunk::grass_culling)

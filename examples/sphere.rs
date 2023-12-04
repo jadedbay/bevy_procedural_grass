@@ -8,7 +8,7 @@ fn main() {
     app.add_plugins((
         DefaultPlugins,
         PlayerPlugin,
-        ProceduralGrassPlugin, // add procedural grass plugin
+        ProceduralGrassPlugin::default(), // add procedural grass plugin
         WorldInspectorPlugin::new(),
     ))
     .add_systems(Startup, setup)
@@ -39,7 +39,7 @@ fn setup(
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
         grass: Grass {
-            entity: Some(terrain.clone()), // Set entity grass will be placed on (must have a mesh and transform)
+            entity: Some(terrain.clone()), // set entity grass will be placed on (must have a mesh and transform)
             ..default()
         },
         ..default()

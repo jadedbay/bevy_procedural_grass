@@ -1,7 +1,7 @@
 use bevy::{prelude::*, window::PresentMode, pbr::wireframe::WireframePlugin, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
+use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh, config::GrassConfig}};
 
 use noise::NoiseFn;
 
@@ -18,7 +18,7 @@ fn main() {
         WireframePlugin,
         PlayerPlugin,
         WorldInspectorPlugin::new(),
-        ProceduralGrassPlugin,
+        ProceduralGrassPlugin::default(),
         LogDiagnosticsPlugin::default(),
         FrameTimeDiagnosticsPlugin,
     ))

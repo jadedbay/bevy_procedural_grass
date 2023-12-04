@@ -176,15 +176,6 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     //return vec4(in.t, in.t, in.t, 1.0);
 }
 
-fn rotate_y(vertex: vec3<f32>, degrees: f32) -> vec3<f32> {
-    let alpha: f32 = degrees * PI / 180.0;
-    let sina: f32 = sin(alpha);
-    let cosa: f32 = cos(alpha);
-    let m: mat2x2<f32> = mat2x2<f32>(cosa, -sina, sina, cosa);
-    let rotated_xz: vec2<f32> = m * vertex.xz;
-    return vec3<f32>(rotated_xz.x, vertex.y, rotated_xz.y);
-}
-
 fn rotate_vector(v: vec3<f32>, n: vec3<f32>, degrees: f32) -> vec3<f32> {
     let theta = degrees * PI / 180.;
     let cosTheta = cos(theta);

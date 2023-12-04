@@ -2,6 +2,8 @@ use bevy::{prelude::*, utils::HashMap, render::{primitives::{Frustum, Aabb}, ext
 
 use crate::render::instance::GrassInstanceData;
 
+use super::config::GrassConfig;
+
 #[derive(Component, Clone)]
 pub struct GrassChunks {
     pub chunk_size: f32,
@@ -36,11 +38,12 @@ pub struct RenderGrassChunks(pub Vec<Handle<GrassInstanceData>>);
 
 pub fn grass_culling(
     mut query: Query<&mut GrassChunks>,
-    camera_query: Query<&Frustum>,
+    camera_query: Query<(&Transform, &Frustum)>,
     mut grass_asset: ResMut<Assets<GrassInstanceData>>,
+    grass_config: Res<GrassConfig>,
 ) {
     for mut chunks in query.iter_mut() {
-        for frustum in camera_query.iter() {
+        for (transform, frustum) in camera_query.iter() {
             let aabb = Aabb {
                 center: Vec3A::splat(chunks.chunk_size / 2.),
                 half_extents: Vec3A::splat(chunks.chunk_size / 2.) + Vec3A::new(2., 2., 2.),
@@ -52,8 +55,11 @@ pub fn grass_culling(
                 .cloned()
                 .partition(|&chunk_coords| {
                     let (x, y, z) = chunk_coords;
-                    let world_pos = Affine3A::from_translation(Vec3::new(x as f32, y as f32, z as f32) * chunks.chunk_size);
-                    frustum.intersects_obb(&aabb, &world_pos, false, false)
+                    let world_pos = Vec3::new(x as f32, y as f32, z as f32) * chunks.chunk_size;
+                    
+                    let distance = (world_pos.xz() - transform.translation.xz()).length();
+                    
+                    frustum.intersects_obb(&aabb, &Affine3A::from_translation(world_pos), false, false) && distance <= grass_config.cull_distance
                 });
         
             for chunk_coords in chunks_outside {

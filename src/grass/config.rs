@@ -1,8 +1,10 @@
 use bevy::prelude::*;
+use bevy_inspector_egui::{InspectorOptions, inspector_options::ReflectInspectorOptions};
 
-#[derive(Resource)]
+#[derive(Resource, Clone, Copy, Reflect, InspectorOptions)]
+#[reflect(Resource, InspectorOptions)]
 pub struct GrassConfig {
-    cull_distance: f32,
+    pub cull_distance: f32,
 }
 
 impl Default for GrassConfig {
