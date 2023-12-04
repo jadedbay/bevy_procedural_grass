@@ -1,6 +1,6 @@
 use bevy::render::extract_resource::ExtractResource;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::{prelude::*, render::extract_component::ExtractComponent, ecs::query::QueryItem};
+use bevy::prelude::*;
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use bytemuck::{Pod, Zeroable};
 use noise::Perlin;
@@ -25,23 +25,6 @@ impl Default for Wind {
             direction: 0.0,
             force: 2.,
         }
-    }
-}
-
-#[derive(Component, Clone, Default)]
-pub struct WindMap {
-    pub wind_map: Handle<Image>,
-}
-
-impl ExtractComponent for WindMap {
-    type Query = &'static Self;
-    type Filter = ();
-    type Out = Self;
-
-    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self::Out> {
-        Some(WindMap {
-            wind_map: item.wind_map.clone_weak(),
-        })
     }
 }
 

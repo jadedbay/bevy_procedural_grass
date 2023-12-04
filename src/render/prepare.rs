@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::{render_resource::{BufferInitDescriptor, BufferUsages, BindGroup, BindingResource, BufferBinding, BindGroupEntries}, renderer::RenderDevice, texture::FallbackImage, render_asset::RenderAssets}};
 
-use crate::grass::{wind::{WindMap, GrassWind}, grass::{Blade, GrassColor, Grass}};
+use crate::grass::{wind::GrassWind, grass::{Blade, GrassColor, Grass}};
 
 use super::pipeline::GrassPipeline;
 

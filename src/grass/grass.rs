@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues}, utils::HashMap};
+use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, extract_component::ExtractComponent}, utils::HashMap, ecs::query::QueryItem};
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
 use bytemuck::{Zeroable, Pod};
@@ -6,7 +6,7 @@ use rand::Rng;
 
 use crate::render::instance::{GrassInstanceData, GrassData};
 
-use super::{wind::WindMap, chunk::GrassChunks};
+use super::chunk::GrassChunks;
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -101,6 +101,16 @@ impl Grass {
         }
 
         chunks
+    }
+}
+
+impl ExtractComponent for Grass {
+    type Query = &'static Grass;
+    type Filter = ();
+    type Out = (GrassColor, Blade);
+
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self::Out> {
+        Some((item.color.clone(), item.blade.clone()))
     }
 }
 

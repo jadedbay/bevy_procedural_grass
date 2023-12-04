@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup, RenderMeshInstances}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use crate::grass::{wind::{WindMap, GrassWind}, chunk::RenderGrassChunks, grass::Grass};
+use crate::grass::{wind::GrassWind, chunk::RenderGrassChunks, grass::Grass};
 
 use super::{prepare::BufferBindGroup, instance::GrassInstanceData};
 
