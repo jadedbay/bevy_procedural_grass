@@ -27,6 +27,7 @@ var<uniform> color: Color;
 struct Wind {
     speed: f32,
     strength: f32,
+    variance: f32,
     direction: f32,
     force: f32,
 };
@@ -37,6 +38,7 @@ struct Blade {
     length: f32,
     width: f32,
     tilt: f32,
+    tilt_variance: f32,
     bend: f32,
 }
 @group(4) @binding(0)
@@ -72,55 +74,52 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let wind_direction = vec2<f32>(cos(rad), sin(rad));
     var facing = normalize(vec2<f32>(mix(-1., 1., random1D(fract(hash_id) * 5000.)), mix(-1., 1., random1D(hash_id * vertex.i_pos.x))));
 
-    //let noise_value = noise(vertex.i_uv.x + vertex.i_uv.y);
-    //let r = sample_wind_map(fract(vertex.i_uv * hash_id), 0.1).r;
     let random_point = vec2<f32>(fract(vertex.i_pos.x * 0.1 * hash_id), fract(vertex.i_pos.y * 0.1 * hash_id));
     let r = sample_wind_map(random_point, wind.speed).r;
     
-
-    //var t = remap(sample_wind_map(vertex.i_uv, wind.speed).r, 0.20, 0.8, 0.0, 1.0);
     var t = sample_wind_map(vertex.i_uv, wind.speed).r;
 
     let width = blade.width;
     let length = mix(blade.length, blade.length + 0.6, fract(hash_id));
-    let tilt = mix(blade.tilt, blade.tilt + 0.2, fract(hash_id * 5000. + 2.));
-    let bend = mix(blade.bend, blade.bend + 0.2, fract(hash_id * 200. + 4.));
 
-    let p3y = tilt * length;
-    let p3x = sqrt(length * length - p3y * p3y);
-    
-    var p3 = vec3<f32>(p3x, p3y, 0.0);
+    let theta = 2.0 * PI * random1D(hash_id);
+    let radius = length * mix(blade.tilt_variance, blade.tilt, fract(random1D(hash_id)));
+    var xz = radius * vec2<f32>(cos(theta), sin(theta)); 
+    let base_xz = xz;
 
-    var blade_dir = normalize(vec3<f32>(-p3y, p3x, 0.0));
+    xz += -wind_direction * (sin(mix(wind.strength - wind.variance, wind.strength, t) * wind.speed) * wind.force);
+    let xz_length = length(xz);
+    let clamped_length = clamp(xz_length, 0.0, length - 0.05);
+    xz = normalize(xz) * clamped_length;
 
-    var p0 = vec3<f32>(0.0, 0.0,  0.0);
+    var y = sqrt(length * length - dot(xz, xz));
+    //y += (xz_length - clamped_length) * wind.strength * length;
+    var p3 = vec3<f32>(xz.x, y, xz.y);
+
+    let p0 = vec3<f32>(0.0);
+
     var p1 = 0.33 * p3;
     var p2 = 0.66 * p3;
 
-    p1 += blade_dir * bend;
-    p2 += blade_dir * bend;
-
-    var p2_offset = pow(0.66, wind.strength) * sin(r * 0.5) * wind.force;
-    var p3_offset = pow(1., wind.strength) * sin(r * 0.5) * wind.force;
-
-    p2 += blade_dir * p2_offset;
-    p3 += blade_dir * p3_offset;
-
-    //facing = normalize(mix(facing, wind_direction, sin(t)));
+    let blade_dir_normal = normalize(vec2<f32>(-xz.y, xz.x));
+    let blade_normal = normalize(cross(vec3<f32>(blade_dir_normal.x, 0., blade_dir_normal.y), p3));
+    
+    p1 += blade_normal * (length - y) * blade.bend;
+    p2 += blade_normal * (length - y) * blade.bend;
+    p2 -= blade_normal * -sin(r * 0.2);
+    p3 += blade_normal * sin(r * 0.2) * 1.5;
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
+    let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
     position.y = bezier.y;
-    var facing_normal = vec2<f32>(-facing.y, facing.x);
-    let bezier_xz = bezier.x * facing;
-    let xz_pos = bezier_xz + (facing_normal * vertex.position.x * width);
+    let xz_pos = bezier.xz + (normalize(vec2<f32>(-base_xz.y, base_xz.x)) * vertex.position.x * width);
     position.x = xz_pos.x;
     position.z = xz_pos.y;
 
     let rotation_matrix = rotate_align(vec3<f32>(0.0, 1.0, 0.0), vertex.i_normal);
     position = rotation_matrix * position;
 
-    let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
-    var normal = normalize(cross(tangent, vec3<f32>(facing_normal.x, 0.0, facing_normal.y)));
+    var normal = normalize(cross(tangent, vec3<f32>(blade_dir_normal.x, 0.0, blade_dir_normal.y)));
     normal = rotation_matrix * normal;
     out.normal = normal;
 
@@ -154,18 +153,23 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
         normal = -normal;
     }
 
-    let spec_strength = 1.;
+    let distance = length(view.world_position - in.world_position);
+    let spec_strength = mix(0.5, 0.0, clamp((distance - 20.0) / 20.0, 0.0, 1.0));
+    
+
     let view_dir = normalize(view.world_position - in.clip_position.xyz);
     let reflect_dir = reflect(lights.directional_lights[0].direction_to_light, in.normal);
     let spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32.);
     let specular =  spec_strength * spec;
 
     let color_gradient = mix(color.color_1, color.color_2, in.uv.y);
-    let ndotl = clamp(dot(normal, -lights.directional_lights[0].direction_to_light), 0.3, 1.0);
+    let ndotl = clamp(dot(normal, lights.directional_lights[0].direction_to_light), 0.3, 1.0);
     let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0),  in.uv.y);
     let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip,  in.uv.y * in.uv.y);
 
-    let final_color = (color_gradient + specular) * ndotl * ao;
+    let world_ndotl = clamp(dot(in.world_normal, lights.directional_lights[0].direction_to_light), 0., 1.);
+
+    let final_color = (color_gradient + specular) * ndotl * ao * world_ndotl;
     //let final_color = color.color_2 * ndotl;
 
     return final_color;
@@ -196,54 +200,12 @@ fn cubic_bezier(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>, p3: vec3<f3
     let uuu = uu * u;
     let ttt = tt * t;
 
-    var p = uuu * p0; // (1-t) ^ 3  * p0
-    p = p + 3.0 * uu * t * p1; // 3(1-t)^2 * t * p1
-    p = p + 3.0 * u * tt * p2; // 3(1-t) * t^2 * p2
-    p = p + ttt * p3; // t^3 * p3
+    var p = uuu * p0;
+    p = p + 3.0 * uu * t * p1;
+    p = p + 3.0 * u * tt * p2;
+    p = p + ttt * p3;
 
     return p;
-}
-
-fn cubic_bezier_v2(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f32>) -> vec2<f32> {
-    let u = 1.0 - t;
-    let tt = t * t;
-    let uu = u * u;
-    let uuu = uu * u;
-    let ttt = tt * t;
-
-    var p = uuu * p0; // (1-t) ^ 3  * p0
-    p = p + 3.0 * uu * t * p1; // 3(1-t)^2 * t * p1
-    p = p + 3.0 * u * tt * p2; // 3(1-t) * t^2 * p2
-    p = p + ttt * p3; // t^3 * p3
-
-    return p;
-}
-
-fn bezier_derivative(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f32>) -> vec2<f32> {
-    let u = 1.0 - t;
-    let tt = t * t;
-    let uu = u * u;
-
-    var p = 3.0 * uu * (p1 - p0); // 3(1-t)^2 * (p1 - p0)
-    p = p + 6.0 * u * t * (p2 - p1); // 6(1-t) * t * (p2 - p1)
-    p = p + 3.0 * tt * (p3 - p2); // 3t^2 * (p3 - p2)
-
-    return p;
-}
-
-fn bezier_tangent_v2(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>, p3: vec2<f32>) -> vec2<f32> {
-    let u = 1.0 - t;
-    let u2 = u * u;
-    let t2 = t * t;
-    
-    let tangent = -3.0 * u2 * p0
-        + 3.0 * u2 * p1
-        - 6.0 * u * t * p1
-        + 6.0 * u * t * p2
-        - 3.0 * t2 * p2
-        + 3.0 * t2 * p3;
-    
-    return tangent;
 }
 
 fn bezier_tangent(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>, p3: vec3<f32>) -> vec3<f32> {
@@ -282,16 +244,8 @@ fn sample_wind_map(uv: vec2<f32>, speed: f32) -> vec4<f32> {
     let rad = wind.direction * PI / 180.0;
     let direction = vec2<f32>(cos(rad), sin(rad));
     
-    let scrolled_uv = uv + direction * globals.time * speed;
+    let scrolled_uv = uv + direction * globals.time * speed * 1.3;
     
     let pixel_coords = vec2<i32>(fract(scrolled_uv) * vec2<f32>(texture_size));
     return textureLoad(t_wind_map, pixel_coords, 0);
-}
-
-fn remap(value: f32, from_min: f32, from_max: f32, to_min: f32, to_max: f32) -> f32 {
-    return (value - from_min) / (from_max - from_min) * (to_max - to_min) + to_min;
-}
-
-fn noise(x: f32) -> f32 {
-    return fract(sin(x) * 43758.5453);
 }

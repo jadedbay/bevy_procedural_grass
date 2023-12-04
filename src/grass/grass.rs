@@ -3,9 +3,12 @@ use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
 use rand::Rng;
 
-use crate::render::instance::{GrassInstanceData, InstanceData};
+use crate::render::{
+    instance::{GrassInstanceData, GrassData},
+    extract::{GrassColorData, WindData, BladeData}
+};
 
-use super::{super::render::extract::{GrassColorData, WindData, BladeData}, wind::{Wind, WindMap, GrassWind}, chunk::{GrassChunks, GrassChunkHandles}};
+use super::{wind::{WindMap, GrassWind}, chunk::{GrassChunks, GrassChunkHandles}};
 
 #[derive(Reflect, Component, InspectorOptions, Default)]
 #[reflect(Component, InspectorOptions)]
@@ -15,6 +18,7 @@ pub struct Grass {
     #[reflect(ignore)]
     pub grass_entity: Option<Entity>,
     pub density: u32,
+    pub chunk_size: f32,
     pub color: GrassColor,
     pub blade: Blade,
     pub regenerate: bool,
@@ -26,6 +30,7 @@ pub struct Blade {
     pub length: f32,
     pub width: f32,
     pub tilt: f32,
+    pub tilt_variance: f32,
     pub bend: f32,
 }
 
@@ -35,6 +40,7 @@ impl Default for Blade {
             length: 1.5,
             width: 1.,
             tilt: 0.5,
+            tilt_variance: 0.2,
             bend: 0.5,
         }
     }
@@ -89,7 +95,6 @@ pub fn generate_grass_data(
     _grass_asset: &mut ResMut<Assets<GrassInstanceData>>,
 ) -> GrassChunks {
     let mut chunks: HashMap<(i32, i32, i32), GrassInstanceData> = HashMap::new();
-    let chunk_size = 12.0;
 
     if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
         if let Some(VertexAttributeValues::Float32x2(uvs)) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
@@ -98,7 +103,7 @@ pub fn generate_grass_data(
                 for index in indices.iter() {
                     triangle.push(index);
                     if triangle.len() == 3 {
-                        let _result: Vec<InstanceData> = {
+                        let _result: Vec<GrassData> = {
                             let v0 = Vec3::from(positions[triangle[0] as usize]) * transform.scale;
                             let v1 = Vec3::from(positions[triangle[1] as usize]) * transform.scale;
                             let v2 = Vec3::from(positions[triangle[2] as usize]) * transform.scale;
@@ -124,13 +129,12 @@ pub fn generate_grass_data(
                                 let uv = uv0 * barycentric.x + uv1 * barycentric.y + uv2 * barycentric.z;
 
                                 let chunk_coords = (
-                                    (position.x / chunk_size).floor() as i32,
-                                    (position.y / chunk_size).floor() as i32,
-                                    //0,
-                                    (position.z / chunk_size).floor() as i32,
+                                    (position.x / grass.chunk_size).floor() as i32,
+                                    (position.y / grass.chunk_size).floor() as i32,
+                                    (position.z / grass.chunk_size).floor() as i32,
                                 );
 
-                                let instance = InstanceData {
+                                let instance = GrassData {
                                     position,
                                     normal,
                                     uv,
@@ -151,6 +155,7 @@ pub fn generate_grass_data(
 
     GrassChunks {
         chunks,
+        chunk_size: grass.chunk_size,
         ..default()
     }
 }

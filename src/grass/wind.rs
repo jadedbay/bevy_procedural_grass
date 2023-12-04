@@ -8,6 +8,7 @@ use noise::Perlin;
 pub struct Wind {
     pub speed: f32,
     pub strength: f32,
+    pub variance: f32,
     pub direction: f32,
     pub force: f32,
 }
@@ -15,8 +16,9 @@ pub struct Wind {
 impl Default for Wind {
     fn default() -> Self {
         Self {
-            speed: 0.1,
+            speed: 0.15,
             strength: 2.,
+            variance: 4.,
             direction: 0.0,
             force: 2.,
         }
@@ -50,10 +52,10 @@ use noise::NoiseFn;
 use std::f64::consts::PI;
 
 impl GrassWind {
-    pub fn generate_wind_map() -> Image {
-        let width = 512;
-        let height = 512;
-        let perlin = Perlin::new(0);
+    pub fn generate_wind_map(size: usize) -> Image {
+        let width = size;
+        let height = size;
+        let perlin = Perlin::new(3);
     
         let mut data = Vec::with_capacity(width * height * 4);
     
@@ -84,7 +86,7 @@ impl GrassWind {
 
 
     pub fn save_perlin_noise_image_as_png(width: u32, height: u32, filename: &str) {
-        let image = GrassWind::generate_wind_map();
+        let image = GrassWind::generate_wind_map(width as usize);
         let mut imgbuf = ImageBuffer::new(width, height);
 
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {

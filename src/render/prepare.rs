@@ -1,16 +1,10 @@
 use std::marker::PhantomData;
 
-use bevy::{prelude::*, render::{render_resource::{Buffer, BufferInitDescriptor, BufferUsages, BindGroup, BindingResource, BufferBinding, BindGroupEntries}, renderer::RenderDevice, texture::FallbackImage, render_asset::RenderAssets}};
+use bevy::{prelude::*, render::{render_resource::{BufferInitDescriptor, BufferUsages, BindGroup, BindingResource, BufferBinding, BindGroupEntries}, renderer::RenderDevice, texture::FallbackImage, render_asset::RenderAssets}};
 
 use crate::grass::wind::WindMap;
 
 use super::{extract::{GrassColorData, WindData, BladeData}, pipeline::GrassPipeline};
-
-#[derive(Component)]
-pub struct InstanceBuffer {
-    pub buffer: Buffer,
-    pub length: usize,
-}
 
 #[derive(Component)]
 pub struct BufferBindGroup<T> {

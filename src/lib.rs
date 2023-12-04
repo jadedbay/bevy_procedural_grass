@@ -1,11 +1,12 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet}, core_pipeline::core_3d::Opaque3d};
+use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet, render_graph::RenderGraph}, core_pipeline::core_3d::Opaque3d};
 
-use grass::{grass::Grass, chunk::GrassChunkHandles, wind::WindMap};
+use grass::{grass::Grass, chunk::GrassChunkHandles, wind::{WindMap, GrassWind}, config::GrassConfig};
 use render::{instance::GrassInstanceData, extract::{GrassColorData, WindData, BladeData}, pipeline::GrassPipeline, draw::DrawGrass};
 
 pub mod grass;
 pub mod render;
 
+#[derive(Default)]
 pub struct ProceduralGrassPlugin;
 
 impl Plugin for ProceduralGrassPlugin {

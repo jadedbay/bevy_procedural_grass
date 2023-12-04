@@ -41,6 +41,7 @@ impl ExtractComponent for GrassColorData {
 pub struct WindData {
     pub speed: f32,
     pub strength: f32,
+    pub variance: f32,
     pub direction: f32,
     pub force: f32,
 }
@@ -50,6 +51,7 @@ impl From<Wind> for WindData {
         Self {
             speed: wind.speed,
             strength: wind.strength,
+            variance: wind.variance,
             direction: wind.direction,
             force: wind.force,
         }
@@ -73,6 +75,7 @@ pub struct BladeData {
     pub length: f32,
     pub width: f32,
     pub tilt: f32,
+    pub tilt_variance: f32,
     pub bend: f32,
 }
 
@@ -82,6 +85,7 @@ impl From<Blade> for BladeData {
             length: blade.length,
             width: blade.width,
             tilt: blade.tilt,
+            tilt_variance: blade.tilt_variance,
             bend: blade.bend,
         }
     }

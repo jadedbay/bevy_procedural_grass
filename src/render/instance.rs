@@ -3,7 +3,7 @@ use bytemuck::{Pod, Zeroable};
 
 #[derive(Clone, Copy, Pod, Zeroable, Reflect, Debug)]
 #[repr(C)]
-pub struct InstanceData {
+pub struct GrassData {
     pub position: Vec3,
     pub normal: Vec3,
     pub uv: Vec2,
@@ -16,7 +16,7 @@ pub struct GrassDataBuffer {
 
 #[derive(Component, Deref, Clone, Asset, TypeUuid, TypePath)]
 #[uuid = "81a29e63-ef6c-4561-b49c-4a138ff39c01"]
-pub struct GrassInstanceData(pub Vec<InstanceData>);
+pub struct GrassInstanceData(pub Vec<GrassData>);
 
 impl Default for GrassInstanceData {
     fn default() -> Self {

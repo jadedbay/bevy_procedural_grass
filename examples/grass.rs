@@ -42,13 +42,10 @@ fn setup(
         }
     }
 
-    //GrassWind::save_perlin_noise_image_as_png(512, 512, "test.png");
-
     commands.insert_resource(GrassWind {
-        wind_map: asset_server.add(GrassWind::generate_wind_map()),
+        wind_map: asset_server.add(GrassWind::generate_wind_map(512)),
         ..default()
     });
-    //let wind_map  = asset_server.load("images/wind_map.png");
 
     commands.spawn((
         PbrBundle {
@@ -64,6 +61,7 @@ fn setup(
         Grass {
             mesh: meshes.add(GrassMesh::mesh()),
             density: 25,
+            chunk_size: 20.,
             ..default()
         },
     ));

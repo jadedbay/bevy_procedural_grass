@@ -12,7 +12,7 @@ pub struct GrassChunks {
 impl Default for GrassChunks {
     fn default() -> Self {
         Self {
-            chunk_size: 12.,
+            chunk_size: 20.,
             chunks: HashMap::new(),
             loaded: HashMap::new(),
         }
