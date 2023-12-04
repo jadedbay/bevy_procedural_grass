@@ -58,7 +58,7 @@ fn setup(
         mesh: meshes.add(GrassMesh::mesh()),
         grass: Grass {
             entity: Some(terrain.clone()),
-            density: 25,
+            //density: 25,
             ..default()
         },
         ..default()

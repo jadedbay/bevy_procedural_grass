@@ -31,13 +31,24 @@ pub fn generate_grass(
     }
 }
 
-#[derive(Reflect, InspectorOptions, Component, Default)]
+#[derive(Reflect, InspectorOptions, Component)]
 #[reflect(InspectorOptions)]
 pub struct Grass {
     pub entity: Option<Entity>,
     pub density: u32,
     pub color: GrassColor,
     pub blade: Blade,
+}
+
+impl Default for Grass {
+    fn default() -> Self {
+        Self {
+            density: 25,
+            entity: None,
+            color: GrassColor::default(),
+            blade: Blade::default(),
+        }
+    }
 }
 
 impl Grass {
