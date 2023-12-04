@@ -1,10 +1,13 @@
+use bevy::render::extract_resource::ExtractResource;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::{prelude::*, render::extract_component::ExtractComponent, ecs::query::QueryItem};
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
+use bytemuck::{Pod, Zeroable};
 use noise::Perlin;
 
-#[derive(Reflect, InspectorOptions, Clone, Copy)]
+#[derive(Reflect, InspectorOptions, Clone, Copy, Pod, Zeroable)]
 #[reflect(InspectorOptions)]
+#[repr(C)]
 pub struct Wind {
     pub speed: f32,
     pub strength: f32,
@@ -42,10 +45,19 @@ impl ExtractComponent for WindMap {
     }
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Clone, Reflect, InspectorOptions)]
+#[reflect(Resource, InspectorOptions)]
 pub struct GrassWind {
     pub wind_data: Wind,
     pub wind_map: Handle<Image>,
+}
+
+impl ExtractResource for GrassWind {
+    type Source = Self;
+
+    fn extract_resource(source: &Self::Source) -> Self {
+        source.clone()
+    }
 }
 
 use noise::NoiseFn;
@@ -55,7 +67,7 @@ impl GrassWind {
     pub fn generate_wind_map(size: usize) -> Image {
         let width = size;
         let height = size;
-        let perlin = Perlin::new(3);
+        let perlin = Perlin::new(4);
     
         let mut data = Vec::with_capacity(width * height * 4);
     
@@ -83,24 +95,11 @@ impl GrassWind {
             TextureFormat::Rgba8UnormSrgb,
         )
     }
-
-
-    pub fn save_perlin_noise_image_as_png(width: u32, height: u32, filename: &str) {
-        let image = GrassWind::generate_wind_map(width as usize);
-        let mut imgbuf = ImageBuffer::new(width, height);
-
-        for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-            let index = (x + y * width) as usize * 4;
-            *pixel = Rgba([
-                image.data[index],
-                image.data[index + 1],
-                image.data[index + 2],
-                image.data[index + 3],
-            ]);
-        }
-
-        imgbuf.save(filename).unwrap();
-    }
 }
 
-use image::{ImageBuffer, Rgba};
+pub fn create_wind_map(
+    mut wind: ResMut<GrassWind>,
+    asset_server: Res<AssetServer>,
+) {
+    wind.wind_map = asset_server.add(GrassWind::generate_wind_map(512));
+}

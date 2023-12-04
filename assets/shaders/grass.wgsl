@@ -24,16 +24,6 @@ struct Color {
 @group(2) @binding(0)
 var<uniform> color: Color;
 
-struct Wind {
-    speed: f32,
-    strength: f32,
-    variance: f32,
-    direction: f32,
-    force: f32,
-};
-@group(3) @binding(0)
-var<uniform> wind: Wind;
-
 struct Blade {
     length: f32,
     width: f32,
@@ -44,7 +34,17 @@ struct Blade {
 @group(2) @binding(1)
 var<uniform> blade: Blade;
 
-@group(4) @binding(0)
+struct Wind {
+    speed: f32,
+    strength: f32,
+    variance: f32,
+    direction: f32,
+    force: f32,
+};
+@group(3) @binding(0)
+var<uniform> wind: Wind;
+
+@group(3) @binding(1)
 var t_wind_map: texture_2d<f32>;
 
 struct VertexOutput {

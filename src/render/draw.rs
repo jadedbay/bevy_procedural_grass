@@ -2,17 +2,16 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup, RenderMeshInstances}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use crate::grass::{wind::WindMap, chunk::RenderGrassChunks, grass::Grass};
+use crate::grass::{wind::{WindMap, GrassWind}, chunk::RenderGrassChunks, grass::Grass};
 
-use super::{extract::WindData, prepare::BufferBindGroup, instance::GrassInstanceData};
+use super::{prepare::BufferBindGroup, instance::GrassInstanceData};
 
 pub type DrawGrass = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
     SetMeshBindGroup<1>,
     SetBindGroup<2, Grass>,
-    SetBindGroup<3, WindData>,
-    SetBindGroup<4, WindMap>,
+    SetResourceBindGroup<3, GrassWind>,
     DrawGrassInstanced,
 );
 
@@ -38,6 +37,30 @@ where
         let Some(bind_group) = bind_group else {
             return RenderCommandResult::Failure;
         };
+        pass.set_bind_group(I, &bind_group.bind_group, &[]);
+        RenderCommandResult::Success
+    }
+}
+
+pub struct SetResourceBindGroup<const I: usize, T> {
+    _marker: PhantomData<T>,
+}
+impl<P: PhaseItem, const I: usize,  T> RenderCommand<P> for SetResourceBindGroup<I, T> 
+where
+    T: 'static + Sync + Send,
+{
+    type Param = SRes<BufferBindGroup<GrassWind>>;
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = ();
+
+    fn render<'w>(
+        _item: &P,
+        _view: (),
+        _: (),
+        wind_bind_group: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let bind_group = wind_bind_group.into_inner();
         pass.set_bind_group(I, &bind_group.bind_group, &[]);
         RenderCommandResult::Success
     }

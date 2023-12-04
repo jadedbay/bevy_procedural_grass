@@ -8,7 +8,6 @@ pub struct GrassPipeline {
     mesh_pipeline: MeshPipeline,
     pub grass_layout: BindGroupLayout,
     pub wind_layout: BindGroupLayout,
-    pub wind_map_layout: BindGroupLayout,
 }
 
 impl FromWorld for GrassPipeline {
@@ -57,15 +56,9 @@ impl FromWorld for GrassPipeline {
                         min_binding_size: None,
                     },
                     count: None,
-                }
-            ]
-        });
-
-        let wind_map_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("light_layout"),
-            entries: &[
+                },
                 BindGroupLayoutEntry {
-                    binding: 0,
+                    binding: 1,
                     visibility: ShaderStages::VERTEX,
                     ty: BindingType::Texture {
                         sample_type: TextureSampleType::Float { filterable: false },
@@ -82,7 +75,6 @@ impl FromWorld for GrassPipeline {
             mesh_pipeline: mesh_pipeline.clone(),
             grass_layout,
             wind_layout,
-            wind_map_layout,
         }
     }
 }
@@ -126,7 +118,6 @@ impl SpecializedMeshPipeline for GrassPipeline {
         });
         descriptor.layout.push(self.grass_layout.clone());
         descriptor.layout.push(self.wind_layout.clone());
-        descriptor.layout.push(self.wind_map_layout.clone());
 
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
         descriptor.primitive.cull_mode = None;

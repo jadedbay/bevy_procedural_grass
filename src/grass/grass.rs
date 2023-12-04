@@ -4,10 +4,7 @@ use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 use bytemuck::{Zeroable, Pod};
 use rand::Rng;
 
-use crate::render::{
-    instance::{GrassInstanceData, GrassData},
-    extract::WindData
-};
+use crate::render::instance::{GrassInstanceData, GrassData};
 
 use super::{wind::WindMap, chunk::GrassChunks};
 
@@ -18,8 +15,6 @@ pub struct GrassBundle {
     pub grass_chunks: GrassChunks,
     #[bundle()]
     pub spatial: SpatialBundle,
-    pub wind_data: WindData,
-    pub wind_map: WindMap,
     pub frustum_culling: NoFrustumCulling,
 }
 

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{mesh::GrassMesh, wind::{GrassWind, Wind, WindMap}, grass::{GrassBundle, Grass}}, render::extract::WindData};
+use procedural_grass::{ProceduralGrassPlugin, grass::{mesh::GrassMesh, grass::{GrassBundle, Grass}}};
 
 fn main() {
     let mut app = App::new();
@@ -19,16 +19,8 @@ fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    asset_server: Res<AssetServer>,
 ) {
     let terrain_mesh = Mesh::try_from(shape::Icosphere { radius: 1.0, subdivisions: 20 }).unwrap();
-
-    // add global wind resource
-    let wind_map = asset_server.add(GrassWind::generate_wind_map(512));
-    commands.insert_resource(GrassWind {
-        wind_map: wind_map.clone(),
-        ..default()
-    });
 
     let terrain = commands.spawn((
         PbrBundle {
@@ -47,12 +39,8 @@ fn setup(
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
         grass: Grass {
-            entity: Some(terrain.clone()),
+            entity: Some(terrain.clone()), // Set entity grass will be placed on (must have a mesh and transform)
             ..default()
-        },
-        wind_data: WindData::from(Wind::default()),
-        wind_map: WindMap {
-            wind_map: wind_map.clone(),
         },
         ..default()
     });

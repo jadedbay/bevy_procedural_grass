@@ -1,7 +1,7 @@
 use bevy::{prelude::*, window::PresentMode, pbr::wireframe::WireframePlugin, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh, wind::{GrassWind, WindMap, Wind}}, render::extract::WindData};
+use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh, wind::{GrassWind, WindMap, Wind}}};
 
 use noise::NoiseFn;
 
@@ -42,14 +42,7 @@ fn setup(
         }
     }
 
-
-    let wind_map = asset_server.add(GrassWind::generate_wind_map(512));
-    commands.insert_resource(GrassWind {
-        wind_map: wind_map.clone(),
-        ..default()
-    });
-
-    let terrain = commands.spawn((
+    let terrain = commands.spawn(
         PbrBundle {
             mesh: meshes.add(terrain_mesh),
             material: materials.add(StandardMaterial {
@@ -60,7 +53,7 @@ fn setup(
             transform: Transform::from_scale(Vec3::new(100.0, 3.0, 100.0)),
             ..Default::default()
         }, 
-    )).id();
+    ).id();
 
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
@@ -68,10 +61,6 @@ fn setup(
             entity: Some(terrain.clone()),
             density: 25,
             ..default()
-        },
-        wind_data: WindData::from(Wind::default()),
-        wind_map: WindMap {
-            wind_map: wind_map.clone(),
         },
         ..default()
     });
