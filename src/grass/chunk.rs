@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap, render::{primitives::{Frustum, Aabb}, extract_component::ExtractComponent}, ecs::query::QueryItem, math::{Vec3A, Affine3A}};
 
-use super::{super::render::instance::GrassInstanceData};
+use crate::render::instance::GrassInstanceData;
 
 #[derive(Component, Clone)]
 pub struct GrassChunks {

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{mesh::GrassMesh, wind::{GrassWind, Wind, WindMap}, grass::{GrassBundle, GrassGeneration, GrassColor, Blade}}, render::extract::{GrassColorData, BladeData, WindData}};
+use procedural_grass::{ProceduralGrassPlugin, grass::{mesh::GrassMesh, wind::{GrassWind, Wind, WindMap}, grass::{GrassBundle, Grass}}, render::extract::WindData};
 
 fn main() {
     let mut app = App::new();
@@ -43,15 +43,14 @@ fn setup(
         },
     )).id();
 
+    // add grass bundle
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
-        grass_generation: GrassGeneration {
+        grass: Grass {
             entity: Some(terrain.clone()),
-            density: 25,
+            ..default()
         },
-        grass_color: GrassColorData::from(GrassColor::default()),
         wind_data: WindData::from(Wind::default()),
-        blade_data: BladeData::from(Blade::default()),
         wind_map: WindMap {
             wind_map: wind_map.clone(),
         },

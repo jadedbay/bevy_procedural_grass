@@ -1,7 +1,7 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet, render_graph::RenderGraph}, core_pipeline::core_3d::Opaque3d};
+use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet}, core_pipeline::core_3d::Opaque3d};
 
-use grass::{chunk::{GrassChunks, RenderGrassChunks}, wind::{WindMap, GrassWind}, config::GrassConfig};
-use render::{instance::GrassInstanceData, extract::{GrassColorData, WindData, BladeData}, pipeline::GrassPipeline, draw::DrawGrass};
+use grass::{chunk::GrassChunks, grass::Grass, wind::WindMap};
+use render::{instance::GrassInstanceData, extract::WindData, pipeline::GrassPipeline, draw::DrawGrass};
 
 pub mod grass;
 pub mod render;
@@ -11,13 +11,13 @@ pub struct ProceduralGrassPlugin;
 
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, grass::grass::generate_grass)
+        app.register_type::<Grass>()
+        .add_systems(PostStartup, grass::grass::generate_grass)
         .add_systems(Update, grass::chunk::grass_culling)
         .init_asset::<GrassInstanceData>()
         .add_plugins(RenderAssetPlugin::<GrassInstanceData>::default())
-        .add_plugins(ExtractComponentPlugin::<GrassColorData>::default())
+        .add_plugins(ExtractComponentPlugin::<Grass>::default())
         .add_plugins(ExtractComponentPlugin::<WindData>::default())
-        .add_plugins(ExtractComponentPlugin::<BladeData>::default())
         .add_plugins(ExtractComponentPlugin::<GrassChunks>::default())
         .add_plugins(ExtractComponentPlugin::<WindMap>::default());
 
@@ -28,9 +28,8 @@ impl Plugin for ProceduralGrassPlugin {
             Render,
             (
                 render::queue::grass_queue.in_set(RenderSet::QueueMeshes),
-                render::prepare::prepare_color_buffers.in_set(RenderSet::PrepareBindGroups),
+                render::prepare::prepare_grass_buffers.in_set(RenderSet::PrepareBindGroups),
                 render::prepare::prepare_wind_buffers.in_set(RenderSet::PrepareBindGroups),
-                render::prepare::prepare_blade_buffers.in_set(RenderSet::PrepareBindGroups),
                 render::prepare::prepare_wind_map_buffers.in_set(RenderSet::PrepareBindGroups),
             ),
         );

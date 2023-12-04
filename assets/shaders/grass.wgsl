@@ -41,10 +41,10 @@ struct Blade {
     tilt_variance: f32,
     bend: f32,
 }
-@group(4) @binding(0)
+@group(2) @binding(1)
 var<uniform> blade: Blade;
 
-@group(5) @binding(0)
+@group(4) @binding(0)
 var t_wind_map: texture_2d<f32>;
 
 struct VertexOutput {

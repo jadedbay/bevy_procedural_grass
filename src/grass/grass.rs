@@ -1,31 +1,30 @@
-use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues}, utils::HashMap, ecs::entity::Entities};
+use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues}, utils::HashMap};
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
+use bytemuck::{Zeroable, Pod};
 use rand::Rng;
 
 use crate::render::{
     instance::{GrassInstanceData, GrassData},
-    extract::{GrassColorData, WindData, BladeData}
+    extract::WindData
 };
 
-use super::{wind::{WindMap, GrassWind}, chunk::{GrassChunks, RenderGrassChunks}};
+use super::{wind::WindMap, chunk::GrassChunks};
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
     pub mesh: Handle<Mesh>,
+    pub grass: Grass,
+    pub grass_chunks: GrassChunks,
     #[bundle()]
     pub spatial: SpatialBundle,
-    pub grass_chunks: GrassChunks,
-    pub grass_color: GrassColorData,
     pub wind_data: WindData,
-    pub blade_data: BladeData,
     pub wind_map: WindMap,
     pub frustum_culling: NoFrustumCulling,
-    pub grass_generation: GrassGeneration,
 }
 
 pub fn generate_grass(
-    mut query: Query<(&GrassGeneration, &mut GrassChunks)>,
+    mut query: Query<(&Grass, &mut GrassChunks)>,
     mesh_entity_query: Query<(&Transform, &Handle<Mesh>)>,
     meshes: Res<Assets<Mesh>>,
 ) {
@@ -37,13 +36,16 @@ pub fn generate_grass(
     }
 }
 
-#[derive(Component, Default)]
-pub struct GrassGeneration {
+#[derive(Reflect, InspectorOptions, Component, Default)]
+#[reflect(InspectorOptions)]
+pub struct Grass {
     pub entity: Option<Entity>,
     pub density: u32,
+    pub color: GrassColor,
+    pub blade: Blade,
 }
 
-impl GrassGeneration {
+impl Grass {
     fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32) -> HashMap<(i32, i32, i32), GrassInstanceData> {
         let mut chunks: HashMap<(i32, i32, i32), GrassInstanceData> = HashMap::new();
 
@@ -107,13 +109,22 @@ impl GrassGeneration {
     }
 }
 
-#[derive(Reflect, InspectorOptions, Clone, Copy)]
+#[derive(Component, Reflect, InspectorOptions, Clone, Copy)]
 #[reflect(InspectorOptions)]
 pub struct GrassColor {
     pub ao: Color,
     pub color_1: Color,
     pub color_2: Color,
     pub tip: Color,
+}
+
+impl GrassColor {
+    pub fn to_array(&self) -> [[f32; 4]; 4] {
+        [self.ao.into(), 
+        self.color_1.into(), 
+        self.color_2.into(), 
+        self.tip.into()]
+    }
 }
 
 impl Default for GrassColor {
@@ -127,8 +138,9 @@ impl Default for GrassColor {
     }
 }
 
-#[derive(Reflect, InspectorOptions, Clone, Copy)]
+#[derive(Component, Reflect, InspectorOptions, Clone, Copy, Pod, Zeroable)]
 #[reflect(InspectorOptions)]
+#[repr(C)]
 pub struct Blade {
     pub length: f32,
     pub width: f32,

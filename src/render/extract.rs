@@ -2,36 +2,15 @@ use bevy::{prelude::*, render::extract_component::ExtractComponent, ecs::query::
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use bytemuck::{Pod, Zeroable};
 
-use crate::grass::{grass::{GrassColor, Blade}, wind::Wind};
+use crate::grass::{grass::{GrassColor, Blade, Grass}, wind::Wind};
 
-#[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
-#[reflect(Component, InspectorOptions)]
-#[repr(C)]
-pub struct GrassColorData {
-    ao: [f32; 4],
-    color_1: [f32; 4],
-    color_2: [f32; 4],
-    tip: [f32; 4],
-}
-
-impl From<GrassColor> for GrassColorData {
-    fn from(color: GrassColor) -> Self {
-        Self {
-            ao: color.ao.into(),
-            color_1: color.color_1.into(),
-            color_2: color.color_2.into(),
-            tip: color.tip.into(),
-        }
-    }
-}
-
-impl ExtractComponent for GrassColorData {
-    type Query = &'static GrassColorData;
+impl ExtractComponent for Grass {
+    type Query = &'static Grass;
     type Filter = ();
-    type Out = Self;
+    type Out = (GrassColor, Blade);
 
-    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
-        Some(item.clone())
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self::Out> {
+        Some((item.color.clone(), item.blade.clone()))
     }
 }
 
@@ -60,39 +39,6 @@ impl From<Wind> for WindData {
 
 impl ExtractComponent for WindData {
     type Query = &'static WindData;
-    type Filter = ();
-    type Out = Self;
-
-    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self> {
-        Some(item.clone())
-    }
-}
-
-#[derive(Component, Clone, Copy, Pod, Zeroable, Reflect, InspectorOptions, Default)]
-#[reflect(Component, InspectorOptions)]
-#[repr(C)]
-pub struct BladeData {
-    pub length: f32,
-    pub width: f32,
-    pub tilt: f32,
-    pub tilt_variance: f32,
-    pub bend: f32,
-}
-
-impl From<Blade> for BladeData {
-    fn from(blade: Blade) -> Self {
-        Self {
-            length: blade.length,
-            width: blade.width,
-            tilt: blade.tilt,
-            tilt_variance: blade.tilt_variance,
-            bend: blade.bend,
-        }
-    }
-}
-
-impl ExtractComponent for BladeData {
-    type Query = &'static BladeData;
     type Filter = ();
     type Out = Self;
 

@@ -1,7 +1,7 @@
 use bevy::{prelude::*, window::PresentMode, pbr::wireframe::WireframePlugin, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, GrassGeneration, GrassColor, Blade}, mesh::GrassMesh, wind::{GrassWind, WindMap, Wind}, chunk::GrassChunks}, render::extract::{GrassColorData, WindData, BladeData}};
+use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh, wind::{GrassWind, WindMap, Wind}}, render::extract::WindData};
 
 use noise::NoiseFn;
 
@@ -64,13 +64,12 @@ fn setup(
 
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
-        grass_generation: GrassGeneration {
+        grass: Grass {
             entity: Some(terrain.clone()),
             density: 25,
+            ..default()
         },
-        grass_color: GrassColorData::from(GrassColor::default()),
         wind_data: WindData::from(Wind::default()),
-        blade_data: BladeData::from(Blade::default()),
         wind_map: WindMap {
             wind_map: wind_map.clone(),
         },

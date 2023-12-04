@@ -2,18 +2,17 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup, RenderMeshInstances}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use crate::grass::{wind::WindMap, chunk::RenderGrassChunks};
+use crate::grass::{wind::WindMap, chunk::RenderGrassChunks, grass::Grass};
 
-use super::{extract::{GrassColorData, WindData, BladeData}, prepare::BufferBindGroup, instance::GrassInstanceData};
+use super::{extract::WindData, prepare::BufferBindGroup, instance::GrassInstanceData};
 
 pub type DrawGrass = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
     SetMeshBindGroup<1>,
-    SetBindGroup<2, GrassColorData>,
+    SetBindGroup<2, Grass>,
     SetBindGroup<3, WindData>,
-    SetBindGroup<4, BladeData>,
-    SetBindGroup<5, WindMap>,
+    SetBindGroup<4, WindMap>,
     DrawGrassInstanced,
 );
 

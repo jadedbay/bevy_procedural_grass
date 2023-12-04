@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_phase::{DrawFunctions, RenderPhase}, render_resource::{SpecializedMeshPipelines, PipelineCache}, render_asset::RenderAssets, view::ExtractedView}, core_pipeline::core_3d::Opaque3d, pbr::{MeshPipelineKey, RenderMeshInstances}};
 
-use crate::grass::chunk::{RenderGrassChunks};
+use crate::grass::chunk::RenderGrassChunks;
 
 use super::{pipeline::GrassPipeline, draw::DrawGrass};
 
