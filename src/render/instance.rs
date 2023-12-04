@@ -9,7 +9,7 @@ pub struct GrassData {
     pub uv: Vec2,
 }
 
-pub struct GrassDataBuffer {
+pub struct GrassInstanceBuffer {
     pub buffer: Buffer,
     pub length: usize,
 }
@@ -26,7 +26,7 @@ impl Default for GrassInstanceData {
 
 impl RenderAsset for GrassInstanceData {
     type ExtractedAsset = GrassInstanceData;
-    type PreparedAsset = GrassDataBuffer;
+    type PreparedAsset = GrassInstanceBuffer;
     type Param = SRes<RenderDevice>;
 
     fn extract_asset(&self) -> Self::ExtractedAsset {
@@ -45,7 +45,7 @@ impl RenderAsset for GrassInstanceData {
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST | BufferUsages::STORAGE
         });
 
-        Ok(GrassDataBuffer {
+        Ok(GrassInstanceBuffer {
             buffer,
             length: extracted_asset.len(),
         })

@@ -35,8 +35,10 @@ impl Plugin for ProceduralGrassPlugin {
             Render,
             (
                 render::queue::grass_queue.in_set(RenderSet::QueueMeshes),
-                render::prepare::prepare_grass_buffers.in_set(RenderSet::PrepareBindGroups),
-                render::prepare::prepare_wind_buffers.in_set(RenderSet::PrepareBindGroups),
+                render::prepare::prepare_grass_buffers.in_set(RenderSet::PrepareResources),
+                render::prepare::prepare_wind_buffers.in_set(RenderSet::PrepareResources),
+                render::prepare::prepare_grass_bind_group.in_set(RenderSet::PrepareBindGroups),
+                render::prepare::prepare_wind_bind_group.in_set(RenderSet::PrepareBindGroups),
             ),
         );
     }
