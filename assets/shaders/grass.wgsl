@@ -1,4 +1,4 @@
-#import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip}
+#import bevy_pbr::mesh_functions::mesh_position_local_to_clip
 #import bevy_pbr::mesh_bindings::mesh
 #import bevy_pbr::mesh_view_bindings::globals
 #import bevy_pbr::mesh_view_bindings::lights
@@ -30,6 +30,7 @@ struct Blade {
     tilt: f32,
     tilt_variance: f32,
     bend: f32,
+    curve: f32,
 }
 @group(2) @binding(1)
 var<uniform> blade: Blade;
@@ -40,6 +41,8 @@ struct Wind {
     variance: f32,
     direction: f32,
     force: f32,
+    oscillation: f32,
+    scale: f32,
 };
 @group(3) @binding(0)
 var<uniform> wind: Wind;
@@ -55,7 +58,6 @@ struct VertexOutput {
     @location(4) normal: vec3<f32>,
     @location(5) world_position: vec3<f32>,
     @location(6) world_normal: vec3<f32>,
-    @location(7) curved_normal: vec3<f32>,
     @location(8) bezier_tangent: vec3<f32>,
 };
 
@@ -77,7 +79,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let random_point = vec2<f32>(fract(vertex.i_pos.x * 0.1 * hash_id), fract(vertex.i_pos.y * 0.1 * hash_id));
     let r = sample_wind_map(random_point, wind.speed).r;
     
-    var t = sample_wind_map(vertex.i_uv, wind.speed).r;
+    let i_uv = fract(vec2<f32>(vertex.i_pos.x, vertex.i_pos.z) / wind.scale);
+    var t = sample_wind_map(i_uv, wind.speed).r;
 
     let width = blade.width;
     let length = mix(blade.length, blade.length + 0.6, fract(hash_id));
@@ -107,7 +110,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     p1 += blade_normal * (length - y) * blade.bend;
     p2 += blade_normal * (length - y) * blade.bend;
     p2 -= blade_normal * -sin(r * 0.2);
-    p3 += blade_normal * sin(r * 0.2) * 1.5;
+    p3 += blade_normal * sin(r * 0.2) * wind.oscillation;
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
@@ -122,18 +125,17 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var normal = normalize(cross(tangent, vec3<f32>(blade_dir_normal.x, 0.0, blade_dir_normal.y)));
     normal = rotation_matrix * normal;
     out.normal = normal;
-
+    
     position += vertex.i_pos.xyz;
 
     out.clip_position = mesh_position_local_to_clip(
-        get_model_matrix(0u), 
+        identity_matrix, 
         vec4<f32>(position, 1.0)
     );
 
     out.uv = uv;
     out.world_uv = vertex.i_uv;
-    out.t = r;
-    out.curved_normal = normal;
+    out.t = t;
     out.world_position = position;
     out.world_normal = vertex.i_normal;
     out.bezier_tangent = tangent;
@@ -143,10 +145,10 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
 @fragment
 fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @location(0) vec4<f32> {
-    var normal = in.curved_normal;
+    var normal = in.normal;
 
     let uv_x_transformed = in.uv.x * 2.0 - 1.0;
-    let normal_curve = 15. * -1.;
+    let normal_curve = blade.curve * -1.;
     normal = normalize(rotate_vector(normal, in.bezier_tangent, normal_curve * uv_x_transformed));
     
     if (!is_front) {
@@ -163,9 +165,9 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     let specular =  spec_strength * spec;
 
     let color_gradient = mix(color.color_1, color.color_2, in.uv.y);
-    let ndotl = clamp(dot(normal, lights.directional_lights[0].direction_to_light), 0.3, 1.0);
-    let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0),  in.uv.y);
-    let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip,  in.uv.y * in.uv.y);
+    let ndotl = clamp(dot(normal, lights.directional_lights[0].direction_to_light), 0.5, 1.0);
+    let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0), in.uv.y);
+    let tip = mix(vec4<f32>(0.0, 0.0, 0.0, 0.0), color.tip, in.uv.y * in.uv.y);
 
     let world_ndotl = clamp(dot(in.world_normal, lights.directional_lights[0].direction_to_light), 0., 1.);
 
@@ -240,3 +242,10 @@ fn sample_wind_map(uv: vec2<f32>, speed: f32) -> vec4<f32> {
     let pixel_coords = vec2<i32>(fract(scrolled_uv) * vec2<f32>(texture_size));
     return textureLoad(t_wind_map, pixel_coords, 0);
 }
+
+const identity_matrix: mat4x4<f32> = mat4x4<f32>(
+    vec4<f32>(1.0, 0.0, 0.0, 0.0),
+    vec4<f32>(0.0, 1.0, 0.0, 0.0),
+    vec4<f32>(0.0, 0.0, 1.0, 0.0),
+    vec4<f32>(0.0, 0.0, 0.0, 1.0)
+);

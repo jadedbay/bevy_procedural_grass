@@ -26,7 +26,6 @@ pub fn generate_grass(
     for (grass, mut chunks) in query.iter_mut() {
         let (transform, mesh_handle) = mesh_entity_query.get(grass.entity.unwrap()).unwrap();
         let mesh = meshes.get(mesh_handle).unwrap();
-
         chunks.chunks = grass.generate_grass(transform, mesh, chunks.chunk_size);
     }
 }
@@ -80,7 +79,7 @@ impl Grass {
                                     let r2 = rng.gen::<f32>();
                                     let barycentric = Vec3::new(1.0 - r1, r1 * (1.0 - r2), r1 * r2);
             
-                                    let position = v0 * barycentric.x + v1 * barycentric.y + v2 * barycentric.z;
+                                    let position = (v0 * barycentric.x + v1 * barycentric.y + v2 * barycentric.z) + transform.translation;
                                 
                                     let uv0 = Vec2::from(uvs[triangle[0] as usize]);
                                     let uv1 = Vec2::from(uvs[triangle[1] as usize]);
@@ -88,9 +87,9 @@ impl Grass {
                                     let uv = uv0 * barycentric.x + uv1 * barycentric.y + uv2 * barycentric.z;
 
                                     let chunk_coords = (
-                                        (position.x / chunk_size).floor() as i32,
-                                        (position.y / chunk_size).floor() as i32,
-                                        (position.z / chunk_size).floor() as i32,
+                                        ((position.x) / chunk_size).floor() as i32,
+                                        ((position.y) / chunk_size).floor() as i32,
+                                        ((position.z) / chunk_size).floor() as i32,
                                     );
 
                                     let instance = GrassData {
@@ -163,6 +162,7 @@ pub struct Blade {
     pub tilt: f32,
     pub tilt_variance: f32,
     pub bend: f32,
+    pub curve: f32,
 }
 
 impl Default for Blade {
@@ -173,6 +173,7 @@ impl Default for Blade {
             tilt: 0.5,
             tilt_variance: 0.2,
             bend: 0.5,
+            curve: 15.,
         }
     }
 }

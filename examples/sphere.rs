@@ -1,19 +1,14 @@
 use bevy::prelude::*;
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{mesh::GrassMesh, grass::{GrassBundle, Grass}, config::GrassConfig}};
+use procedural_grass::{ProceduralGrassPlugin, grass::{mesh::GrassMesh, grass::{GrassBundle, Grass}}}; // imports
 
 fn main() {
     let mut app = App::new();
     app.add_plugins((
         DefaultPlugins,
         PlayerPlugin,
-        ProceduralGrassPlugin {
-            config: GrassConfig {
-                cull_distance: 1000.,
-            },
-            ..default()
-        }, // add procedural grass plugin
+        ProceduralGrassPlugin::default(), // add procedural grass plugin
         WorldInspectorPlugin::new(),
     ))
     .add_systems(Startup, setup)
@@ -44,6 +39,7 @@ fn setup(
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
         grass: Grass {
+            density: 25,
             entity: Some(terrain.clone()), // set entity grass will be placed on (must have a mesh and transform)
             ..default()
         },

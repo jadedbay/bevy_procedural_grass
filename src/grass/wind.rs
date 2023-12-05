@@ -14,6 +14,9 @@ pub struct Wind {
     pub variance: f32,
     pub direction: f32,
     pub force: f32,
+    pub oscillation: f32,
+
+    pub scale: f32,
 }
 
 impl Default for Wind {
@@ -24,6 +27,9 @@ impl Default for Wind {
             variance: 4.,
             direction: 0.0,
             force: 2.,
+            oscillation: 1.5,
+
+            scale: 100.,
         }
     }
 }

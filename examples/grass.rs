@@ -47,20 +47,43 @@ fn setup(
             material: materials.add(StandardMaterial {
                 base_color: Color::rgb(0.0, 0.05, 0.0),
                 reflectance: 0.0,
-                ..Default::default()
+                ..default()
             }),
             transform: Transform::from_scale(Vec3::new(100.0, 3.0, 100.0)),
-            ..Default::default()
+            ..default()
+        }, 
+    ).id();
+
+    let terrain_2 = commands.spawn(
+        PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Plane { size: 10., subdivisions: 1 })),
+            material: materials.add(StandardMaterial {
+                base_color: Color::rgb(0.0, 0.05, 0.0),
+                reflectance: 0.0,
+                ..default()
+            }),
+            transform: Transform::from_translation(Vec3::new(55., -2.1, 0.)),
+            ..default()
         }, 
     ).id();
 
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
         grass: Grass {
-            entity: Some(terrain.clone()),
-            //density: 25,
+            entity: Some(terrain_2.clone()),
             ..default()
         },
+        spatial: SpatialBundle::INHERITED_IDENTITY,
+        ..default()
+    });
+
+    commands.spawn(GrassBundle {
+        mesh: meshes.add(GrassMesh::mesh()),
+        grass: Grass {
+            entity: Some(terrain.clone()),
+            ..default()
+        },
+        spatial: SpatialBundle::INHERITED_IDENTITY,
         ..default()
     });
      
