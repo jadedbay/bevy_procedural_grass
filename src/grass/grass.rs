@@ -163,6 +163,7 @@ pub struct Blade {
     pub tilt_variance: f32,
     pub bend: f32,
     pub curve: f32,
+    pub specular: f32,
 }
 
 impl Default for Blade {
@@ -174,6 +175,7 @@ impl Default for Blade {
             tilt_variance: 0.2,
             bend: 0.5,
             curve: 15.,
+            specular: 0.2,
         }
     }
 }

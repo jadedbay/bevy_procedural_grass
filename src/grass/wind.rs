@@ -14,7 +14,6 @@ pub struct Wind {
     pub direction: f32,
     pub force: f32,
     pub oscillation: f32,
-    pub test: f32,
 
     pub scale: f32,
 }
@@ -28,7 +27,6 @@ impl Default for Wind {
             direction: 0.0,
             force: 1.,
             oscillation: 1.5,
-            test: 0.,
 
             scale: 100.,
         }

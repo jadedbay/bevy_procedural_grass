@@ -5,9 +5,9 @@
 #import bevy_pbr::mesh_view_bindings::view
 #import bevy_pbr::utils::PI
 #import bevy_pbr::utils::random1D
-#import bevy_pbr::pbr_types;
-#import bevy_pbr::pbr_functions;
-#import bevy_pbr;
+#import bevy_pbr::pbr_types
+#import bevy_pbr::pbr_functions
+#import bevy_pbr::shadows
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -34,6 +34,7 @@ struct Blade {
     tilt_variance: f32,
     bend: f32,
     curve: f32,
+    specular: f32,
 }
 @group(2) @binding(1)
 var<uniform> blade: Blade;
@@ -45,7 +46,6 @@ struct Wind {
     direction: f32,
     force: f32,
     oscillation: f32,
-    test: f32,
     scale: f32,
 };
 @group(3) @binding(0)
@@ -167,37 +167,49 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     let ao = mix(color.ao, vec4<f32>(1.0, 1.0, 1.0, 1.0), in.uv.y);
 
     let distance = length(view.world_position - in.world_position);
-    let spec_strength = mix(0.5, 0.0, clamp((distance - 20.0) / 20.0, 0.0, 1.0)) * 0.5;
+    let spec_strength = mix(0.5, 0.0, clamp((distance - 20.0) / 20.0, 0.0, 1.0)) * blade.specular;
+
+    let view_dir = normalize(view.world_position - in.clip_position.xyz);
 
     var specular = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     var ndotl = 0.0;
     var world_ndotl = 0.0;
     var color_gradient = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
+    let view_z = dot(vec4<f32>(
+        view.inverse_view[0].z,
+        view.inverse_view[1].z,
+        view.inverse_view[2].z,
+        view.inverse_view[3].z
+    ), vec4<f32>(in.world_position, 1.0));
+
     let n_directional_lights = lights.n_directional_lights;
     for (var i: u32 = 0u; i < n_directional_lights; i = i + 1u) {
-        let view_dir = normalize(view.world_position - in.clip_position.xyz);
         let reflect_dir = reflect(lights.directional_lights[i].direction_to_light, in.normal);
         let spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32.);
-        specular += spec_strength * spec * lights.directional_lights[i].color;
 
         ndotl += clamp(dot(normal, lights.directional_lights[i].direction_to_light), 0.5, 1.0);
         world_ndotl += clamp(dot(in.world_normal, lights.directional_lights[i].direction_to_light), 0., 1.);
-        
-        color_gradient += base_color_gradient * lights.directional_lights[i].color;
+
+        let shadow = clamp(shadows::fetch_directional_shadow(i, vec4<f32>(in.world_position, 1.0), in.world_normal, view_z), 0.1, 1.0);
+        if (shadow == 1.0) {
+            specular += spec_strength * spec * lights.directional_lights[i].color;
+        }
+
+        color_gradient += base_color_gradient * lights.directional_lights[i].color * shadow;
     }
 
-    let final_color = ((color_gradient + specular) * ndotl * ao * world_ndotl) * 0.1;
+    let final_color = ((color_gradient + (specular * 10.)) * ndotl * ao * world_ndotl) * 0.1;
 
     return final_color;
 }
 
 fn rotate_vector(v: vec3<f32>, n: vec3<f32>, degrees: f32) -> vec3<f32> {
     let theta = degrees * PI / 180.;
-    let cosTheta = cos(theta);
-    let sinTheta = sin(theta);
+    let cos_theta = cos(theta);
+    let sin_theta = sin(theta);
 
-    return v * cosTheta + cross(n, v) * sinTheta + n * dot(n, v) * (1.0 - cosTheta);
+    return v * cos_theta + cross(n, v) * sin_theta + n * dot(n, v) * (1.0 - cos_theta);
 }
 
 fn cubic_bezier(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>, p3: vec3<f32>) -> vec3<f32> {
