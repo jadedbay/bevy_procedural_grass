@@ -2,6 +2,8 @@
 
 A plugin for `bevy 0.12` that generates grass on top of any mesh.
 
+![bevy_procedural_grass](https://github.com/jadedbay/bevy_procedural_grass/assets/86005828/6b806f78-0910-40c7-9785-2d4e42d6ebb1)
+
 ## Usage
 
 ```rust
