@@ -1,5 +1,6 @@
-use bevy::{prelude::*, render::mesh::VertexAttributeValues};
+use bevy::{prelude::*, window::PresentMode, pbr::wireframe::WireframePlugin, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
 use bevy_flycam::PlayerPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
 
 use noise::NoiseFn;
@@ -7,9 +8,19 @@ use noise::NoiseFn;
 fn main() {
     let mut app = App::new();
     app.add_plugins((
-        DefaultPlugins,
+        DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                present_mode: PresentMode::Immediate,
+                ..default()
+            }),
+            ..default()
+        }),
+        WireframePlugin,
         PlayerPlugin,
-        ProceduralGrassPlugin::default(), // add grass plugin
+        WorldInspectorPlugin::new(),
+        ProceduralGrassPlugin::default(),
+        LogDiagnosticsPlugin::default(),
+        FrameTimeDiagnosticsPlugin,
     ))
     .add_systems(Startup, setup)
     .run();
@@ -32,7 +43,7 @@ fn setup(
 
     let terrain = commands.spawn(
         PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane::default())),
+            mesh: meshes.add(terrain_mesh),
             material: materials.add(StandardMaterial {
                 base_color: Color::rgb(0.0, 0.05, 0.0),
                 reflectance: 0.0,
@@ -44,13 +55,13 @@ fn setup(
         }, 
     ).id();
 
-    // spawn grass
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
         grass: Grass {
-            entity: Some(terrain.clone()), // set entity that grass will generate on top of.
+            entity: Some(terrain.clone()),
             ..default()
         },
+        spatial: SpatialBundle::INHERITED_IDENTITY,
         ..default()
     });
 

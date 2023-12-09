@@ -130,15 +130,15 @@ pub struct GrassColor {
     pub ao: Color,
     pub color_1: Color,
     pub color_2: Color,
-    pub tip: Color,
 }
 
 impl GrassColor {
-    pub fn to_array(&self) -> [[f32; 4]; 4] {
-        [self.ao.into(), 
-        self.color_1.into(), 
-        self.color_2.into(), 
-        self.tip.into()]
+    pub fn to_array(&self) -> [[f32; 4]; 3] {
+        [
+            self.ao.into(), 
+            self.color_1.into(), 
+            self.color_2.into()
+        ]
     }
 }
 
@@ -148,7 +148,6 @@ impl Default for GrassColor {
             ao: [0.01, 0.02, 0.05, 1.0].into(),
             color_1: [0.1, 0.23, 0.09, 1.0].into(),
             color_2: [0.12, 0.39, 0.15, 1.0].into(),
-            tip: [0.7, 0.7, 0.7, 1.0].into(),
         }
     }
 }
@@ -161,7 +160,7 @@ pub struct Blade {
     pub width: f32,
     pub tilt: f32,
     pub tilt_variance: f32,
-    pub bend: f32,
+    pub flexibility: f32,
     pub curve: f32,
     pub specular: f32,
 }
@@ -173,7 +172,7 @@ impl Default for Blade {
             width: 1.,
             tilt: 0.5,
             tilt_variance: 0.2,
-            bend: 0.5,
+            flexibility: 0.5,
             curve: 15.,
             specular: 0.2,
         }

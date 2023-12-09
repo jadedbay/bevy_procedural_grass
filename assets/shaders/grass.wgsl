@@ -22,7 +22,6 @@ struct Color {
     ao: vec4<f32>,
     color_1: vec4<f32>,
     color_2: vec4<f32>,
-    tip: vec4<f32>,
 };
 @group(2) @binding(0)
 var<uniform> color: Color;
@@ -32,7 +31,7 @@ struct Blade {
     width: f32,
     tilt: f32,
     tilt_variance: f32,
-    bend: f32,
+    flexibility: f32,
     curve: f32,
     specular: f32,
 }
@@ -94,6 +93,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let radius = length * mix(blade.tilt - blade.tilt_variance, blade.tilt, fract(random1D(hash_id)));
     var xz = radius * vec2<f32>(cos(theta), sin(theta)); 
     let base_xz = xz;
+    let base_y = sqrt(length * length - dot(xz, xz));
 
     xz += -wind_direction * (sin(mix(wind.strength - wind.variance, wind.strength, t) * wind.force));
 
@@ -115,9 +115,10 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var blade_dir_normal = normalize(vec2<f32>(-xz.y, xz.x));
     var blade_normal = normalize(cross(vec3<f32>(blade_dir_normal.x, 0., blade_dir_normal.y), p3));
     
-    // p2 -= blade_normal * -sin(r * 0.2);
-    p1 += blade_normal * (length - y) * blade.bend;
-    p2 += blade_normal * (length - y) * blade.bend;
+    let distance = distance(vec3<f32>(base_xz.x, base_y, base_xz.y), p3);
+
+    p1 += blade_normal * distance * blade.flexibility;
+    p2 += blade_normal * distance * blade.flexibility;
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
