@@ -6,21 +6,20 @@ A plugin for `bevy 0.12` that generates grass on top of any mesh.
 
 ```rust
 use bevy::prelude::*;
-use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
+use bevy_procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
 
 fn main() {
-    let mut app = App::new();
-    app.add_plugins((
-        DefaultPlugins,
-        ProceduralGrassPlugin::default(), // add grass plugin
-    ))
-    .add_systems(Startup, setup)
-    .run();
+    App::new()
+        .add_plugins((
+            DefaultPlugins,
+            ProceduralGrassPlugin::default(), // add grass plugin
+        ))
+        .add_systems(Startup, setup)
+        .run();
 }
 
 fn setup(
     mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let plane = commands.spawn(

@@ -1,18 +1,18 @@
 use bevy::{prelude::*, render::mesh::VertexAttributeValues};
 use bevy_flycam::PlayerPlugin;
-use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
+use bevy_procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
 
 use noise::NoiseFn;
 
 fn main() {
-    let mut app = App::new();
-    app.add_plugins((
-        DefaultPlugins,
-        PlayerPlugin,
-        ProceduralGrassPlugin::default(), // add grass plugin
-    ))
-    .add_systems(Startup, setup)
-    .run();
+    App::new()
+        .add_plugins((
+            DefaultPlugins,
+            PlayerPlugin,
+            ProceduralGrassPlugin::default(), // add grass plugin
+        ))
+        .add_systems(Startup, setup)
+        .run();
 }
 
 fn setup(
