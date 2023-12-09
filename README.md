@@ -28,13 +28,6 @@ fn setup(
     let plane = commands.spawn(
         PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Plane::default())),
-            material: materials.add(StandardMaterial {
-                base_color: Color::rgb(0.0, 0.05, 0.0),
-                reflectance: 0.0,
-                
-                ..default()
-            }),
-            transform: Transform::from_scale(Vec3::new(100.0, 3.0, 100.0)),
             ..default()
         }, 
     ).id();
@@ -43,7 +36,7 @@ fn setup(
     commands.spawn(GrassBundle {
         mesh: meshes.add(GrassMesh::mesh()),
         grass: Grass {
-            entity: Some(terrain.clone()), // set entity that grass will generate on top of.
+            entity: Some(plane.clone()), // set entity that grass will generate on top of.
             ..default()
         },
         ..default()
@@ -66,6 +59,3 @@ fn setup(
 - [Procedural Grass in 'Ghost of Tsushima' by GDC](https://www.youtube.com/watch?v=Ibe1JBF5i5Y)
 - [Unity-Grass by cainrademan](https://github.com/cainrademan/Unity-Grass/)
 - [warbler_grass by EmiOnGit](https://github.com/EmiOnGit/warbler_grass/)
-
-#### 
-
