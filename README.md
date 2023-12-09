@@ -8,8 +8,6 @@ A plugin for `bevy 0.12` that generates grass on top of any mesh.
 use bevy::prelude::*;
 use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
 
-use noise::NoiseFn;
-
 fn main() {
     let mut app = App::new();
     app.add_plugins((
@@ -45,7 +43,7 @@ fn setup(
 ```
 
 ## TODO
-- Lighting for point and spot lights (Currently only supporting directional lights).
+- Lighting for point and spot lights (Currently only supports directional lights).
 - Improve Animation.
 - Grass Clumping for less uniform grass generation.
 - Grass Interaction, allow grass to move out of the way of other entites.
