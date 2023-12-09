@@ -4,7 +4,7 @@ A plugin for `bevy 0.12` that generates grass on top of any mesh.
 
 ## Usage
 
-```
+```rust
 use bevy::prelude::*;
 use procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
 
