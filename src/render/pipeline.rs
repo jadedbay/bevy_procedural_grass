@@ -1,5 +1,7 @@
 use bevy::{prelude::*, pbr::{MeshPipeline, MeshPipelineKey}, render::{render_resource::{BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, ShaderStages, BindingType, BufferBindingType, SpecializedMeshPipeline, RenderPipelineDescriptor, SpecializedMeshPipelineError, VertexBufferLayout, VertexStepMode, VertexAttribute, VertexFormat, TextureSampleType, TextureViewDimension}, renderer::RenderDevice, mesh::MeshVertexBufferLayout}};
 
+use crate::GRASS_SHADER_HANDLE;
+
 use super::instance::GrassData;
 
 #[derive(Resource)]
@@ -12,8 +14,6 @@ pub struct GrassPipeline {
 
 impl FromWorld for GrassPipeline {
     fn from_world(world: &mut World) -> Self {
-        let asset_server = world.resource::<AssetServer>();
-        let shader = asset_server.load("shaders/grass.wgsl");
         let render_device = world.get_resource::<RenderDevice>().unwrap();
 
         let mesh_pipeline = world.resource::<MeshPipeline>();
@@ -71,7 +71,7 @@ impl FromWorld for GrassPipeline {
         });
 
         GrassPipeline {
-            shader,
+            shader: GRASS_SHADER_HANDLE,
             mesh_pipeline: mesh_pipeline.clone(),
             grass_layout,
             wind_layout,

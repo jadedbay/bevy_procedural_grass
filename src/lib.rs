@@ -1,10 +1,13 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet, extract_resource::ExtractResourcePlugin}, core_pipeline::core_3d::Opaque3d};
+use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet, extract_resource::ExtractResourcePlugin}, core_pipeline::core_3d::Opaque3d, asset::load_internal_asset};
 
 use grass::{chunk::GrassChunks, grass::Grass, wind::GrassWind, config::GrassConfig};
 use render::{instance::GrassInstanceData, pipeline::GrassPipeline, draw::DrawGrass};
 
 pub mod grass;
 pub mod render;
+
+pub(crate) const GRASS_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(195_094_223_228_228_028_086_047_086_167_255_040_126);
 
 #[derive(Default, Clone)]
 pub struct ProceduralGrassPlugin {
@@ -14,6 +17,13 @@ pub struct ProceduralGrassPlugin {
 
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
+        load_internal_asset!(
+            app,
+            GRASS_SHADER_HANDLE,
+            "assets/shaders/grass.wgsl",
+            Shader::from_wgsl
+        );
+        
         #[cfg(feature = "bevy-inspector-egui")]
         {
             app

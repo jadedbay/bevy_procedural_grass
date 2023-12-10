@@ -92,8 +92,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let theta = 2.0 * PI * random1D(hash_id);
     let radius = length * mix(blade.tilt - blade.tilt_variance, blade.tilt, fract(random1D(hash_id)));
     var xz = radius * vec2<f32>(cos(theta), sin(theta)); 
-    let base_xz = xz;
-    let base_y = sqrt(length * length - dot(xz, xz));
+    let base_p3 = vec3<f32>(xz.x, sqrt(length * length - dot(xz, xz)), xz.y);
 
     xz += -wind_direction * (sin(mix(wind.strength - wind.variance, wind.strength, t) * wind.force));
 
@@ -112,10 +111,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var p1 = 0.33 * p3;
     var p2 = 0.66 * p3;
 
-    var blade_dir_normal = normalize(vec2<f32>(-xz.y, xz.x));
+    var blade_dir_normal = normalize(vec2<f32>(-base_p3.z, base_p3.x));
     var blade_normal = normalize(cross(vec3<f32>(blade_dir_normal.x, 0., blade_dir_normal.y), p3));
     
-    let distance = distance(vec3<f32>(base_xz.x, base_y, base_xz.y), p3);
+    let distance = distance(base_p3, p3);
+
 
     p1 += blade_normal * distance * blade.flexibility;
     p2 += blade_normal * distance * blade.flexibility;
@@ -123,7 +123,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
     position.y = bezier.y;
-    let xz_pos = bezier.xz + (normalize(vec2<f32>(-base_xz.y, base_xz.x)) * vertex.position.x * width);
+    let xz_pos = bezier.xz + (normalize(vec2<f32>(-base_p3.z, base_p3.x)) * vertex.position.x * width);
     position.x = xz_pos.x;
     position.z = xz_pos.y;
 
