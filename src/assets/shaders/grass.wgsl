@@ -111,11 +111,10 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var p1 = 0.33 * p3;
     var p2 = 0.66 * p3;
 
-    var blade_dir_normal = normalize(vec2<f32>(-base_p3.z, base_p3.x));
+    var blade_dir_normal = normalize(vec2<f32>(-p3.z, p3.x));
     var blade_normal = normalize(cross(vec3<f32>(blade_dir_normal.x, 0., blade_dir_normal.y), p3));
     
     let distance = distance(base_p3, p3);
-
 
     p1 += blade_normal * distance * blade.flexibility;
     p2 += blade_normal * distance * blade.flexibility;
