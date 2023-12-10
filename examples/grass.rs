@@ -1,9 +1,7 @@
-use bevy::{prelude::*, render::mesh::VertexAttributeValues};
+use bevy::prelude::*;
 
 use bevy_flycam::PlayerPlugin;
 use bevy_procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
-
-use noise::NoiseFn;
 
 fn main() {
     App::new()
@@ -21,16 +19,6 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let mut terrain_mesh = Mesh::from(shape::Plane { size: 1.0, subdivisions: 100 });
-    if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-        if let VertexAttributeValues::Float32x3(positions) = positions {
-            for position in positions.iter_mut() {
-                let y = noise::Perlin::new(1).get([((position[0]) * 5.) as f64, ((position[2]) * 5.) as f64]) as f32;
-                position[1] += y;
-            }
-        }
-    }
-
     let terrain = commands.spawn(
         PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Plane::default())),
