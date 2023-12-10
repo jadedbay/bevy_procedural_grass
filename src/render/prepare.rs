@@ -82,12 +82,12 @@ pub(crate) fn prepare_grass_bind_group(
     }
 }
 
-#[derive(Resource, Clone)]
+#[derive(Component, Resource, Clone)]
 pub struct WindBuffer {
     buffer: Buffer,
 }
 
-pub(crate) fn prepare_wind_buffers(
+pub(crate) fn prepare_global_wind_buffers(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
     wind: Res<GrassWind>,
@@ -103,7 +103,7 @@ pub(crate) fn prepare_wind_buffers(
     });
 }
 
-pub(crate) fn prepare_wind_bind_group(
+pub(crate) fn prepare_global_wind_bind_group(
     mut commands: Commands,
     pipeline: Res<GrassPipeline>,
     render_device: Res<RenderDevice>,
@@ -134,4 +134,56 @@ pub(crate) fn prepare_wind_bind_group(
     );
 
     commands.insert_resource(BufferBindGroup::<GrassWind>::new(bind_group));
+}
+
+pub(crate) fn prepare_local_wind_buffers(
+    mut commands: Commands,
+    query: Query<(Entity, &GrassWind)>,
+    render_device: Res<RenderDevice>,
+) {
+    for (entity, grass_wind) in &query {
+        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            label: Some("local wind buffer"),
+            contents: bytemuck::cast_slice(&[grass_wind.wind_data.clone()]),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
+        });
+
+        commands.entity(entity).insert(WindBuffer {
+            buffer,
+        });
+    }
+}
+
+pub(crate) fn prepare_local_wind_bind_group(
+    mut commands: Commands,
+    pipeline: Res<GrassPipeline>,
+    render_device: Res<RenderDevice>,
+    query: Query<(Entity, &GrassWind, &WindBuffer)>,
+    fallback_img: Res<FallbackImage>,
+    images: Res<RenderAssets<Image>>,
+) {
+    let layout = pipeline.wind_layout.clone();
+
+    for (entity, grass_wind, wind_buffer) in query.iter() {
+        let wind_map_texture = if let Some(texture) = images.get(&grass_wind.wind_map) {
+            &texture.texture_view
+        } else {
+            &fallback_img.d2.texture_view
+        };
+
+        let bind_group = render_device.create_bind_group(
+            Some("local wind bind group"),
+            &layout,
+            &BindGroupEntries::sequential((
+                BufferBinding {
+                    buffer: &wind_buffer.buffer,
+                    offset: 0,
+                    size: None,
+                },
+                BindingResource::TextureView(&wind_map_texture)
+            ))
+        );
+
+        commands.entity(entity).insert(BufferBindGroup::<GrassWind>::new(bind_group));
+    }
 }

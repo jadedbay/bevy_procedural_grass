@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup, RenderMeshInstances}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
 use crate::grass::{wind::GrassWind, chunk::RenderGrassChunks, grass::Grass};
@@ -10,27 +8,22 @@ pub type DrawGrass = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
     SetMeshBindGroup<1>,
-    SetBindGroup<2, Grass>,
-    SetResourceBindGroup<3, GrassWind>,
+    SetGrassBindGroup<2>,
+    SetWindBindGroup<3>,
     DrawGrassInstanced,
 );
 
-pub struct SetBindGroup<const I: usize, T> {
-    _marker: PhantomData<T>,
-}
-
-impl<P: PhaseItem, const I: usize,  T> RenderCommand<P> for SetBindGroup<I, T> 
-where
-    T: 'static + Sync + Send,
+pub struct SetGrassBindGroup<const I: usize>;
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetGrassBindGroup<I> 
 {
     type Param = ();
     type ViewWorldQuery = ();
-    type ItemWorldQuery = Option<Read<BufferBindGroup<T>>>;
+    type ItemWorldQuery = Option<Read<BufferBindGroup<Grass>>>;
 
     fn render<'w>(
         _item: &P,
         _view: (),
-        bind_group: Option<&'w BufferBindGroup<T>>,
+        bind_group: Option<&'w BufferBindGroup<Grass>>,
         _meshes: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
@@ -42,25 +35,25 @@ where
     }
 }
 
-pub struct SetResourceBindGroup<const I: usize, T> {
-    _marker: PhantomData<T>,
-}
-impl<P: PhaseItem, const I: usize,  T> RenderCommand<P> for SetResourceBindGroup<I, T> 
-where
-    T: 'static + Sync + Send,
+pub struct SetWindBindGroup<const I: usize>;
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetWindBindGroup<I> 
 {
     type Param = SRes<BufferBindGroup<GrassWind>>;
     type ViewWorldQuery = ();
-    type ItemWorldQuery = ();
+    type ItemWorldQuery = Option<Read<BufferBindGroup<GrassWind>>>;
 
     fn render<'w>(
         _item: &P,
         _view: (),
-        _: (),
+        local_wind: Option<&'w BufferBindGroup<GrassWind>>,
         wind_bind_group: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let bind_group = wind_bind_group.into_inner();
+        let bind_group = if let Some(local_wind) = local_wind {
+            local_wind
+        } else {
+            wind_bind_group.into_inner()
+        };
         pass.set_bind_group(I, &bind_group.bind_group, &[]);
         RenderCommandResult::Success
     }

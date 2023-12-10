@@ -12,7 +12,7 @@ Add `bevy_procedural_grass` dependency to `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_procedural_grass = "0.1.0"
+bevy_procedural_grass = "0.1.2"
 ```
 
 ### Generate grass on top of entity:
@@ -67,7 +67,6 @@ fn setup(
 - Grass Clumping for less uniform grass generation.
 - Grass Interaction, allow grass to move out of the way of other entites.
 - Density Map.
-- Local wind, allow separate grass entities to have their own wind.
 - LOD
 - Compute Shaders, use compute shaders to generate grass instance data each frame to optimize memory usage.
 

@@ -1,3 +1,5 @@
+use bevy::ecs::query::QueryItem;
+use bevy::render::extract_component::ExtractComponent;
 use bevy::render::extract_resource::ExtractResource;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::prelude::*;
@@ -35,12 +37,22 @@ impl Default for Wind {
     }
 }
 
-#[derive(Resource, Default, Clone)]
+#[derive(Component, Resource, Default, Clone)]
 #[cfg_attr(feature = "bevy-inspector-egui", derive(Reflect, InspectorOptions))]
 #[cfg_attr(feature = "bevy-inspector-egui", reflect(Resource, InspectorOptions))]
 pub struct GrassWind {
     pub wind_data: Wind,
     pub wind_map: Handle<Image>,
+}
+
+impl ExtractComponent for GrassWind {
+    type Query = &'static GrassWind;
+    type Filter = ();
+    type Out = Self;
+
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self::Out> {
+        Some(item.clone())
+    }
 }
 
 impl ExtractResource for GrassWind {

@@ -23,7 +23,7 @@ impl Plugin for ProceduralGrassPlugin {
             "assets/shaders/grass.wgsl",
             Shader::from_wgsl
         );
-        
+
         #[cfg(feature = "bevy-inspector-egui")]
         {
             app
@@ -41,6 +41,7 @@ impl Plugin for ProceduralGrassPlugin {
             .add_plugins(RenderAssetPlugin::<GrassInstanceData>::default())
             .add_plugins(ExtractComponentPlugin::<Grass>::default())
             .add_plugins(ExtractComponentPlugin::<GrassChunks>::default())
+            .add_plugins(ExtractComponentPlugin::<GrassWind>::default())
             .add_plugins(ExtractResourcePlugin::<GrassWind>::default());
 
         let render_app = app.sub_app_mut(RenderApp);
@@ -51,9 +52,11 @@ impl Plugin for ProceduralGrassPlugin {
             (
                 render::queue::grass_queue.in_set(RenderSet::QueueMeshes),
                 render::prepare::prepare_grass_buffers.in_set(RenderSet::PrepareResources),
-                render::prepare::prepare_wind_buffers.in_set(RenderSet::PrepareResources),
+                render::prepare::prepare_global_wind_buffers.in_set(RenderSet::PrepareResources),
+                render::prepare::prepare_local_wind_buffers.in_set(RenderSet::PrepareResources),
                 render::prepare::prepare_grass_bind_group.in_set(RenderSet::PrepareBindGroups),
-                render::prepare::prepare_wind_bind_group.in_set(RenderSet::PrepareBindGroups),
+                render::prepare::prepare_global_wind_bind_group.in_set(RenderSet::PrepareBindGroups),
+                render::prepare::prepare_local_wind_bind_group.in_set(RenderSet::PrepareBindGroups),
             ),
         );
     }

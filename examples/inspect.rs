@@ -56,15 +56,16 @@ fn setup(
         }, 
     ).id();
 
-    commands.spawn(GrassBundle {
-        mesh: meshes.add(GrassMesh::mesh()),
-        grass: Grass {
-            entity: Some(terrain.clone()),
+    commands.spawn((
+        GrassBundle {
+            mesh: meshes.add(GrassMesh::mesh()),
+            grass: Grass {
+                entity: Some(terrain.clone()),
+                ..default()
+            },
             ..default()
         },
-        spatial: SpatialBundle::INHERITED_IDENTITY,
-        ..default()
-    });
+    ));
 
     commands.spawn(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
