@@ -1,4 +1,5 @@
 # bevy_procedural_grass
+[![crates.io](https://img.shields.io/badge/crates.io-v0.1.0-orange)](https://crates.io/crates/bevy_procedural_grass)
 
 A plugin for `bevy 0.12` that generates grass on top of any mesh.
 
