@@ -1,5 +1,6 @@
 # bevy_procedural_grass
-[![crates.io](https://img.shields.io/badge/crates.io-v0.1.0-orange)](https://crates.io/crates/bevy_procedural_grass)
+[![crates.io](https://img.shields.io/crates/v/bevy_procedural_grass.svg)](https://crates.io/crates/bevy_procedural_grass)
+[![Doc](https://docs.rs/bevy_procedural_grass/badge.svg)](https://docs.rs/bevy_procedural_grass)
 
 A plugin for `bevy 0.12` that generates grass on top of any mesh.
 
@@ -52,6 +53,13 @@ fn setup(
     });
 }
 ```
+
+## Features
+- Grass generated based of mesh
+- Wind Animation
+- Lighting/Shadows for directional lights
+- GPU Instancing
+- Frustum/Distance Culling
 
 ## TODO
 - Lighting for point and spot lights (Currently only supports directional lights).
