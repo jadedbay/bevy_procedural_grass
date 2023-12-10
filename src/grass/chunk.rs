@@ -57,7 +57,7 @@ pub fn grass_culling(
                     let (x, y, z) = chunk_coords;
                     let world_pos = Vec3::new(x as f32, y as f32, z as f32) * chunks.chunk_size;
                     
-                    let distance = (world_pos.xz() - transform.translation.xz()).length();
+                    let distance = ((world_pos.xz() + aabb.center.xz()) - transform.translation.xz()).length();
                     
                     frustum.intersects_obb(&aabb, &Affine3A::from_translation(world_pos), false, false) && distance <= grass_config.cull_distance
                 });

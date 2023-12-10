@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 keywords = ["bevy", "grass"]
 repository = "https://github.com/jadedbay/bevy_procedural_grass/"
 description = "A plugin for bevy to generate grass"
+documentation = "https://docs.rs/bevy_procedural_grass/latest/bevy_procedural_grass/"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
