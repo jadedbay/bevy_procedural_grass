@@ -14,19 +14,24 @@ pub struct ProceduralGrassPlugin {
 
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<Grass>()
-        .register_type::<GrassWind>()
-        .register_type::<GrassConfig>()
-        .insert_resource(self.wind.clone())
-        .insert_resource(self.config)
-        .add_systems(Startup, grass::wind::create_wind_map)
-        .add_systems(PostStartup, grass::grass::generate_grass)
-        .add_systems(Update, grass::chunk::grass_culling)
-        .init_asset::<GrassInstanceData>()
-        .add_plugins(RenderAssetPlugin::<GrassInstanceData>::default())
-        .add_plugins(ExtractComponentPlugin::<Grass>::default())
-        .add_plugins(ExtractComponentPlugin::<GrassChunks>::default())
-        .add_plugins(ExtractResourcePlugin::<GrassWind>::default());
+        #[cfg(feature = "bevy-inspector-egui")]
+        {
+            app
+                .register_type::<Grass>()
+                .register_type::<GrassWind>()
+                .register_type::<GrassConfig>();
+        }
+        app
+            .insert_resource(self.wind.clone())
+            .insert_resource(self.config)
+            .add_systems(Startup, grass::wind::create_wind_map)
+            .add_systems(PostStartup, grass::grass::generate_grass)
+            .add_systems(Update, grass::chunk::grass_culling)
+            .init_asset::<GrassInstanceData>()
+            .add_plugins(RenderAssetPlugin::<GrassInstanceData>::default())
+            .add_plugins(ExtractComponentPlugin::<Grass>::default())
+            .add_plugins(ExtractComponentPlugin::<GrassChunks>::default())
+            .add_plugins(ExtractResourcePlugin::<GrassWind>::default());
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_render_command::<Opaque3d, DrawGrass>()

@@ -1,4 +1,5 @@
 use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, extract_component::ExtractComponent}, utils::HashMap, ecs::query::QueryItem};
+#[cfg(feature = "bevy-inspector-egui")]
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
 use bytemuck::{Zeroable, Pod};
@@ -30,8 +31,9 @@ pub fn generate_grass(
     }
 }
 
-#[derive(Reflect, InspectorOptions, Component)]
-#[reflect(InspectorOptions)]
+#[derive(Component)]
+#[cfg_attr(feature = "bevy-inspector-egui", derive(Reflect, InspectorOptions))]
+#[cfg_attr(feature = "bevy-inspector-egui", reflect(InspectorOptions))]
 pub struct Grass {
     pub entity: Option<Entity>,
     pub density: u32,
@@ -124,8 +126,9 @@ impl ExtractComponent for Grass {
     }
 }
 
-#[derive(Component, Reflect, InspectorOptions, Clone, Copy)]
-#[reflect(InspectorOptions)]
+#[derive(Component, Clone, Copy)]
+#[cfg_attr(feature = "bevy-inspector-egui", derive(Reflect, InspectorOptions))]
+#[cfg_attr(feature = "bevy-inspector-egui", reflect(InspectorOptions))]
 pub struct GrassColor {
     pub ao: Color,
     pub color_1: Color,
@@ -152,8 +155,9 @@ impl Default for GrassColor {
     }
 }
 
-#[derive(Component, Reflect, InspectorOptions, Clone, Copy, Pod, Zeroable)]
-#[reflect(InspectorOptions)]
+#[derive(Component, Clone, Copy, Pod, Zeroable)]
+#[cfg_attr(feature = "bevy-inspector-egui", derive(Reflect, InspectorOptions))]
+#[cfg_attr(feature = "bevy-inspector-egui", reflect(InspectorOptions))]
 #[repr(C)]
 pub struct Blade {
     pub length: f32,

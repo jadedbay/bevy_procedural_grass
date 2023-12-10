@@ -1,6 +1,6 @@
 use bevy::prelude::*;
+
 use bevy_flycam::PlayerPlugin;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::{ProceduralGrassPlugin, grass::{mesh::GrassMesh, grass::{GrassBundle, Grass}}}; // imports
 
 fn main() {
@@ -9,7 +9,6 @@ fn main() {
         DefaultPlugins,
         PlayerPlugin,
         ProceduralGrassPlugin::default(), // add procedural grass plugin
-        WorldInspectorPlugin::new(),
     ))
     .add_systems(Startup, setup)
     .run();

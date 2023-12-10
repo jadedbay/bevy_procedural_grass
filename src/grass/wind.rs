@@ -1,11 +1,13 @@
 use bevy::render::extract_resource::ExtractResource;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::prelude::*;
+#[cfg(feature = "bevy-inspector-egui")]
 use bevy_inspector_egui::{InspectorOptions, prelude::ReflectInspectorOptions};
 use bytemuck::{Pod, Zeroable};
 
-#[derive(Reflect, InspectorOptions, Clone, Copy, Pod, Zeroable)]
-#[reflect(InspectorOptions)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+#[cfg_attr(feature = "bevy-inspector-egui", derive(Reflect, InspectorOptions))]
+#[cfg_attr(feature = "bevy-inspector-egui", reflect(InspectorOptions))]
 #[repr(C)]
 pub struct Wind {
     pub speed: f32,
@@ -33,8 +35,9 @@ impl Default for Wind {
     }
 }
 
-#[derive(Resource, Default, Clone, Reflect, InspectorOptions)]
-#[reflect(Resource, InspectorOptions)]
+#[derive(Resource, Default, Clone)]
+#[cfg_attr(feature = "bevy-inspector-egui", derive(Reflect, InspectorOptions))]
+#[cfg_attr(feature = "bevy-inspector-egui", reflect(Resource, InspectorOptions))]
 pub struct GrassWind {
     pub wind_data: Wind,
     pub wind_map: Handle<Image>,
