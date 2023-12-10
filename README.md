@@ -54,7 +54,7 @@ fn setup(
 - Compute Shaders, use compute shaders to generate grass instance data each frame to optimize memory usage.
 
 ## Resources
-- [Modern Foliage Rendering by Acerola](https://www.youtube.com/watch?v=jw00MbIJcrk)
-- [Procedural Grass in 'Ghost of Tsushima' by GDC](https://www.youtube.com/watch?v=Ibe1JBF5i5Y)
-- [Unity-Grass by cainrademan](https://github.com/cainrademan/Unity-Grass/)
-- [warbler_grass by EmiOnGit](https://github.com/EmiOnGit/warbler_grass/)
+- [Modern Foliage Rendering - Acerola](https://www.youtube.com/watch?v=jw00MbIJcrk)
+- [Procedural Grass in 'Ghost of Tsushima' - GDC](https://www.youtube.com/watch?v=Ibe1JBF5i5Y)
+- [Unity-Grass - cainrademan](https://github.com/cainrademan/Unity-Grass/)
+- [warbler_grass - EmiOnGit](https://github.com/EmiOnGit/warbler_grass/)
