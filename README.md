@@ -13,6 +13,8 @@ Add `bevy_procedural_grass` dependency to `Cargo.toml`:
 bevy_procedural_grass = "0.1.0"
 ```
 
+### Generate grass on top of entity:
+
 ```rust
 use bevy::prelude::*;
 use bevy_procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
