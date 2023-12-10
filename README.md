@@ -54,6 +54,13 @@ fn setup(
 }
 ```
 
+## Features
+- Grass generated based of mesh
+- Wind Animation
+- Lighting/Shadows for directional lights
+- GPU Instancing
+- Frustum/Distance Culling
+
 ## TODO
 - Lighting for point and spot lights (Currently only supports directional lights).
 - Improve Animation.
