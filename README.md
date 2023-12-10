@@ -6,6 +6,13 @@ A plugin for `bevy 0.12` that generates grass on top of any mesh.
 
 ## Usage
 
+Add `bevy_procedural_grass` dependency to `Cargo.toml`:
+
+```toml
+[dependencies]
+bevy_procedural_grass = "0.1.0"
+```
+
 ```rust
 use bevy::prelude::*;
 use bevy_procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
