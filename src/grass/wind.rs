@@ -13,10 +13,9 @@ use bytemuck::{Pod, Zeroable};
 #[repr(C)]
 pub struct Wind {
     pub speed: f32,
-    pub strength: f32,
-    pub variance: f32,
+    pub amplitude: f32,
+    pub frequency: f32,
     pub direction: f32,
-    pub force: f32,
     pub oscillation: f32,
 
     pub scale: f32,
@@ -26,10 +25,9 @@ impl Default for Wind {
     fn default() -> Self {
         Self {
             speed: 0.15,
-            strength: 1.,
-            variance: 1.,
+            amplitude: 1.,
+            frequency: 1.,
             direction: 0.0,
-            force: 1.,
             oscillation: 1.5,
 
             scale: 100.,

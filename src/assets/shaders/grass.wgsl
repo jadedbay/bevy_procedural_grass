@@ -40,10 +40,9 @@ var<uniform> blade: Blade;
 
 struct Wind {
     speed: f32,
-    strength: f32,
-    variance: f32,
+    amplitude: f32,
+    frequency: f32,
     direction: f32,
-    force: f32,
     oscillation: f32,
     scale: f32,
 };
@@ -87,21 +86,17 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let t = unpack_float(sample);
 
     let width = blade.width;
-    let length = mix(blade.length, blade.length + 0.6, fract(hash_id));
+    let length = mix(blade.length, blade.length + blade.length / 2., fract(hash_id));
 
     let theta = 2.0 * PI * random1D(hash_id);
     let radius = length * mix(blade.tilt - blade.tilt_variance, blade.tilt, fract(random1D(hash_id)));
     var xz = radius * vec2<f32>(cos(theta), sin(theta)); 
     let base_p3 = vec3<f32>(xz.x, sqrt(length * length - dot(xz, xz)), xz.y);
 
-    xz += -wind_direction * (sin(mix(wind.strength - wind.variance, wind.strength, t) * wind.force));
+    xz += -wind_direction * sin(t * wind.frequency) * wind.amplitude;
     xz += normalize(vec2<f32>(base_p3.x, base_p3.z)) * sin(r * 0.2) * wind.oscillation;
 
-    let xz_length = length(xz);
-    let clamped_length = clamp(xz_length, 0.0, length - 0.05);
-    xz = normalize(xz) * clamped_length;
-
-    var y = sqrt(length * length - dot(xz, xz));
+    var y = -pow((length(xz) * 0.5), 2.) + length;
     var p3 = vec3<f32>(xz.x, y, xz.y);
 
     let p0 = vec3<f32>(0.0);

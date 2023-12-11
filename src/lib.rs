@@ -4,7 +4,12 @@ use grass::{chunk::GrassChunks, grass::Grass, wind::GrassWind, config::GrassConf
 use render::{instance::GrassInstanceData, pipeline::GrassPipeline, draw::DrawGrass};
 
 pub mod grass;
-pub mod render;
+mod render;
+
+pub mod prelude {
+    pub use crate::ProceduralGrassPlugin;
+    pub use crate::grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh, wind::{GrassWind, Wind}};
+}
 
 pub(crate) const GRASS_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(195_094_223_228_228_028_086_047_086_167_255_040_126);
