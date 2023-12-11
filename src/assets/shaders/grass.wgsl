@@ -31,7 +31,8 @@ struct Blade {
     width: f32,
     tilt: f32,
     tilt_variance: f32,
-    flexibility: f32,
+    p1_flexibility: f32,
+    p2_flexibility: f32,
     curve: f32,
     specular: f32,
 }
@@ -85,7 +86,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let sample = sample_wind_map(wind_pos , wind.speed).rgb;
     let t = unpack_float(sample);
 
-    let width = blade.width;
     let length = mix(blade.length, blade.length + blade.length / 2., fract(hash_id));
 
     let theta = 2.0 * PI * random1D(hash_id);
@@ -108,12 +108,13 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let distance = distance(base_p3, p3);
 
-    p1 += blade_normal * (y - length) * blade.flexibility;
-    p2 += blade_normal * (y - length) * blade.flexibility;
+    p1 += blade_normal * (y - length) * blade.p1_flexibility;
+    p2 += blade_normal * (y - length) * blade.p2_flexibility;
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
     position.y = bezier.y;
+    let width = blade.width * (1.0 - pow(uv.y, 2.));
     let xz_pos = bezier.xz + (normalize(vec2<f32>(-base_p3.z, base_p3.x)) * vertex.position.x * width);
     position.x = xz_pos.x;
     position.z = xz_pos.y;

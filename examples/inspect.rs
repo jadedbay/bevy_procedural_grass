@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::PresentMode, pbr::wireframe::WireframePlugin, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
+use bevy::{prelude::*, window::PresentMode, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
 use bevy_procedural_grass::prelude::*;
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -6,24 +6,23 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use noise::NoiseFn;
 
 fn main() {
-    let mut app = App::new();
-    app.add_plugins((
-        DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                present_mode: PresentMode::Immediate,
+    App::new()
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    present_mode: PresentMode::Immediate,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }),
-        WireframePlugin,
-        PlayerPlugin,
-        WorldInspectorPlugin::new(),
-        ProceduralGrassPlugin::default(),
-        LogDiagnosticsPlugin::default(),
-        FrameTimeDiagnosticsPlugin,
-    ))
-    .add_systems(Startup, setup)
-    .run();
+            PlayerPlugin,
+            WorldInspectorPlugin::new(),
+            ProceduralGrassPlugin::default(),
+            LogDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin,
+        ))
+        .add_systems(Startup, setup)
+        .run();
 }
 
 fn setup(

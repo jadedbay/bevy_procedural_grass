@@ -164,7 +164,8 @@ pub struct Blade {
     pub width: f32,
     pub tilt: f32,
     pub tilt_variance: f32,
-    pub flexibility: f32,
+    pub p1_flexibility: f32,
+    pub p2_flexibility: f32,
     pub curve: f32,
     pub specular: f32,
 }
@@ -173,10 +174,11 @@ impl Default for Blade {
     fn default() -> Self {
         Self {
             length: 1.5,
-            width: 1.,
+            width: 0.05,
             tilt: 0.5,
             tilt_variance: 0.2,
-            flexibility: 0.5,
+            p1_flexibility: 0.5,
+            p2_flexibility: 0.5,
             curve: 15.,
             specular: 0.2,
         }
