@@ -95,6 +95,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let base_p3 = vec3<f32>(xz.x, sqrt(length * length - dot(xz, xz)), xz.y);
 
     xz += -wind_direction * (sin(mix(wind.strength - wind.variance, wind.strength, t) * wind.force));
+    xz += normalize(vec2<f32>(base_p3.x, base_p3.z)) * sin(r * 0.2) * wind.oscillation;
 
     let xz_length = length(xz);
     let clamped_length = clamp(xz_length, 0.0, length - 0.05);
@@ -103,21 +104,17 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var y = sqrt(length * length - dot(xz, xz));
     var p3 = vec3<f32>(xz.x, y, xz.y);
 
-    let osc_dir = normalize(vec3<f32>(random1D(hash_id), random1D(hash_id * 2.0), random1D(hash_id * 3.0)));
-    p3 += vec3<f32>(osc_dir.x, 0., osc_dir.y) * sin(r * 0.2) * wind.oscillation;
-
     let p0 = vec3<f32>(0.0);
-
     var p1 = 0.33 * p3;
     var p2 = 0.66 * p3;
 
     var blade_dir_normal = normalize(vec2<f32>(-p3.z, p3.x));
-    var blade_normal = normalize(cross(vec3<f32>(blade_dir_normal.x, 0., blade_dir_normal.y), p3));
-    
+    var blade_normal = normalize(cross(normalize(p3), vec3<f32>(blade_dir_normal.x, 0., blade_dir_normal.y)));
+
     let distance = distance(base_p3, p3);
 
-    p1 += blade_normal * distance * blade.flexibility;
-    p2 += blade_normal * distance * blade.flexibility;
+    p1 += blade_normal * (y - length) * blade.flexibility;
+    p2 += blade_normal * (y - length) * blade.flexibility;
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
