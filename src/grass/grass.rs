@@ -12,6 +12,7 @@ use super::chunk::GrassChunks;
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
     pub mesh: Handle<Mesh>,
+    pub lod: GrassLODMesh,
     pub grass: Grass,
     pub grass_chunks: GrassChunks,
     #[bundle()]
@@ -182,5 +183,28 @@ impl Default for Blade {
             curve: 15.,
             specular: 0.2,
         }
+    }
+}
+
+#[derive(Component, Default, Clone)]
+pub struct GrassLODMesh {
+    pub mesh_handle: Option<Handle<Mesh>>,
+}
+
+impl GrassLODMesh {
+    pub fn new(mesh_handle: Handle<Mesh>) -> Self {
+        Self {
+            mesh_handle: Some(mesh_handle)
+        }
+    }
+}
+
+impl ExtractComponent for GrassLODMesh {
+    type Query = &'static GrassLODMesh;
+    type Filter = ();
+    type Out = Self;
+
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self::Out> {
+        Some(item.clone())
     }
 }

@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet, extract_resource::ExtractResourcePlugin}, core_pipeline::core_3d::Opaque3d, asset::load_internal_asset};
 
-use grass::{chunk::GrassChunks, grass::Grass, wind::GrassWind, config::GrassConfig};
+use grass::{chunk::GrassChunks, grass::{Grass, GrassLODMesh}, wind::GrassWind, config::GrassConfig};
 use render::{instance::GrassInstanceData, pipeline::GrassPipeline, draw::DrawGrass};
 
 pub mod grass;
@@ -8,7 +8,11 @@ mod render;
 
 pub mod prelude {
     pub use crate::ProceduralGrassPlugin;
-    pub use crate::grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh, wind::{GrassWind, Wind}};
+    pub use crate::grass::{
+        grass::{GrassBundle, Grass, GrassLODMesh}, 
+        mesh::GrassMesh, 
+        wind::{GrassWind, Wind}
+    };
 }
 
 pub(crate) const GRASS_SHADER_HANDLE: Handle<Shader> =
@@ -44,10 +48,13 @@ impl Plugin for ProceduralGrassPlugin {
             .add_systems(Update, grass::chunk::grass_culling)
             .init_asset::<GrassInstanceData>()
             .add_plugins(RenderAssetPlugin::<GrassInstanceData>::default())
-            .add_plugins(ExtractComponentPlugin::<Grass>::default())
-            .add_plugins(ExtractComponentPlugin::<GrassChunks>::default())
-            .add_plugins(ExtractComponentPlugin::<GrassWind>::default())
-            .add_plugins(ExtractResourcePlugin::<GrassWind>::default());
+            .add_plugins((
+                ExtractComponentPlugin::<Grass>::default(),
+                ExtractComponentPlugin::<GrassChunks>::default(),
+                ExtractComponentPlugin::<GrassLODMesh>::default(),
+                ExtractComponentPlugin::<GrassWind>::default(),
+                ExtractResourcePlugin::<GrassWind>::default(),
+            ));
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_render_command::<Opaque3d, DrawGrass>()

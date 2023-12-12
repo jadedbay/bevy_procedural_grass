@@ -35,7 +35,7 @@ fn setup(
 
     // spawn grass
     commands.spawn(GrassBundle {
-        mesh: meshes.add(GrassMesh::mesh()),
+        mesh: meshes.add(GrassMesh::mesh(7)),
         grass: Grass {
             entity: Some(terrain.clone()), // set entity that grass will generate on top of.
             ..default()

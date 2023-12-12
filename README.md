@@ -55,7 +55,7 @@ fn setup(
 ```
 
 ## Features
-- Grass generated based of mesh
+- Grass positions generated based of mesh
 - Wind Animation
 - Lighting/Shadows for directional lights
 - GPU Instancing

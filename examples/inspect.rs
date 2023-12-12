@@ -1,5 +1,5 @@
 use bevy::{prelude::*, window::PresentMode, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
-use bevy_procedural_grass::prelude::*;
+use bevy_procedural_grass::{prelude::*, grass::grass::GrassLODMesh};
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
@@ -39,6 +39,7 @@ fn setup(
             }
         }
     }
+    
 
     let terrain = commands.spawn(
         PbrBundle {
@@ -56,7 +57,8 @@ fn setup(
 
     commands.spawn((
         GrassBundle {
-            mesh: meshes.add(GrassMesh::mesh()),
+            mesh: meshes.add(GrassMesh::mesh(7)),
+            lod: GrassLODMesh::new(meshes.add(GrassMesh::mesh(3))),
             grass: Grass {
                 entity: Some(terrain.clone()),
                 ..default()

@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup, RenderMeshInstances}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use crate::grass::{wind::GrassWind, chunk::RenderGrassChunks, grass::Grass};
+use crate::grass::{wind::GrassWind, chunk::{RenderGrassChunks, GrassLOD}, grass::{Grass, GrassLODMesh}};
 
 use super::{prepare::BufferBindGroup, instance::GrassInstanceData};
 
@@ -63,34 +63,50 @@ pub struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<Mesh>>, SRes<RenderMeshInstances>, SRes<RenderAssets<GrassInstanceData>>);
     type ViewWorldQuery = ();
-    type ItemWorldQuery = Read<RenderGrassChunks>;
+    type ItemWorldQuery = (Read<GrassLODMesh>, Read<RenderGrassChunks>);
 
     #[inline]
-    fn render<'w>(
+    fn render<'w>( 
         item: &P,
         _view: (),
-        chunks: &'w RenderGrassChunks,
+        (lod, chunks): (&'w GrassLODMesh, &'w RenderGrassChunks),
         (meshes, render_mesh_instances, grass_data): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let Some(mesh_instance) = render_mesh_instances.get(&item.entity()) else {
             return RenderCommandResult::Failure;
         };
-        let gpu_mesh = match meshes.into_inner().get(mesh_instance.mesh_asset_id) {
+
+        let meshes = meshes.into_inner();
+
+        let gpu_mesh_high = match meshes.get(mesh_instance.mesh_asset_id) {
             Some(gpu_mesh) => gpu_mesh,
             None => return RenderCommandResult::Failure,
         };
+        
+        let gpu_mesh_low = if let Some(lod) = &lod.mesh_handle {
+            match meshes.get(lod) {
+                Some(gpu_mesh) => gpu_mesh,
+                None => return RenderCommandResult::Failure,
+            }
+        } else {
+            gpu_mesh_high
+        };
 
         let grass_data_inner = grass_data.into_inner();
-        
-        pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
 
-        for handle in &chunks.0 {
-            let gpu_grass = match grass_data_inner.get(handle) {
+        for chunk in &chunks.0 {
+            let gpu_grass = match grass_data_inner.get(chunk.1.clone()) {
                 Some(gpu_grass) => gpu_grass,
                 None => return RenderCommandResult::Failure,
             };
 
+            let gpu_mesh = match chunk.0 {
+                GrassLOD::Low => &gpu_mesh_low,
+                GrassLOD::High => &gpu_mesh_high,
+            };
+
+            pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
             pass.set_vertex_buffer(1, gpu_grass.buffer.slice(..));
 
             match &gpu_mesh.buffer_info {

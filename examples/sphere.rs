@@ -36,7 +36,7 @@ fn setup(
 
     // add grass bundle
     commands.spawn(GrassBundle {
-        mesh: meshes.add(GrassMesh::mesh()),
+        mesh: meshes.add(GrassMesh::mesh(7)),
         grass: Grass {
             density: 25,
             entity: Some(terrain.clone()), // set entity grass will be placed on (must have a mesh and transform)
