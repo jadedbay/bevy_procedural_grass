@@ -12,14 +12,14 @@ Add `bevy_procedural_grass` dependency to `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_procedural_grass = "0.1.2"
+bevy_procedural_grass = "0.2.0"
 ```
 
 ### Generate grass on top of entity:
 
 ```rust
 use bevy::prelude::*;
-use bevy_procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
+use bevy_procedural_grass::prelude::*;
 
 fn main() {
     App::new()
@@ -44,11 +44,12 @@ fn setup(
 
     // spawn grass
     commands.spawn(GrassBundle {
-        mesh: meshes.add(GrassMesh::mesh()),
+        mesh: meshes.add(GrassMesh::mesh(7)), // how many segments you want in the mesh (no. of verts = segments * 2 + 1)
         grass: Grass {
             entity: Some(plane.clone()), // set entity that grass will generate on top of.
             ..default()
         },
+        lod: GrassLODMesh::new(meshes.add(GrassMesh::mesh(3))), // optional: enables LOD
         ..default()
     });
 }
@@ -60,6 +61,7 @@ fn setup(
 - Lighting/Shadows for directional lights
 - GPU Instancing
 - Frustum/Distance Culling
+- LOD
 
 ## TODO
 - Lighting for point and spot lights (Currently only supports directional lights).
@@ -67,7 +69,6 @@ fn setup(
 - Grass Clumping for less uniform grass generation.
 - Grass Interaction, allow grass to move out of the way of other entites.
 - Density Map.
-- LOD
 - Compute Shaders, use compute shaders to generate grass instance data each frame to optimize memory usage.
 
 ## Resources

@@ -1,7 +1,6 @@
 use bevy::prelude::*;
-
+use bevy_procedural_grass::prelude::*;
 use bevy_flycam::PlayerPlugin;
-use bevy_procedural_grass::{ProceduralGrassPlugin, grass::{grass::{GrassBundle, Grass}, mesh::GrassMesh}};
 
 fn main() {
     App::new()
@@ -35,11 +34,12 @@ fn setup(
 
     // spawn grass
     commands.spawn(GrassBundle {
-        mesh: meshes.add(GrassMesh::mesh(7)),
+        mesh: meshes.add(GrassMesh::mesh(7)), // how many segments you want in the mesh (no. of verts = segments * 2 + 1)
         grass: Grass {
             entity: Some(terrain.clone()), // set entity that grass will generate on top of.
             ..default()
         },
+        lod: GrassLODMesh::new(meshes.add(GrassMesh::mesh(3))), // optional: enables LOD
         ..default()
     });
 

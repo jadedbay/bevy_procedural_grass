@@ -50,6 +50,7 @@ pub fn grass_culling(
 ) {
     for mut chunks in query.iter_mut() {
         chunks.render.clear();
+        
         for (transform, frustum) in camera_query.iter() {
             let aabb = Aabb {
                 center: Vec3A::splat(chunks.chunk_size / 2.),
@@ -65,14 +66,15 @@ pub fn grass_culling(
                 let (x, y, z) = chunk_coords;
                 let world_pos = Vec3::new(x as f32, y as f32, z as f32) * chunks.chunk_size;
                 
-                let distance = ((world_pos.xz() + aabb.center.xz()) - transform.translation.xz()).length();
-                
-                let lod_type = match distance <= grass_config.lod_distance {
+                let cull_distance = ((world_pos.xz() + aabb.center.xz()) - transform.translation.xz()).length();
+                let lod_distance = (world_pos + Vec3::from(aabb.center) - transform.translation).length();
+
+                let lod_type = match lod_distance <= grass_config.lod_distance {
                     true => GrassLOD::High,
                     false => GrassLOD::Low,
                 };
                 
-                if frustum.intersects_obb(&aabb, &Affine3A::from_translation(world_pos), false, false) && distance <= grass_config.cull_distance {
+                if frustum.intersects_obb(&aabb, &Affine3A::from_translation(world_pos), false, false) && cull_distance <= grass_config.cull_distance {
                     chunks_inside.push((chunk_coords, lod_type));
                 } else {
                     chunks_outside.push(chunk_coords);
