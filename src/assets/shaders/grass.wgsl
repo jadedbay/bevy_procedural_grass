@@ -70,14 +70,14 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let uv = vertex.uv;
 
-    var hash_id = random1D(vertex.i_pos.x * 10000. + vertex.i_pos.y * 100. + vertex.i_pos.z * 0.05 + 2.);
+    var hash_id = random1D(vertex.i_pos.x * 100. + vertex.i_pos.y * 100. + vertex.i_pos.z * 0.05 + 2.);
     hash_id = random1D(hash_id * 100000.);
 
     var position = vertex.position;
 
     let rad = wind.direction * PI / 180.0;
     let wind_direction = vec2<f32>(cos(rad), sin(rad));
-    var facing = normalize(vec2<f32>(mix(-1., 1., random1D(fract(hash_id) * 5000.)), mix(-1., 1., random1D(hash_id * vertex.i_pos.x))));
+    var facing = normalize(vec2<f32>(mix(-1., 1., hash_id), mix(-1., 1., random1D(hash_id * vertex.i_pos.x))));
 
     let random_point = vec2<f32>(fract(vertex.i_pos.x * 0.1 * hash_id), fract(vertex.i_pos.y * 0.1 * hash_id));
     let r = sample_wind_map(random_point, wind.speed).r;
