@@ -35,7 +35,7 @@ impl Plugin for ProceduralGrassPlugin {
 
         #[cfg(feature = "bevy-inspector-egui")]
         {
-            app
+            app 
                 .register_type::<Grass>()
                 .register_type::<GrassWind>()
                 .register_type::<GrassConfig>();

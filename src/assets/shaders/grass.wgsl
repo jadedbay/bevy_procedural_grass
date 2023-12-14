@@ -89,12 +89,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let length = mix(blade.length, blade.length + blade.length / 2., fract(hash_id));
 
     let theta = 2.0 * PI * random1D(hash_id);
-    let radius = length * mix(blade.tilt - blade.tilt_variance, blade.tilt, fract(random1D(hash_id)));
+    let radius = length * mix(blade.tilt - blade.tilt_variance, blade.tilt, fract(hash_id * 123.));
     var xz = radius * vec2<f32>(cos(theta), sin(theta)); 
     let base_p3 = vec3<f32>(xz.x, sqrt(length * length - dot(xz, xz)), xz.y);
     let base_normal = normalize(vec2<f32>(-base_p3.z, base_p3.x));
 
-    xz += -wind_direction * sin(t * wind.frequency) * wind.amplitude;
+    xz += wind_direction * (0.5 * (sin(t * wind.frequency) + 1.)) * wind.amplitude;
     xz += base_normal * sin(r * 0.2) * wind.oscillation;
 
     var y = -pow((length(xz) * 0.5), 2.) + length;
@@ -169,6 +169,7 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     var ndotl = 0.0;
     var world_ndotl = 0.0;
     var color_gradient = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    var backlight_color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
     let view_z = dot(vec4<f32>(
         view.inverse_view[0].z,
@@ -179,21 +180,23 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
 
     let n_directional_lights = lights.n_directional_lights;
     for (var i: u32 = 0u; i < n_directional_lights; i = i + 1u) {
-        let reflect_dir = reflect(lights.directional_lights[i].direction_to_light, in.normal);
+        let light_dir = lights.directional_lights[i].direction_to_light;
+        let reflect_dir = reflect(light_dir, in.normal);
         let spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32.);
 
-        ndotl += clamp(dot(normal, lights.directional_lights[i].direction_to_light), 0.5, 1.0);
-        world_ndotl += clamp(dot(in.world_normal, lights.directional_lights[i].direction_to_light), 0., 1.);
+        world_ndotl += clamp(dot(in.world_normal, light_dir), 0., 1.);
+        ndotl += clamp(dot(normal, light_dir), world_ndotl, 1.0);
 
         let shadow = clamp(shadows::fetch_directional_shadow(i, vec4<f32>(in.world_position, 1.0), in.world_normal, view_z), 0.1, 1.0);
         if (shadow == 1.0) {
             specular += spec_strength * spec * lights.directional_lights[i].color;
         }
 
-        color_gradient += base_color_gradient * lights.directional_lights[i].color * shadow;
+        color_gradient += (base_color_gradient * lights.directional_lights[i].color * shadow) * 0.1;
     }
 
-    let final_color = ((color_gradient + (specular * 10.)) * ndotl * ao * world_ndotl) * 0.1;
+    let final_color = ((color_gradient + specular) * ndotl * world_ndotl * ao);
+    //let final_color = ((color_gradient + specular) * ndotl * ao * world_ndotl) + backlight_color;
 
     return final_color;
 }

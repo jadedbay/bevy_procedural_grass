@@ -39,7 +39,6 @@ fn setup(
             }
         }
     }
-    
 
     let terrain = commands.spawn(
         PbrBundle {
@@ -50,7 +49,7 @@ fn setup(
                 
                 ..default()
             }),
-            transform: Transform::from_scale(Vec3::new(1000.0, 5.0, 1000.0)),
+            transform: Transform::from_scale(Vec3::new(100.0, 3.0, 100.0)),
             ..default()
         }, 
     ).id();
