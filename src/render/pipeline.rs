@@ -10,6 +10,7 @@ pub struct GrassPipeline {
     mesh_pipeline: MeshPipeline,
     pub grass_layout: BindGroupLayout,
     pub wind_layout: BindGroupLayout,
+    pub interactable_layout: BindGroupLayout,
 }
 
 impl FromWorld for GrassPipeline {
@@ -48,7 +49,7 @@ impl FromWorld for GrassPipeline {
             label: Some("wind_layout"),
             entries: &[
                 BindGroupLayoutEntry {
-                binding: 0,
+                    binding: 0,
                     visibility: ShaderStages::VERTEX,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
@@ -70,11 +71,44 @@ impl FromWorld for GrassPipeline {
             ]
         });
 
+        // let interactable_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+        //     label: Some("interactable_layout"),
+        //     entries: &[
+        //         BindGroupLayoutEntry {
+        //             binding: 0,
+        //             visibility: ShaderStages::VERTEX,
+        //             ty: BindingType::Texture {
+        //                 sample_type: TextureSampleType::Float { filterable: false },
+        //                 view_dimension: TextureViewDimension::D2,
+        //                 multisampled: false,
+        //             },
+        //             count: None,
+        //         },
+        //     ]
+        // });
+
+        let interactable_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("interactable_layout"),
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::VERTEX,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ]
+        });
+
         GrassPipeline {
             shader: GRASS_SHADER_HANDLE,
             mesh_pipeline: mesh_pipeline.clone(),
             grass_layout,
             wind_layout,
+            interactable_layout,
         }
     }
 }
@@ -118,6 +152,7 @@ impl SpecializedMeshPipeline for GrassPipeline {
         });
         descriptor.layout.push(self.grass_layout.clone());
         descriptor.layout.push(self.wind_layout.clone());
+        descriptor.layout.push(self.interactable_layout.clone());
 
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
         descriptor.primitive.cull_mode = None;

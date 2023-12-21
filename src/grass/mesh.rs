@@ -29,10 +29,10 @@ impl GrassMesh {
         positions.push([0.0, 1.0, 0.0]);
         uvs.push([0.5, 1.0]);
 
-        let last = 2 * segments - 1;
-        indices.push(last);
-        indices.push(last - 1);
-        indices.push(last + 1);
+        let tip = 2 * segments - 1;
+        indices.push(tip);
+        indices.push(tip - 1);
+        indices.push(tip + 1);
 
         let mut grass_mesh = Mesh::new(PrimitiveTopology::TriangleList);
         grass_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);

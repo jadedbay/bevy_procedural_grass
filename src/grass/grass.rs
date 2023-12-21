@@ -1,13 +1,13 @@
-use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, extract_component::ExtractComponent}, utils::HashMap, ecs::query::QueryItem};
+use bevy::{prelude::*, render::{view::NoFrustumCulling, mesh::VertexAttributeValues, extract_component::ExtractComponent, render_resource::{Extent3d, TextureDimension, TextureFormat}}, utils::HashMap, ecs::query::QueryItem};
 #[cfg(feature = "bevy-inspector-egui")]
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 
 use bytemuck::{Zeroable, Pod};
 use rand::Rng;
 
-use crate::render::instance::{GrassInstanceData, GrassData};
+use crate::render::instance::{GrassChunkData, GrassData};
 
-use super::chunk::GrassChunks;
+use super::{chunk::GrassChunks, interactable::GrassInterableTarget};
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -15,6 +15,7 @@ pub struct GrassBundle {
     pub lod: GrassLODMesh,
     pub grass: Grass,
     pub grass_chunks: GrassChunks,
+    pub interactable_target: GrassInterableTarget,
     #[bundle()]
     pub spatial: SpatialBundle,
     pub frustum_culling: NoFrustumCulling,
@@ -54,8 +55,8 @@ impl Default for Grass {
 }
 
 impl Grass {
-    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32) -> HashMap<(i32, i32, i32), GrassInstanceData> {
-        let mut chunks: HashMap<(i32, i32, i32), GrassInstanceData> = HashMap::new();
+    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32) -> HashMap<(i32, i32, i32), GrassChunkData> {
+        let mut chunks: HashMap<(i32, i32, i32), GrassChunkData> = HashMap::new();
 
         if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
             if let Some(VertexAttributeValues::Float32x2(uvs)) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
@@ -90,9 +91,9 @@ impl Grass {
                                     let uv = uv0 * barycentric.x + uv1 * barycentric.y + uv2 * barycentric.z;
 
                                     let chunk_coords = (
-                                        ((position.x) / chunk_size).floor() as i32,
-                                        ((position.y) / chunk_size).floor() as i32,
-                                        ((position.z) / chunk_size).floor() as i32,
+                                        (position.x / chunk_size).floor() as i32,
+                                        (position.y / chunk_size).floor() as i32,
+                                        (position.z / chunk_size).floor() as i32,
                                     );
 
                                     let instance = GrassData {
@@ -101,7 +102,7 @@ impl Grass {
                                         uv,
                                     };
 
-                                    chunks.entry(chunk_coords).or_insert_with(|| {GrassInstanceData(Vec::new())}).0.push(instance);
+                                    chunks.entry(chunk_coords).or_insert_with(|| {GrassChunkData(Vec::new())}).0.push(instance);
 
                                     None
                                 }).collect::<Vec<_>>()
@@ -181,7 +182,7 @@ impl Default for Blade {
             p1_flexibility: 0.5,
             p2_flexibility: 0.5,
             curve: 15.,
-            specular: 0.2,
+            specular: 0.1,
         }
     }
 }

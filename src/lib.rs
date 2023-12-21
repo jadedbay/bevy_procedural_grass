@@ -1,7 +1,9 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_component::ExtractComponentPlugin, RenderApp, render_resource::SpecializedMeshPipelines, Render, render_phase::AddRenderCommand, RenderSet, extract_resource::ExtractResourcePlugin}, core_pipeline::core_3d::Opaque3d, asset::load_internal_asset};
 
 use grass::{chunk::GrassChunks, grass::{Grass, GrassLODMesh}, wind::GrassWind, config::GrassConfig};
-use render::{instance::GrassInstanceData, pipeline::GrassPipeline, draw::DrawGrass};
+use render::{instance::GrassChunkData, pipeline::GrassPipeline, draw::DrawGrass};
+
+use crate::grass::interactable::{GrassInterableTarget, GrassInteractable};
 
 pub mod grass;
 mod render;
@@ -36,6 +38,7 @@ impl Plugin for ProceduralGrassPlugin {
         #[cfg(feature = "bevy-inspector-egui")]
         {
             app 
+                .register_type::<GrassInterableTarget>()
                 .register_type::<Grass>()
                 .register_type::<GrassWind>()
                 .register_type::<GrassConfig>();
@@ -44,16 +47,18 @@ impl Plugin for ProceduralGrassPlugin {
             .insert_resource(self.wind.clone())
             .insert_resource(self.config)
             .add_systems(Startup, grass::wind::create_wind_map)
-            .add_systems(PostStartup, grass::grass::generate_grass)
-            .add_systems(Update, grass::chunk::grass_culling)
-            .init_asset::<GrassInstanceData>()
-            .add_plugins(RenderAssetPlugin::<GrassInstanceData>::default())
+            .add_systems(PostStartup, (grass::grass::generate_grass, /*grass::interactable::create_interactable_image*/))
+            .add_systems(Update, (grass::chunk::grass_culling, /*(grass::interactable::grass_interact, grass::interactable::update_interaction_image).chain()*/))
+            .init_asset::<GrassChunkData>()
+            .add_plugins(RenderAssetPlugin::<GrassChunkData>::default())
             .add_plugins((
                 ExtractComponentPlugin::<Grass>::default(),
                 ExtractComponentPlugin::<GrassChunks>::default(),
                 ExtractComponentPlugin::<GrassLODMesh>::default(),
                 ExtractComponentPlugin::<GrassWind>::default(),
                 ExtractResourcePlugin::<GrassWind>::default(),
+                ExtractComponentPlugin::<GrassInterableTarget>::default(),
+                ExtractComponentPlugin::<GrassInteractable>::default()
             ));
 
         let render_app = app.sub_app_mut(RenderApp);
@@ -69,6 +74,7 @@ impl Plugin for ProceduralGrassPlugin {
                 render::prepare::prepare_grass_bind_group.in_set(RenderSet::PrepareBindGroups),
                 render::prepare::prepare_global_wind_bind_group.in_set(RenderSet::PrepareBindGroups),
                 render::prepare::prepare_local_wind_bind_group.in_set(RenderSet::PrepareBindGroups),
+                render::prepare::prepare_interactable_bind_group.in_set(RenderSet::PrepareBindGroups),
             ),
         );
     }

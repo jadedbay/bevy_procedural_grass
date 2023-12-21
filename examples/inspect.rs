@@ -1,5 +1,5 @@
-use bevy::{prelude::*, window::PresentMode, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
-use bevy_procedural_grass::{prelude::*, grass::grass::GrassLODMesh};
+use bevy::{prelude::*, window::PresentMode, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues, pbr::wireframe::{WireframePlugin, Wireframe}};
+use bevy_procedural_grass::{prelude::*, grass::{grass::GrassLODMesh, interactable::GrassInteractable}};
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
@@ -30,17 +30,17 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let mut terrain_mesh = Mesh::from(shape::Plane { size: 1.0, subdivisions: 100 });
-    if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-        if let VertexAttributeValues::Float32x3(positions) = positions {
-            for position in positions.iter_mut() {
-                let y = noise::Perlin::new(1).get([((position[0]) * 5.) as f64, ((position[2]) * 5.) as f64]) as f32;
-                position[1] += y;
-            }
-        }
-    }
+    let mut terrain_mesh = Mesh::from(shape::Plane { size: 100.0, subdivisions: 100 });
+    // if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+    //     if let VertexAttributeValues::Float32x3(positions) = positions {
+    //         for position in positions.iter_mut() {
+    //             let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
+    //             position[1] += y;
+    //         }
+    //     }
+    // }
 
-    let terrain = commands.spawn(
+    let terrain = commands.spawn((
         PbrBundle {
             mesh: meshes.add(terrain_mesh),
             material: materials.add(StandardMaterial {
@@ -49,10 +49,10 @@ fn setup(
                 
                 ..default()
             }),
-            transform: Transform::from_scale(Vec3::new(100.0, 3.0, 100.0)),
+            transform: Transform::from_scale(Vec3::new(1.0, 3.0, 1.0)),
             ..default()
-        }, 
-    ).id();
+        },
+    )).id();
 
     commands.spawn((
         GrassBundle {
@@ -66,12 +66,14 @@ fn setup(
         },
     ));
 
-    commands.spawn(PbrBundle {
+    commands.spawn((PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
         material: materials.add(StandardMaterial::from(Color::WHITE)),
         transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)).with_scale(Vec3::new(1.0, 5.0, 1.0)),
         ..default()
-    });
+    },
+    GrassInteractable::default()
+    ));
      
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {

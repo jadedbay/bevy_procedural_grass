@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::{render_resource::{BufferInitDescriptor, BufferUsages, BindGroup, BindingResource, BufferBinding, BindGroupEntries, Buffer}, renderer::RenderDevice, texture::FallbackImage, render_asset::RenderAssets}};
 
-use crate::grass::{wind::GrassWind, grass::{Blade, GrassColor, Grass}};
+use crate::grass::{wind::GrassWind, grass::{Blade, GrassColor, Grass}, interactable::{GrassInterableTarget, GrassInteractable}};
 
 use super::pipeline::GrassPipeline;
 
@@ -185,5 +185,58 @@ pub(crate) fn prepare_local_wind_bind_group(
         );
 
         commands.entity(entity).insert(BufferBindGroup::<GrassWind>::new(bind_group));
+    }
+}
+
+pub(crate) fn prepare_interactable_bind_group(
+    mut commands: Commands,
+    pipeline: Res<GrassPipeline>,
+    render_device: Res<RenderDevice>,
+    query: Query<(Entity, &GrassInterableTarget)>,
+    object_query: Query<&GrassInteractable>,
+    fallback_img: Res<FallbackImage>,
+    images: Res<RenderAssets<Image>>,
+) {
+    let layout = pipeline.interactable_layout.clone();
+
+    for (entity, interactable) in query.iter() {
+        let mut positions = Vec::new();
+        for object in object_query.iter() {
+            positions.push(Vec4::new(object.position.x, object.position.y, object.position.z, 1.));
+        }
+
+        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            label: Some("interactable buffer"),
+            contents: bytemuck::cast_slice(&positions),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
+        });
+
+        // let interactable_image = if let Some(image) = images.get(&interactable.image) {
+        //     &image.texture_view
+        // } else {
+        //     &fallback_img.d2.texture_view
+        // };
+
+        // let bind_group = render_device.create_bind_group(
+        //     Some("interactable bind group"),
+        //     &layout,
+        //     &BindGroupEntries::single(
+        //         BindingResource::TextureView(&interactable_image)
+        //     )
+        // );
+
+        let bind_group = render_device.create_bind_group(
+            Some("interactable bind group"),
+            &layout,
+            &BindGroupEntries::single(
+                BufferBinding {
+                    buffer: &buffer,
+                    offset: 0,
+                    size: None,
+                }
+            ),
+        );
+
+        commands.entity(entity).insert(BufferBindGroup::<GrassInterableTarget>::new(bind_group));
     }
 }

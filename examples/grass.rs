@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_procedural_grass::prelude::*;
+use bevy_procedural_grass::{prelude::*, grass::interactable::GrassInteractable};
 use bevy_flycam::PlayerPlugin;
 
 fn main() {
@@ -43,12 +43,13 @@ fn setup(
         ..default()
     });
 
-    commands.spawn(PbrBundle {
+    commands.spawn((PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
         material: materials.add(StandardMaterial::from(Color::WHITE)),
         transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)).with_scale(Vec3::new(1.0, 5.0, 1.0)),
         ..default()
-    });
+    },GrassInteractable)
+    );
      
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {

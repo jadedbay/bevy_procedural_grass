@@ -53,6 +53,16 @@ var<uniform> wind: Wind;
 @group(3) @binding(1)
 var t_wind_map: texture_2d<f32>;
 
+// @group(4) @binding(0)
+// var t_interactable: texture_2d<f32>;
+
+struct InteractablePositions {
+    data: vec4<f32>,
+};
+
+@group(4) @binding(0)
+var<uniform> interactable_positions: InteractablePositions;
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(1) uv: vec2<f32>,
@@ -94,15 +104,29 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let base_p3 = vec3<f32>(xz.x, sqrt(length * length - dot(xz, xz)), xz.y);
     let base_normal = normalize(vec2<f32>(-base_p3.z, base_p3.x));
 
-    xz += wind_direction * (0.5 * (sin(t * wind.frequency) + 1.)) * wind.amplitude;
+    // let interact = sample_interactable_image(vertex.i_uv);
+    // let interact_direction = interact.rg * 2.0 - vec2<f32>(1.0, 1.0);
+
+    xz += -wind_direction * (0.5 * (sin(t * wind.frequency))) * wind.amplitude;
     xz += base_normal * sin(r * 0.2) * wind.oscillation;
+
+    // if (interact.w != 0.) {
+    //     xz += interact_direction * interact.a * length * 2.;
+    // }
+
+    let interactable_position = interactable_positions.data;
+    let direction_to_interactable = -normalize(interactable_position.xz - vertex.i_pos.xz);
+    let distance_to_interactable = distance(interactable_position.xz, vertex.i_pos.xz);
+    if (distance_to_interactable < 2.) {
+        xz += direction_to_interactable * (2. - distance_to_interactable);
+    }
 
     var y = -pow((length(xz) * 0.5), 2.) + length;
     var p3 = vec3<f32>(xz.x, y, xz.y);
 
     let p0 = vec3<f32>(0.0);
-    var p1 = 0.33 * p3;
-    var p2 = 0.66 * p3;
+    var p1 = (0.33) * p3;
+    var p2 = (0.66) * p3;
 
     var blade_dir_normal = normalize(vec2<f32>(-p3.z, p3.x));
     var blade_normal = normalize(cross(normalize(p3), vec3<f32>(blade_dir_normal.x, 0., blade_dir_normal.y)));
@@ -196,9 +220,10 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     }
 
     let final_color = ((color_gradient + specular) * ndotl * world_ndotl * ao);
-    //let final_color = ((color_gradient + specular) * ndotl * ao * world_ndotl) + backlight_color;
-
+    
     return final_color;
+    
+    //return vec4<f32>(in.t, in.t, in.t, 1.0);
 }
 
 fn rotate_vector(v: vec3<f32>, n: vec3<f32>, degrees: f32) -> vec3<f32> {
@@ -265,6 +290,14 @@ fn sample_wind_map(uv: vec2<f32>, speed: f32) -> vec4<f32> {
     let pixel_coords = vec2<i32>(fract(scrolled_uv) * vec2<f32>(texture_size));
     return textureLoad(t_wind_map, pixel_coords, 0);
 }
+
+// fn sample_interactable_image(uv: vec2<f32>) -> vec4<f32> {
+//     let texture_size = textureDimensions(t_interactable);
+
+//     let pixel_coords = vec2<i32>(uv * vec2<f32>(texture_size));
+//     return textureLoad(t_interactable, pixel_coords, 0);
+// }
+
 
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(
     vec4<f32>(1.0, 0.0, 0.0, 0.0),

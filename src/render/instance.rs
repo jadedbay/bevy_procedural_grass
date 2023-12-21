@@ -9,28 +9,28 @@ pub struct GrassData {
     pub uv: Vec2,
 }
 
-pub struct GrassInstanceBuffer {
+pub struct GrassChunkBuffer {
     pub buffer: Buffer,
     pub length: usize,
 }
 
 #[derive(Component, Deref, Clone, Asset, TypeUuid, TypePath)]
 #[uuid = "81a29e63-ef6c-4561-b49c-4a138ff39c01"]
-pub struct GrassInstanceData(pub Vec<GrassData>);
+pub struct GrassChunkData(pub Vec<GrassData>);
 
-impl Default for GrassInstanceData {
+impl Default for GrassChunkData {
     fn default() -> Self {
         Self(Vec::new())
     }
 }
 
-impl RenderAsset for GrassInstanceData {
-    type ExtractedAsset = GrassInstanceData;
-    type PreparedAsset = GrassInstanceBuffer;
+impl RenderAsset for GrassChunkData {
+    type ExtractedAsset = GrassChunkData;
+    type PreparedAsset = GrassChunkBuffer;
     type Param = SRes<RenderDevice>;
 
     fn extract_asset(&self) -> Self::ExtractedAsset {
-        GrassInstanceData(self.0.clone())
+        GrassChunkData(self.0.clone())
     }
 
     fn prepare_asset(
@@ -45,7 +45,7 @@ impl RenderAsset for GrassInstanceData {
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST | BufferUsages::STORAGE
         });
 
-        Ok(GrassInstanceBuffer {
+        Ok(GrassChunkBuffer {
             buffer,
             length: extracted_asset.len(),
         })

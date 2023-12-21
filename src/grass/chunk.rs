@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap, render::{primitives::{Frustum, Aabb}, extract_component::ExtractComponent}, ecs::query::QueryItem, math::{Vec3A, Affine3A}};
 
-use crate::render::instance::GrassInstanceData;
+use crate::render::instance::GrassChunkData;
 
 use super::config::GrassConfig;
 
@@ -21,9 +21,9 @@ pub enum CullDimension {
 pub struct GrassChunks {
     pub chunk_size: f32,
     pub cull_dimension: CullDimension,
-    pub chunks: HashMap<(i32, i32, i32), GrassInstanceData>,
-    pub loaded: HashMap<(i32, i32, i32), Handle<GrassInstanceData>>,
-    pub render: Vec<(GrassLOD, Handle<GrassInstanceData>)>,
+    pub chunks: HashMap<(i32, i32, i32), GrassChunkData>,
+    pub loaded: HashMap<(i32, i32, i32), Handle<GrassChunkData>>,
+    pub render: Vec<(GrassLOD, Handle<GrassChunkData>)>,
 }
 
 impl Default for GrassChunks {
@@ -49,12 +49,12 @@ impl ExtractComponent for GrassChunks {
 }
 
 #[derive(Component, Default, Clone)]
-pub struct RenderGrassChunks(pub Vec<(GrassLOD, Handle<GrassInstanceData>)>);
+pub struct RenderGrassChunks(pub Vec<(GrassLOD, Handle<GrassChunkData>)>);
 
 pub(crate) fn grass_culling(
     mut query: Query<&mut GrassChunks>,
     camera_query: Query<(&Transform, &Frustum)>,
-    mut grass_asset: ResMut<Assets<GrassInstanceData>>,
+    mut grass_asset: ResMut<Assets<GrassChunkData>>,
     grass_config: Res<GrassConfig>,
 ) {
     for mut chunks in query.iter_mut() {
