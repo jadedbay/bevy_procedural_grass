@@ -3,10 +3,13 @@ use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_compone
 use grass::{chunk::GrassChunks, grass::{Grass, GrassLODMesh}, wind::GrassWind, config::GrassConfig};
 use render::{instance::GrassChunkData, pipeline::GrassPipeline, draw::DrawGrass};
 
-use crate::grass::interactable::{GrassInterableTarget, GrassInteractable};
+use crate::grass::interactable::GrassTimer;
+#[cfg(feature = "bevy-inspector-egui")]
+use crate::grass::interactable::GrassInteractable;
 
 pub mod grass;
 mod render;
+mod util;
 
 pub mod prelude {
     pub use crate::ProceduralGrassPlugin;
@@ -38,17 +41,18 @@ impl Plugin for ProceduralGrassPlugin {
         #[cfg(feature = "bevy-inspector-egui")]
         {
             app 
-                .register_type::<GrassInterableTarget>()
                 .register_type::<Grass>()
                 .register_type::<GrassWind>()
+                .register_type::<GrassInteractable>()
                 .register_type::<GrassConfig>();
         }
         app
             .insert_resource(self.wind.clone())
             .insert_resource(self.config)
+            .insert_resource(GrassTimer::default())
             .add_systems(Startup, grass::wind::create_wind_map)
-            .add_systems(PostStartup, (grass::grass::generate_grass, /*grass::interactable::create_interactable_image*/))
-            .add_systems(Update, (grass::chunk::grass_culling, /*(grass::interactable::grass_interact, grass::interactable::update_interaction_image).chain()*/))
+            .add_systems(PostStartup, grass::grass::generate_grass)
+            .add_systems(Update, (grass::chunk::grass_culling, grass::interactable::chunk_interact))
             .init_asset::<GrassChunkData>()
             .add_plugins(RenderAssetPlugin::<GrassChunkData>::default())
             .add_plugins((
@@ -57,8 +61,6 @@ impl Plugin for ProceduralGrassPlugin {
                 ExtractComponentPlugin::<GrassLODMesh>::default(),
                 ExtractComponentPlugin::<GrassWind>::default(),
                 ExtractResourcePlugin::<GrassWind>::default(),
-                ExtractComponentPlugin::<GrassInterableTarget>::default(),
-                ExtractComponentPlugin::<GrassInteractable>::default()
             ));
 
         let render_app = app.sub_app_mut(RenderApp);

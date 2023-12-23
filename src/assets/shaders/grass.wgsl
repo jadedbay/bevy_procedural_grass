@@ -15,7 +15,7 @@ struct Vertex {
 
     @location(3) i_pos: vec3<f32>,
     @location(4) i_normal: vec3<f32>,
-    @location(5) i_uv: vec2<f32>,
+    @location(5) i_chunk_uv: vec2<f32>,
 };
 
 struct Color {
@@ -53,25 +53,16 @@ var<uniform> wind: Wind;
 @group(3) @binding(1)
 var t_wind_map: texture_2d<f32>;
 
-// @group(4) @binding(0)
-// var t_interactable: texture_2d<f32>;
-
-struct InteractablePositions {
-    data: vec4<f32>,
-};
-
 @group(4) @binding(0)
-var<uniform> interactable_positions: InteractablePositions;
+var t_interactable: texture_2d<f32>;
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(1) uv: vec2<f32>,
-    @location(2) world_uv: vec2<f32>,
-    @location(3) t: f32,
-    @location(4) normal: vec3<f32>,
-    @location(5) world_position: vec3<f32>,
-    @location(6) world_normal: vec3<f32>,
-    @location(8) bezier_tangent: vec3<f32>,
+    @location(2) normal: vec3<f32>,
+    @location(3) world_position: vec3<f32>,
+    @location(4) world_normal: vec3<f32>,
+    @location(5) bezier_tangent: vec3<f32>,
 };
 
 @vertex
@@ -104,22 +95,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let base_p3 = vec3<f32>(xz.x, sqrt(length * length - dot(xz, xz)), xz.y);
     let base_normal = normalize(vec2<f32>(-base_p3.z, base_p3.x));
 
-    // let interact = sample_interactable_image(vertex.i_uv);
-    // let interact_direction = interact.rg * 2.0 - vec2<f32>(1.0, 1.0);
-
     xz += -wind_direction * (0.5 * (sin(t * wind.frequency))) * wind.amplitude;
     xz += base_normal * sin(r * 0.2) * wind.oscillation;
 
-    // if (interact.w != 0.) {
-    //     xz += interact_direction * interact.a * length * 2.;
-    // }
-
-    let interactable_position = interactable_positions.data;
-    let direction_to_interactable = -normalize(interactable_position.xz - vertex.i_pos.xz);
-    let distance_to_interactable = distance(interactable_position.xz, vertex.i_pos.xz);
-    if (distance_to_interactable < 2.) {
-        xz += direction_to_interactable * (2. - distance_to_interactable);
-    }
+    let interact = sample_interactable_image(vertex.i_chunk_uv);
+    let interact_direction = interact.rg * 2.0 - vec2<f32>(1.0, 1.0);
+    xz += interact_direction * interact.a * length;
 
     var y = -pow((length(xz) * 0.5), 2.) + length;
     var p3 = vec3<f32>(xz.x, y, xz.y);
@@ -133,8 +114,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let distance = distance(base_p3, p3);
 
-    p1 += blade_normal * (y - length) * mix(blade.p1_flexibility, blade.p1_flexibility + 0.2, fract(hash_id * 99.));
-    p2 += blade_normal * (y - length) * mix(blade.p2_flexibility, blade.p2_flexibility + 0.2, fract(hash_id * 2480.));
+    p1 += blade_normal * (y - length) * mix(blade.p1_flexibility, blade.p1_flexibility + 0.2, fract(hash_id * 99.)) * (1. - interact.a);
+    p2 += blade_normal * (y - length) * mix(blade.p2_flexibility, blade.p2_flexibility + 0.2, fract(hash_id * 2480.)) * (1. - interact.a);
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
@@ -159,12 +140,10 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     );
 
     out.uv = uv;
-    out.world_uv = vertex.i_uv;
-    out.t = t;
     out.world_position = position;
     out.world_normal = vertex.i_normal;
     out.bezier_tangent = tangent;
-
+    
     return out;
 }
 
@@ -220,10 +199,8 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     }
 
     let final_color = ((color_gradient + specular) * ndotl * world_ndotl * ao);
-    
+
     return final_color;
-    
-    //return vec4<f32>(in.t, in.t, in.t, 1.0);
 }
 
 fn rotate_vector(v: vec3<f32>, n: vec3<f32>, degrees: f32) -> vec3<f32> {
@@ -291,12 +268,12 @@ fn sample_wind_map(uv: vec2<f32>, speed: f32) -> vec4<f32> {
     return textureLoad(t_wind_map, pixel_coords, 0);
 }
 
-// fn sample_interactable_image(uv: vec2<f32>) -> vec4<f32> {
-//     let texture_size = textureDimensions(t_interactable);
+fn sample_interactable_image(uv: vec2<f32>) -> vec4<f32> {
+    let texture_size = textureDimensions(t_interactable);
 
-//     let pixel_coords = vec2<i32>(uv * vec2<f32>(texture_size));
-//     return textureLoad(t_interactable, pixel_coords, 0);
-// }
+    let pixel_coords = vec2<i32>(uv * vec2<f32>(texture_size));
+    return textureLoad(t_interactable, pixel_coords, 0);
+}
 
 
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(

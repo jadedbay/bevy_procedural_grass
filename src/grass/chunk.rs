@@ -1,8 +1,7 @@
 use bevy::{prelude::*, utils::HashMap, render::{primitives::{Frustum, Aabb}, extract_component::ExtractComponent}, ecs::query::QueryItem, math::{Vec3A, Affine3A}};
 
 use crate::render::instance::GrassChunkData;
-
-use super::config::GrassConfig;
+use super::{config::GrassConfig, interactable::GrassInteractableTarget};
 
 #[derive(Clone, Copy)]
 pub enum GrassLOD {
@@ -16,14 +15,19 @@ pub enum CullDimension {
     D3,
 }
 
+impl Default for CullDimension {
+    fn default() -> Self {
+        Self::D2
+    }
+}
 
 #[derive(Component, Clone)]
 pub struct GrassChunks {
     pub chunk_size: f32,
     pub cull_dimension: CullDimension,
-    pub chunks: HashMap<(i32, i32, i32), GrassChunkData>,
+    pub chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassInteractableTarget)>,
     pub loaded: HashMap<(i32, i32, i32), Handle<GrassChunkData>>,
-    pub render: Vec<(GrassLOD, Handle<GrassChunkData>)>,
+    pub render: Vec<(GrassLOD, Handle<GrassChunkData>, Handle<Image>)>,
 }
 
 impl Default for GrassChunks {
@@ -49,7 +53,7 @@ impl ExtractComponent for GrassChunks {
 }
 
 #[derive(Component, Default, Clone)]
-pub struct RenderGrassChunks(pub Vec<(GrassLOD, Handle<GrassChunkData>)>);
+pub struct RenderGrassChunks(pub Vec<(GrassLOD, Handle<GrassChunkData>, Handle<Image>)>);
 
 pub(crate) fn grass_culling(
     mut query: Query<&mut GrassChunks>,
@@ -100,7 +104,7 @@ pub(crate) fn grass_culling(
         
             for chunk_coords in chunks_inside.iter() {
                 if !chunks.loaded.contains_key(&chunk_coords.0) {
-                    let instance = chunks.chunks.get(&chunk_coords.0).unwrap();
+                    let instance = &chunks.chunks.get(&chunk_coords.0).unwrap().0;
                     let handle = grass_asset.add(instance.clone());
                     chunks.loaded.insert(chunk_coords.0, handle);
                 }
@@ -109,7 +113,7 @@ pub(crate) fn grass_culling(
             let mut render_chunks = Vec::new();
             for chunk_coords in chunks_inside {
                 if let Some(handle) = chunks.loaded.get(&chunk_coords.0) {
-                    render_chunks.push((chunk_coords.1, handle.clone()));
+                    render_chunks.push((chunk_coords.1, handle.clone(), chunks.chunks.get(&chunk_coords.0).unwrap().1.image.clone()));
                 }
             }
 

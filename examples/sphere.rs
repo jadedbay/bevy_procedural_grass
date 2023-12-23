@@ -25,6 +25,7 @@ fn setup(
             mesh: meshes.add(terrain_mesh),
             material: materials.add(StandardMaterial {
                 base_color: Color::rgb(0.0, 0.05, 0.0),
+                reflectance: 0.0,
                 ..Default::default()
             }),
             transform: Transform::from_scale(Vec3::new(20.0, 20.0, 20.0)),

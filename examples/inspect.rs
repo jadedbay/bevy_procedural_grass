@@ -66,13 +66,16 @@ fn setup(
         },
     ));
 
-    commands.spawn((PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(StandardMaterial::from(Color::WHITE)),
-        transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)).with_scale(Vec3::new(1.0, 5.0, 1.0)),
-        ..default()
-    },
-    GrassInteractable::default()
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Cylinder { radius: 0.75, height: 4.0, ..default()})),
+            material: materials.add(StandardMaterial::from(Color::WHITE)),
+            transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)),
+            ..default()
+        },
+        GrassInteractable {
+            size: 15,
+        }
     ));
      
     commands.spawn(DirectionalLightBundle {

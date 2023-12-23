@@ -71,32 +71,16 @@ impl FromWorld for GrassPipeline {
             ]
         });
 
-        // let interactable_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-        //     label: Some("interactable_layout"),
-        //     entries: &[
-        //         BindGroupLayoutEntry {
-        //             binding: 0,
-        //             visibility: ShaderStages::VERTEX,
-        //             ty: BindingType::Texture {
-        //                 sample_type: TextureSampleType::Float { filterable: false },
-        //                 view_dimension: TextureViewDimension::D2,
-        //                 multisampled: false,
-        //             },
-        //             count: None,
-        //         },
-        //     ]
-        // });
-
         let interactable_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             label: Some("interactable_layout"),
             entries: &[
                 BindGroupLayoutEntry {
                     binding: 0,
                     visibility: ShaderStages::VERTEX,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    ty: BindingType::Texture {
+                        sample_type: TextureSampleType::Float { filterable: false },
+                        view_dimension: TextureViewDimension::D2,
+                        multisampled: false,
                     },
                     count: None,
                 },

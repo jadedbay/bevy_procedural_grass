@@ -7,7 +7,7 @@ use rand::Rng;
 
 use crate::render::instance::{GrassChunkData, GrassData};
 
-use super::{chunk::GrassChunks, interactable::GrassInterableTarget};
+use super::{chunk::GrassChunks, interactable::GrassInteractableTarget};
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -15,7 +15,6 @@ pub struct GrassBundle {
     pub lod: GrassLODMesh,
     pub grass: Grass,
     pub grass_chunks: GrassChunks,
-    pub interactable_target: GrassInterableTarget,
     #[bundle()]
     pub spatial: SpatialBundle,
     pub frustum_culling: NoFrustumCulling,
@@ -25,11 +24,15 @@ pub fn generate_grass(
     mut query: Query<(&Grass, &mut GrassChunks)>,
     mesh_entity_query: Query<(&Transform, &Handle<Mesh>)>,
     meshes: Res<Assets<Mesh>>,
+    asset_server: Res<AssetServer>,
 ) {
     for (grass, mut chunks) in query.iter_mut() {
         let (transform, mesh_handle) = mesh_entity_query.get(grass.entity.unwrap()).unwrap();
         let mesh = meshes.get(mesh_handle).unwrap();
-        chunks.chunks = grass.generate_grass(transform, mesh, chunks.chunk_size);
+        let start = std::time::Instant::now();
+        chunks.chunks = grass.generate_grass(transform, mesh, chunks.chunk_size, &asset_server);
+        let duration = start.elapsed();
+        println!("GRASS GENERATION TIME: {:?}", duration);
     }
 }
 
@@ -55,60 +58,71 @@ impl Default for Grass {
 }
 
 impl Grass {
-    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32) -> HashMap<(i32, i32, i32), GrassChunkData> {
-        let mut chunks: HashMap<(i32, i32, i32), GrassChunkData> = HashMap::new();
+    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32, asset_server: &AssetServer) -> HashMap<(i32, i32, i32), (GrassChunkData, GrassInteractableTarget)> {
+        let mut chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassInteractableTarget)> = HashMap::new();
 
         if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-            if let Some(VertexAttributeValues::Float32x2(uvs)) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
-                if let Some(indices) = mesh.indices() {
-                    let mut triangle = Vec::new();
-                    for index in indices.iter() {
-                        triangle.push(index);
-                        if triangle.len() == 3 {
-                            let _result: Vec<GrassData> = {
-                                let v0 = Vec3::from(positions[triangle[0] as usize]) * transform.scale;
-                                let v1 = Vec3::from(positions[triangle[1] as usize]) * transform.scale;
-                                let v2 = Vec3::from(positions[triangle[2] as usize]) * transform.scale;
+            if let Some(indices) = mesh.indices() {
+                let mut triangle = Vec::new();
+                for index in indices.iter() {
+                    triangle.push(index);
+                    if triangle.len() == 3 {
+                        let _result: Vec<GrassData> = {
+                            let v0 = Vec3::from(positions[triangle[0] as usize]) * transform.scale;
+                            let v1 = Vec3::from(positions[triangle[1] as usize]) * transform.scale;
+                            let v2 = Vec3::from(positions[triangle[2] as usize]) * transform.scale;
 
-                                let normal = (v1 - v0).cross(v2 - v0).normalize();
-            
-                                let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
-            
-                                let scaled_density = (self.density as f32 * area).ceil() as u32;
-            
-                                (0..scaled_density).filter_map(|_| {
-                                    let mut rng = rand::thread_rng();
-            
-                                    let r1 = rng.gen::<f32>().sqrt();
-                                    let r2 = rng.gen::<f32>();
-                                    let barycentric = Vec3::new(1.0 - r1, r1 * (1.0 - r2), r1 * r2);
-            
-                                    let position = (v0 * barycentric.x + v1 * barycentric.y + v2 * barycentric.z) + transform.translation;
+                            let normal = (v1 - v0).cross(v2 - v0).normalize();
+        
+                            let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
+        
+                            let scaled_density = (self.density as f32 * area).ceil() as u32;
+        
+                            (0..scaled_density).filter_map(|_| {
+                                let mut rng = rand::thread_rng();
+        
+                                let r1 = rng.gen::<f32>().sqrt();
+                                let r2 = rng.gen::<f32>();
+                                let barycentric = Vec3::new(1.0 - r1, r1 * (1.0 - r2), r1 * r2);
+        
+                                let position = (v0 * barycentric.x + v1 * barycentric.y + v2 * barycentric.z) + transform.translation;
                                 
-                                    let uv0 = Vec2::from(uvs[triangle[0] as usize]);
-                                    let uv1 = Vec2::from(uvs[triangle[1] as usize]);
-                                    let uv2 = Vec2::from(uvs[triangle[2] as usize]);
-                                    let uv = uv0 * barycentric.x + uv1 * barycentric.y + uv2 * barycentric.z;
+                                let chunk_coords = (
+                                    (position.x / chunk_size).floor() as i32,
+                                    (position.y / chunk_size).floor() as i32,
+                                    (position.z / chunk_size).floor() as i32,
+                                );
 
-                                    let chunk_coords = (
-                                        (position.x / chunk_size).floor() as i32,
-                                        (position.y / chunk_size).floor() as i32,
-                                        (position.z / chunk_size).floor() as i32,
+                                let chunk_base = Vec3::new(chunk_coords.0 as f32, chunk_coords.1 as f32, chunk_coords.2 as f32) * chunk_size;
+                                let chunk_pos = position - chunk_base;
+                                let chunk_uv = Vec2::new(chunk_pos.x / chunk_size, chunk_pos.z / chunk_size);
+                                
+                                let instance = GrassData {
+                                    position,
+                                    normal,
+                                    chunk_uv,
+                                };
+
+                                chunks.entry(chunk_coords).or_insert_with(|| {
+                                    let handle = asset_server.add(
+                                        Image::new_fill(
+                                            Extent3d {
+                                                width: 128,
+                                                height: 128,
+                                                depth_or_array_layers: 1,
+                                            }, 
+                                            TextureDimension::D2, 
+                                            &[0, 0, 0, 0], 
+                                            TextureFormat::Rgba8UnormSrgb,
+                                        )
                                     );
+                                    (GrassChunkData(Vec::new()), GrassInteractableTarget::new(handle))
+                                }).0.0.push(instance);
 
-                                    let instance = GrassData {
-                                        position,
-                                        normal,
-                                        uv,
-                                    };
-
-                                    chunks.entry(chunk_coords).or_insert_with(|| {GrassChunkData(Vec::new())}).0.push(instance);
-
-                                    None
-                                }).collect::<Vec<_>>()
-                            };
-                            triangle.clear();
-                        }
+                                None
+                            }).collect::<Vec<_>>()
+                        };
+                        triangle.clear();
                     }
                 }
             }

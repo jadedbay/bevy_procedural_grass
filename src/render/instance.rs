@@ -6,7 +6,7 @@ use bytemuck::{Pod, Zeroable};
 pub struct GrassData {
     pub position: Vec3,
     pub normal: Vec3,
-    pub uv: Vec2,
+    pub chunk_uv: Vec2,
 }
 
 pub struct GrassChunkBuffer {
