@@ -189,11 +189,11 @@ pub(crate) fn prepare_local_wind_bind_group(
 }
 
 #[derive(Component)]
-pub struct InteractableBindGroups {
+pub struct DisplacementBindGroups {
     pub bind_groups: Vec<BindGroup>,
 }
 
-impl InteractableBindGroups {
+impl DisplacementBindGroups {
     pub fn new(bind_groups: Vec<BindGroup>) -> Self {
         Self {
             bind_groups
@@ -201,7 +201,7 @@ impl InteractableBindGroups {
     }
 }
 
-pub(crate) fn prepare_interactable_bind_group(
+pub(crate) fn prepare_displacement_bind_group(
     mut commands: Commands,
     pipeline: Res<GrassPipeline>,
     render_device: Res<RenderDevice>,
@@ -209,29 +209,35 @@ pub(crate) fn prepare_interactable_bind_group(
     fallback_img: Res<FallbackImage>,
     images: Res<RenderAssets<Image>>,
 ) {
-    let layout = pipeline.interactable_layout.clone();
+    let layout = pipeline.displacement_layout.clone();
 
     for (entity, chunks) in query.iter() {
         let mut bind_groups = Vec::new();
         for chunk in chunks.0.iter() {
-            let interactable_image = if let Some(image) = images.get(&chunk.2) {
+            let xz_displacement_image = if let Some(image) = images.get(&chunk.2) {
+                &image.texture_view
+            } else {
+                &fallback_img.d2.texture_view
+            };
+            let xy_displacement_image = if let Some(image) = images.get(&chunk.3) {
                 &image.texture_view
             } else {
                 &fallback_img.d2.texture_view
             };
 
             let bind_group = render_device.create_bind_group(
-                Some("interactable bind group"),
+                Some("displacement bind group"),
                 &layout,
-                &BindGroupEntries::single(
-                    BindingResource::TextureView(&interactable_image)
-                )
+                &BindGroupEntries::sequential((
+                    BindingResource::TextureView(&xz_displacement_image),
+                    BindingResource::TextureView(&xy_displacement_image),
+                ))
             );
 
             bind_groups.push(bind_group);
         }
 
 
-        commands.entity(entity).insert(InteractableBindGroups::new(bind_groups));
+        commands.entity(entity).insert(DisplacementBindGroups::new(bind_groups));
     }
 }

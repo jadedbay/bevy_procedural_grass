@@ -3,9 +3,9 @@ use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, extract_compone
 use grass::{chunk::GrassChunks, grass::{Grass, GrassLODMesh}, wind::GrassWind, config::GrassConfig};
 use render::{instance::GrassChunkData, pipeline::GrassPipeline, draw::DrawGrass};
 
-use crate::grass::interactable::GrassTimer;
+use crate::grass::displacement::GrassTimer;
 #[cfg(feature = "bevy-inspector-egui")]
-use crate::grass::interactable::GrassInteractable;
+use crate::grass::displacement::GrassDisplacer;
 
 pub mod grass;
 mod render;
@@ -16,7 +16,8 @@ pub mod prelude {
     pub use crate::grass::{
         grass::{GrassBundle, Grass, GrassLODMesh}, 
         mesh::GrassMesh, 
-        wind::{GrassWind, Wind}
+        wind::{GrassWind, Wind},
+        displacement::GrassDisplacer
     };
 }
 
@@ -43,7 +44,7 @@ impl Plugin for ProceduralGrassPlugin {
             app 
                 .register_type::<Grass>()
                 .register_type::<GrassWind>()
-                .register_type::<GrassInteractable>()
+                .register_type::<GrassDisplacer>()
                 .register_type::<GrassConfig>();
         }
         app
@@ -52,7 +53,7 @@ impl Plugin for ProceduralGrassPlugin {
             .insert_resource(GrassTimer::default())
             .add_systems(Startup, grass::wind::create_wind_map)
             .add_systems(PostStartup, grass::grass::generate_grass)
-            .add_systems(Update, (grass::chunk::grass_culling, grass::interactable::chunk_interact))
+            .add_systems(Update, (grass::chunk::grass_culling, grass::displacement::grass_displacement))
             .init_asset::<GrassChunkData>()
             .add_plugins(RenderAssetPlugin::<GrassChunkData>::default())
             .add_plugins((
@@ -76,7 +77,7 @@ impl Plugin for ProceduralGrassPlugin {
                 render::prepare::prepare_grass_bind_group.in_set(RenderSet::PrepareBindGroups),
                 render::prepare::prepare_global_wind_bind_group.in_set(RenderSet::PrepareBindGroups),
                 render::prepare::prepare_local_wind_bind_group.in_set(RenderSet::PrepareBindGroups),
-                render::prepare::prepare_interactable_bind_group.in_set(RenderSet::PrepareBindGroups),
+                render::prepare::prepare_displacement_bind_group.in_set(RenderSet::PrepareBindGroups),
             ),
         );
     }

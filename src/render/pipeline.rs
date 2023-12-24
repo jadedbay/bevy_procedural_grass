@@ -10,7 +10,7 @@ pub struct GrassPipeline {
     mesh_pipeline: MeshPipeline,
     pub grass_layout: BindGroupLayout,
     pub wind_layout: BindGroupLayout,
-    pub interactable_layout: BindGroupLayout,
+    pub displacement_layout: BindGroupLayout,
 }
 
 impl FromWorld for GrassPipeline {
@@ -71,11 +71,21 @@ impl FromWorld for GrassPipeline {
             ]
         });
 
-        let interactable_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("interactable_layout"),
+        let displacement_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("displacement_layout"),
             entries: &[
                 BindGroupLayoutEntry {
                     binding: 0,
+                    visibility: ShaderStages::VERTEX,
+                    ty: BindingType::Texture {
+                        sample_type: TextureSampleType::Float { filterable: false },
+                        view_dimension: TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: 1,
                     visibility: ShaderStages::VERTEX,
                     ty: BindingType::Texture {
                         sample_type: TextureSampleType::Float { filterable: false },
@@ -92,7 +102,7 @@ impl FromWorld for GrassPipeline {
             mesh_pipeline: mesh_pipeline.clone(),
             grass_layout,
             wind_layout,
-            interactable_layout,
+            displacement_layout,
         }
     }
 }
@@ -128,7 +138,7 @@ impl SpecializedMeshPipeline for GrassPipeline {
                     shader_location: 4,
                 },
                 VertexAttribute {
-                    format: VertexFormat::Float32x2,
+                    format: VertexFormat::Float32x3,
                     offset: std::mem::size_of::<[f32; 6]>() as u64,
                     shader_location: 5,
                 },
@@ -136,7 +146,7 @@ impl SpecializedMeshPipeline for GrassPipeline {
         });
         descriptor.layout.push(self.grass_layout.clone());
         descriptor.layout.push(self.wind_layout.clone());
-        descriptor.layout.push(self.interactable_layout.clone());
+        descriptor.layout.push(self.displacement_layout.clone());
 
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
         descriptor.primitive.cull_mode = None;

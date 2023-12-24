@@ -1,8 +1,8 @@
 use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, RenderCommand, TrackedRenderPass, RenderCommandResult}, render_asset::RenderAssets, mesh::GpuBufferInfo}, pbr::{SetMeshViewBindGroup, SetMeshBindGroup, RenderMeshInstances}, ecs::system::{lifetimeless::{SRes, Read}, SystemParamItem}};
 
-use crate::grass::{wind::GrassWind, chunk::{RenderGrassChunks, GrassLOD}, grass::{Grass, GrassLODMesh}, interactable::GrassInteractableTarget};
+use crate::grass::{wind::GrassWind, chunk::{RenderGrassChunks, GrassLOD}, grass::{Grass, GrassLODMesh}};
 
-use super::{prepare::{BufferBindGroup, InteractableBindGroups}, instance::GrassChunkData};
+use super::{prepare::{BufferBindGroup, DisplacementBindGroups}, instance::GrassChunkData};
 
 pub type DrawGrass = (
     SetItemPipeline,
@@ -10,7 +10,6 @@ pub type DrawGrass = (
     SetMeshBindGroup<1>,
     SetGrassBindGroup<2>,
     SetWindBindGroup<3>,
-    //SetInteractableBindGroup<4>,
     DrawGrassInstanced,
 );
 
@@ -57,39 +56,18 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetWindBindGroup<I> {
         RenderCommandResult::Success
     }
 }
-
-pub struct SetInteractableBindGroup<const I: usize>;
-impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetInteractableBindGroup<I> {
-    type Param = ();
-    type ViewWorldQuery = ();
-    type ItemWorldQuery = Option<Read<BufferBindGroup<GrassInteractableTarget>>>;
-
-    fn render<'w>(
-        _item: &P,
-        _view: (),
-        bind_group: Option<&'w BufferBindGroup<GrassInteractableTarget>>,
-        _meshes: SystemParamItem<'w, '_, Self::Param>,
-        pass: &mut TrackedRenderPass<'w>,
-    ) -> RenderCommandResult {
-        let Some(bind_group) = bind_group else {
-            return RenderCommandResult::Failure;
-        };
-        pass.set_bind_group(I, &bind_group.bind_group, &[]);
-        RenderCommandResult::Success
-    }
-}
  
 pub struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<Mesh>>, SRes<RenderMeshInstances>, SRes<RenderAssets<GrassChunkData>>);
     type ViewWorldQuery = ();
-    type ItemWorldQuery = (Read<GrassLODMesh>, Read<RenderGrassChunks>, Read<InteractableBindGroups>);
+    type ItemWorldQuery = (Read<GrassLODMesh>, Read<RenderGrassChunks>, Read<DisplacementBindGroups>);
 
     #[inline]
     fn render<'w>( 
         item: &P,
         _view: (),
-        (lod, chunks, interactable): (&'w GrassLODMesh, &'w RenderGrassChunks, &'w InteractableBindGroups),
+        (lod, chunks, displacement): (&'w GrassLODMesh, &'w RenderGrassChunks, &'w DisplacementBindGroups),
         (meshes, render_mesh_instances, grass_data): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
@@ -129,7 +107,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
             pass.set_vertex_buffer(1, gpu_grass.buffer.slice(..));
 
-            pass.set_bind_group(4, &interactable.bind_groups[i], &[]);
+            pass.set_bind_group(4, &displacement.bind_groups[i], &[]);
 
             match &gpu_mesh.buffer_info {
                 GpuBufferInfo::Indexed {

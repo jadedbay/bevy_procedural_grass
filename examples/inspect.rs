@@ -1,5 +1,5 @@
 use bevy::{prelude::*, window::PresentMode, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues, pbr::wireframe::{WireframePlugin, Wireframe}};
-use bevy_procedural_grass::{prelude::*, grass::{grass::GrassLODMesh, interactable::GrassInteractable}};
+use bevy_procedural_grass::prelude::*;
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
@@ -31,14 +31,15 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let mut terrain_mesh = Mesh::from(shape::Plane { size: 100.0, subdivisions: 100 });
-    // if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-    //     if let VertexAttributeValues::Float32x3(positions) = positions {
-    //         for position in positions.iter_mut() {
-    //             let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
-    //             position[1] += y;
-    //         }
-    //     }
-    // }
+    if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+        if let VertexAttributeValues::Float32x3(positions) = positions {
+            for position in positions.iter_mut() {
+                let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
+                position[1] += y;
+            }
+        }
+    }
+    //let terrain_mesh = Mesh::try_from(shape::Icosphere { radius: 1.0, subdivisions: 20 }).unwrap();
 
     let terrain = commands.spawn((
         PbrBundle {
@@ -73,11 +74,12 @@ fn setup(
             transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)),
             ..default()
         },
-        GrassInteractable {
+        GrassDisplacer {
             size: 15,
+            base_offset: Vec3::new(0., -2., 0.),
         }
     ));
-     
+
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             shadows_enabled: true,

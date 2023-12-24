@@ -54,4 +54,17 @@ fn setup(
         )),
         ..default()
     });
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Cylinder { radius: 0.75, height: 4.0, ..default()})),
+            material: materials.add(StandardMaterial::from(Color::WHITE)),
+            transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)),
+            ..default()
+        },
+        GrassDisplacer {
+            size: 15,
+            base_offset: Vec3::new(0., -2., 0.),
+        }
+    ));
 }

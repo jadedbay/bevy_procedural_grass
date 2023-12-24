@@ -7,7 +7,7 @@ use rand::Rng;
 
 use crate::render::instance::{GrassChunkData, GrassData};
 
-use super::{chunk::GrassChunks, interactable::GrassInteractableTarget};
+use super::{chunk::GrassChunks, displacement::GrassDisplacementImage};
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -58,8 +58,8 @@ impl Default for Grass {
 }
 
 impl Grass {
-    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32, asset_server: &AssetServer) -> HashMap<(i32, i32, i32), (GrassChunkData, GrassInteractableTarget)> {
-        let mut chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassInteractableTarget)> = HashMap::new();
+    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32, asset_server: &AssetServer) -> HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)> {
+        let mut chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)> = HashMap::new();
 
         if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
             if let Some(indices) = mesh.indices() {
@@ -95,28 +95,28 @@ impl Grass {
 
                                 let chunk_base = Vec3::new(chunk_coords.0 as f32, chunk_coords.1 as f32, chunk_coords.2 as f32) * chunk_size;
                                 let chunk_pos = position - chunk_base;
-                                let chunk_uv = Vec2::new(chunk_pos.x / chunk_size, chunk_pos.z / chunk_size);
+                                let chunk_uvw = Vec3::new(chunk_pos.x / chunk_size, chunk_pos.y / chunk_size, chunk_pos.z / chunk_size);
                                 
                                 let instance = GrassData {
                                     position,
                                     normal,
-                                    chunk_uv,
+                                    chunk_uvw,
                                 };
 
                                 chunks.entry(chunk_coords).or_insert_with(|| {
-                                    let handle = asset_server.add(
-                                        Image::new_fill(
-                                            Extent3d {
-                                                width: 128,
-                                                height: 128,
-                                                depth_or_array_layers: 1,
-                                            }, 
-                                            TextureDimension::D2, 
-                                            &[0, 0, 0, 0], 
-                                            TextureFormat::Rgba8UnormSrgb,
-                                        )
+                                    let empty_image = Image::new_fill(
+                                        Extent3d {
+                                            width: 128,
+                                            height: 128,
+                                            depth_or_array_layers: 1,
+                                        }, 
+                                        TextureDimension::D2, 
+                                        &[0, 0, 0, 0], 
+                                        TextureFormat::Rgba8UnormSrgb,
                                     );
-                                    (GrassChunkData(Vec::new()), GrassInteractableTarget::new(handle))
+                                    let xz_handle = asset_server.add(empty_image.clone());
+                                    let xy_handle = asset_server.add(empty_image.clone());
+                                    (GrassChunkData(Vec::new()), GrassDisplacementImage::new(xz_handle, xy_handle))
                                 }).0.0.push(instance);
 
                                 None

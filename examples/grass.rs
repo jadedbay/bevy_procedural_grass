@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_procedural_grass::{prelude::*, grass::interactable::GrassInteractable};
+use bevy_procedural_grass::{prelude::*, grass::displacement::GrassDisplacer};
 use bevy_flycam::PlayerPlugin;
 
 fn main() {
@@ -50,8 +50,9 @@ fn setup(
             transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)).with_scale(Vec3::new(1.0, 5.0, 1.0)),
             ..default()
         },
-        GrassInteractable {
-            size: 15
+        GrassDisplacer {
+            size: 15,
+            base_offset: Vec3::new(0.0, -2.0, 0.0),
         }
     ));
      

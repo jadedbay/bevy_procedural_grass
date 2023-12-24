@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::HashMap, render::{primitives::{Frustum, Aabb}, extract_component::ExtractComponent}, ecs::query::QueryItem, math::{Vec3A, Affine3A}};
 
 use crate::render::instance::GrassChunkData;
-use super::{config::GrassConfig, interactable::GrassInteractableTarget};
+use super::{config::GrassConfig, displacement::GrassDisplacementImage};
 
 #[derive(Clone, Copy)]
 pub enum GrassLOD {
@@ -21,13 +21,20 @@ impl Default for CullDimension {
     }
 }
 
+pub type GrassRenderInfo = (
+    GrassLOD, 
+    Handle<GrassChunkData>, 
+    Handle<Image>,
+    Handle<Image>,
+);
+
 #[derive(Component, Clone)]
 pub struct GrassChunks {
     pub chunk_size: f32,
     pub cull_dimension: CullDimension,
-    pub chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassInteractableTarget)>,
+    pub chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)>,
     pub loaded: HashMap<(i32, i32, i32), Handle<GrassChunkData>>,
-    pub render: Vec<(GrassLOD, Handle<GrassChunkData>, Handle<Image>)>,
+    pub render: Vec<GrassRenderInfo>,
 }
 
 impl Default for GrassChunks {
@@ -53,7 +60,7 @@ impl ExtractComponent for GrassChunks {
 }
 
 #[derive(Component, Default, Clone)]
-pub struct RenderGrassChunks(pub Vec<(GrassLOD, Handle<GrassChunkData>, Handle<Image>)>);
+pub struct RenderGrassChunks(pub Vec<GrassRenderInfo>);
 
 pub(crate) fn grass_culling(
     mut query: Query<&mut GrassChunks>,
@@ -113,7 +120,12 @@ pub(crate) fn grass_culling(
             let mut render_chunks = Vec::new();
             for chunk_coords in chunks_inside {
                 if let Some(handle) = chunks.loaded.get(&chunk_coords.0) {
-                    render_chunks.push((chunk_coords.1, handle.clone(), chunks.chunks.get(&chunk_coords.0).unwrap().1.image.clone()));
+                    render_chunks.push((
+                        chunk_coords.1, 
+                        handle.clone(), 
+                        chunks.chunks.get(&chunk_coords.0).unwrap().1.xz_image.clone(), 
+                        chunks.chunks.get(&chunk_coords.0).unwrap().1.xy_image.clone()
+                    ));
                 }
             }
 
