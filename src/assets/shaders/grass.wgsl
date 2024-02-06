@@ -54,9 +54,7 @@ var<uniform> wind: Wind;
 var t_wind_map: texture_2d<f32>;
 
 @group(4) @binding(0)
-var t_displacement_xz: texture_2d<f32>;
-@group(4) @binding(1)
-var t_displacement_xy: texture_2d<f32>;
+var t_displacement_image: texture_2d<f32>;
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -65,6 +63,8 @@ struct VertexOutput {
     @location(3) world_position: vec3<f32>,
     @location(4) world_normal: vec3<f32>,
     @location(5) bezier_tangent: vec3<f32>,
+    @location(6) test: vec2<f32>,
+    @location(7) test_2: f32,
 };
 
 @vertex
@@ -86,11 +86,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let r = sample_wind_map(random_point, wind.speed).r;
     
     var wind_pos = fract(vec2<f32>(vertex.i_pos.x, vertex.i_pos.z) / wind.scale);
-    let sample = sample_wind_map(wind_pos , wind.speed).rgb;
+    let sample = sample_wind_map(wind_pos, wind.speed).rgb;
     let t = unpack_float(sample);
 
-    // let length = mix(blade.length, blade.length + blade.length / 2., fract(hash_id));
-    let length = blade.length;
+    let length = mix(blade.length, blade.length + blade.length / 2., fract(hash_id));
+    // let length = blade.length;
 
     let theta = 2.0 * PI * random1D(hash_id);
     let radius = length * mix(blade.tilt - blade.tilt_variance, blade.tilt, fract(hash_id * 123.));
@@ -98,14 +98,22 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let base_p3 = vec3<f32>(xz.x, sqrt(length * length - dot(xz, xz)), xz.y);
     let base_normal = normalize(vec2<f32>(-base_p3.z, base_p3.x));
 
-    let xz_displacement = sample_displacement_image(t_displacement_xz, vertex.i_chunk_uvw.xz);
-    let xy_displacement = sample_displacement_image(t_displacement_xy, vertex.i_chunk_uvw.xy);
+    let xz_displacement = sample_displacement_image(vertex.i_chunk_uvw.xz);
+    let xy_displacement = sample_displacement_image(vertex.i_chunk_uvw.xy);
     
-    let interact_direction = xz_displacement.rg * 2.0 - vec2<f32>(1.0, 1.0);
-    xz += interact_direction * xz_displacement.a * length * xy_displacement.a;
+    // let packed_value = xz_displacement.r * 65535.0;
+    // let x_dis = floor(packed_value / 256.0) / 255.0;
+    // let y_dis = fract(packed_value / 256.0) * 256.0 / 255.0;
+    // let displace_direction = vec2<f32>(x_dis, y_dis) * 2.0 - vec2<f32>(1.0, 1.0);
 
-    xz += -wind_direction * (0.5 * (sin(t * wind.frequency))) * wind.amplitude;
-    xz += base_normal * sin(r * 0.2) * wind.oscillation;
+    let angle = xz_displacement.r * 2.0 * PI;
+    let displace_direction = vec2<f32>(-cos(angle), -sin(angle));
+    var displace_strength = xz_displacement.a;
+    
+    xz += displace_direction * length * displace_strength;
+
+    //xz += -wind_direction * (0.5 * (sin(t * wind.frequency))) * wind.amplitude * (1. - displace_strength);
+    //xz += base_normal * sin(r * 0.2) * wind.oscillation;
 
     var y = max(-pow((length(xz) * 0.5), 2.) + length, 0.01);
     var p3 = vec3<f32>(xz.x, y, xz.y);
@@ -119,8 +127,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let distance = distance(base_p3, p3);
 
-    p1 += blade_normal * (y - length) * mix(blade.p1_flexibility, blade.p1_flexibility + 0.2, fract(hash_id * 99.)) * -xz_displacement.a;
-    p2 += blade_normal * (y - length) * mix(blade.p2_flexibility, blade.p2_flexibility + 0.2, fract(hash_id * 2480.)) * -xz_displacement.a;
+    p1 += blade_normal * (y - length) * mix(blade.p1_flexibility, blade.p1_flexibility + 0.2, fract(hash_id * 99.)) * -(xz_displacement.a * 0.5);
+    p2 += blade_normal * (y - length) * mix(blade.p2_flexibility, blade.p2_flexibility + 0.2, fract(hash_id * 2480.)) * -(xz_displacement.a);
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);
@@ -148,6 +156,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.world_position = position;
     out.world_normal = vertex.i_normal;
     out.bezier_tangent = tangent;
+    out.test = displace_direction;
+    out.test_2 = displace_strength;
 
     return out;
 }
@@ -204,7 +214,7 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> @locatio
     }
 
     let final_color = ((color_gradient + specular) * ndotl * world_ndotl * ao);
-    // let final_color = vec4<f32>(0.0, 0., in.test, 1.);
+    // let final_color = vec4<f32>(in.test, 0.0, 1.);
 
     return final_color;
 }
@@ -274,13 +284,12 @@ fn sample_wind_map(uv: vec2<f32>, speed: f32) -> vec4<f32> {
     return textureLoad(t_wind_map, pixel_coords, 0);
 }
 
-fn sample_displacement_image(image: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {
-    let texture_size = textureDimensions(image);
+fn sample_displacement_image(uv: vec2<f32>) -> vec4<f32> {
+    let texture_size = textureDimensions(t_displacement_image);
 
     let pixel_coords = vec2<i32>(uv * vec2<f32>(texture_size));
-    return textureLoad(image, pixel_coords, 0);
+    return textureLoad(t_displacement_image, pixel_coords, 0);
 }
-
 
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(
     vec4<f32>(1.0, 0.0, 0.0, 0.0),

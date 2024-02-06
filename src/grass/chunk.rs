@@ -25,7 +25,6 @@ pub type GrassRenderInfo = (
     GrassLOD, 
     Handle<GrassChunkData>, 
     Handle<Image>,
-    Handle<Image>,
 );
 
 #[derive(Component, Clone)]
@@ -123,8 +122,7 @@ pub(crate) fn grass_culling(
                     render_chunks.push((
                         chunk_coords.1, 
                         handle.clone(), 
-                        chunks.chunks.get(&chunk_coords.0).unwrap().1.xz_image.clone(), 
-                        chunks.chunks.get(&chunk_coords.0).unwrap().1.xy_image.clone()
+                        chunks.chunks.get(&chunk_coords.0).unwrap().1.image.clone(),
                     ));
                 }
             }

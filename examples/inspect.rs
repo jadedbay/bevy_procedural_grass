@@ -22,6 +22,7 @@ fn main() {
             FrameTimeDiagnosticsPlugin,
         ))
         .add_systems(Startup, setup)
+        .add_systems(FixedUpdate, movement)
         .run();
 }
 
@@ -31,14 +32,14 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let mut terrain_mesh = Mesh::from(shape::Plane { size: 100.0, subdivisions: 100 });
-    if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-        if let VertexAttributeValues::Float32x3(positions) = positions {
-            for position in positions.iter_mut() {
-                let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
-                position[1] += y;
-            }
-        }
-    }
+    // if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+    //     if let VertexAttributeValues::Float32x3(positions) = positions {
+    //         for position in positions.iter_mut() {
+    //             let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
+    //             position[1] += y;
+    //         }
+    //     }
+    // }
     //let terrain_mesh = Mesh::try_from(shape::Icosphere { radius: 1.0, subdivisions: 20 }).unwrap();
 
     let terrain = commands.spawn((
@@ -75,7 +76,8 @@ fn setup(
             ..default()
         },
         GrassDisplacer {
-            size: 15,
+            width: 10.,
+            height: 30.,
             base_offset: Vec3::new(0., -2., 0.),
         }
     ));
@@ -93,4 +95,24 @@ fn setup(
         )),
         ..default()
     });
+}
+
+fn movement(
+    input: Res<Input<KeyCode>>,
+    mut query: Query<&mut Transform, With<GrassDisplacer>>
+) {
+    for mut transform in query.iter_mut() {
+        if input.pressed(KeyCode::W) {
+            transform.translation += Vec3::new(0.03, 0.0, 0.0);
+        }
+        if input.pressed(KeyCode::A) {
+            transform.translation += Vec3::new(0.0, 0.0, -0.03);
+        }
+        if input.pressed(KeyCode::S) {
+            transform.translation += Vec3::new(-0.03, 0.0, 0.0);
+        }
+        if input.pressed(KeyCode::D) {
+            transform.translation += Vec3::new(0.0, 0.0, 0.03);
+        }
+    }
 }

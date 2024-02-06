@@ -214,12 +214,7 @@ pub(crate) fn prepare_displacement_bind_group(
     for (entity, chunks) in query.iter() {
         let mut bind_groups = Vec::new();
         for chunk in chunks.0.iter() {
-            let xz_displacement_image = if let Some(image) = images.get(&chunk.2) {
-                &image.texture_view
-            } else {
-                &fallback_img.d2.texture_view
-            };
-            let xy_displacement_image = if let Some(image) = images.get(&chunk.3) {
+            let displacement_image = if let Some(image) = images.get(&chunk.2) {
                 &image.texture_view
             } else {
                 &fallback_img.d2.texture_view
@@ -228,10 +223,9 @@ pub(crate) fn prepare_displacement_bind_group(
             let bind_group = render_device.create_bind_group(
                 Some("displacement bind group"),
                 &layout,
-                &BindGroupEntries::sequential((
-                    BindingResource::TextureView(&xz_displacement_image),
-                    BindingResource::TextureView(&xy_displacement_image),
-                ))
+                &BindGroupEntries::single(
+                    BindingResource::TextureView(&displacement_image),
+                )
             );
 
             bind_groups.push(bind_group);

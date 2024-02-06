@@ -7,7 +7,7 @@ use rand::Rng;
 
 use crate::render::instance::{GrassChunkData, GrassData};
 
-use super::{chunk::GrassChunks, displacement::GrassDisplacementImage};
+use super::{chunk::GrassChunks, displacement::GrassDisplacementImage, config::GrassConfig};
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -25,12 +25,13 @@ pub fn generate_grass(
     mesh_entity_query: Query<(&Transform, &Handle<Mesh>)>,
     meshes: Res<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
+    config: Res<GrassConfig>,
 ) {
     for (grass, mut chunks) in query.iter_mut() {
         let (transform, mesh_handle) = mesh_entity_query.get(grass.entity.unwrap()).unwrap();
         let mesh = meshes.get(mesh_handle).unwrap();
         let start = std::time::Instant::now();
-        chunks.chunks = grass.generate_grass(transform, mesh, chunks.chunk_size, &asset_server);
+        chunks.chunks = grass.generate_grass(transform, mesh, chunks.chunk_size, &asset_server, &config);
         let duration = start.elapsed();
         println!("GRASS GENERATION TIME: {:?}", duration);
     }
@@ -58,7 +59,7 @@ impl Default for Grass {
 }
 
 impl Grass {
-    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32, asset_server: &AssetServer) -> HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)> {
+    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32, asset_server: &AssetServer, config: &GrassConfig) -> HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)> {
         let mut chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)> = HashMap::new();
 
         if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
@@ -104,19 +105,19 @@ impl Grass {
                                 };
 
                                 chunks.entry(chunk_coords).or_insert_with(|| {
-                                    let empty_image = Image::new_fill(
-                                        Extent3d {
-                                            width: 128,
-                                            height: 128,
-                                            depth_or_array_layers: 1,
-                                        }, 
-                                        TextureDimension::D2, 
-                                        &[0, 0, 0, 0], 
-                                        TextureFormat::Rgba8UnormSrgb,
-                                    );
-                                    let xz_handle = asset_server.add(empty_image.clone());
-                                    let xy_handle = asset_server.add(empty_image.clone());
-                                    (GrassChunkData(Vec::new()), GrassDisplacementImage::new(xz_handle, xy_handle))
+                                    let image_handle = asset_server.add( 
+                                        Image::new_fill(
+                                            Extent3d {
+                                                width: config.displacement_resolution,
+                                                height: config.displacement_resolution,
+                                                depth_or_array_layers: 1,
+                                            }, 
+                                            TextureDimension::D2, 
+                                            &[0, 0, 0, 0], 
+                                            TextureFormat::Rgba8Unorm,
+                                        ));
+
+                                    (GrassChunkData(Vec::new()), GrassDisplacementImage::new(image_handle, config.displacement_resolution))
                                 }).0.0.push(instance);
 
                                 None
