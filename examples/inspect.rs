@@ -32,15 +32,14 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let mut terrain_mesh = Mesh::from(shape::Plane { size: 100.0, subdivisions: 100 });
-    // if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-    //     if let VertexAttributeValues::Float32x3(positions) = positions {
-    //         for position in positions.iter_mut() {
-    //             let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
-    //             position[1] += y;
-    //         }
-    //     }
-    // }
-    //let terrain_mesh = Mesh::try_from(shape::Icosphere { radius: 1.0, subdivisions: 20 }).unwrap();
+    if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+        if let VertexAttributeValues::Float32x3(positions) = positions {
+            for position in positions.iter_mut() {
+                let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
+                position[1] += y;
+            }
+        }
+    }
 
     let terrain = commands.spawn((
         PbrBundle {

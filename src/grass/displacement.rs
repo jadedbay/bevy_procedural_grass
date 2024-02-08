@@ -1,5 +1,4 @@
 use bevy::{prelude::*, render::{render_resource::{TextureFormat, Extent3d, TextureDimension}, primitives::Aabb}, utils::HashSet, math::Vec3A};
-use byteorder::ByteOrder;
 use image::{Rgba, ImageBuffer};
 use super::chunk::GrassChunks;
 
@@ -57,7 +56,7 @@ pub(crate) fn grass_displacement(
                 center: Vec3A::from(((chunk_coord.0 as f32 * chunk_size + chunk_size / 2.), (chunk_coord.1 as f32 * chunk_size + chunk_size / 2.), (chunk_coord.2 as f32 * chunk_size + chunk_size / 2.))),
                 half_extents: Vec3A::splat(chunk_size as f32 / 2.0),
             };
-            let offset = 15.;
+            let offset = 2.;
 
             crate::util::draw_chunk(&mut gizmos, &chunk_coord, chunk_size);
 
@@ -113,14 +112,14 @@ pub(crate) fn grass_displacement(
                                 
                                 if pixel[3] >= 5 {
                                     pixel[3] = std::cmp::max(pixel[3], alpha);
+                                    pixel[2] = (uv.y * 255.0) as u8;
                                 } else {
                                     let direction = Vec2::new(x as f32 - center_x as f32, y as f32 - center_y as f32).normalize();
                                     let angle = direction.y.atan2(direction.x);
-                                    let angle_normalized = (angle + std::f32::consts::PI) / (2.0 * std::f32::consts::PI); // Normalize angle to [0, 1]
-                                    let angle_as_u16 = (angle_normalized * 255.0) as u8; // Convert to u8
-                                    
-                                    //pixel[0] = (((direction.x * 0.5 + 0.5) * 255.0) as u8) << 8 | ((direction.y * 0.5 + 0.5) * 255.0) as u8;
-                                    pixel[0] = angle_as_u16;
+                                    let angle_normalized = (angle + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
+                                    let angle_as_u8 = (angle_normalized * 255.0) as u8;
+                                    pixel[0] = angle_as_u8;
+                                    pixel[2] = (uv.y * 255.0) as u8;
                                     pixel[3] = std::cmp::max(pixel[3], alpha);
                                     chunks.chunks.get_mut(&chunk.0).unwrap().1.edited_pixels.insert((x as u32, y as u32));
                                 }
@@ -128,78 +127,10 @@ pub(crate) fn grass_displacement(
                             changed = true;
                         }
                     }
-                        
-                    // let center_x = uv.x * width as f32;
-                    // let center_y = uv.y * height as f32;
-                    
-                    // let start_x = center_x - size;
-                    // let start_y = center_y - size;
-                    // let end_x = center_x + size;
-                    // let end_y = center_y + size;
-                    
-                    // for x in start_x as i32..end_x as i32 {
-                    //     for y in start_y as i32..end_y as i32 {
-                    //         if x < 0 || x >= width as i32 || y < 0 || y >= height as i32 {
-                    //             continue;
-                    //         }
-                    //         if ((x as f32 - center_x as f32).powi(2) + (y as f32 - center_y as f32).powi(2)) <= radius_squared {
-                    //             let pixel = &mut chunks.chunks.get_mut(&chunk.0).unwrap().1.image_buffer.get_pixel_mut(x as u32, y as u32).0;
-                    //             let distance = ((x as f32 - center_x as f32).powi(2) + (y as f32 - center_y as f32).powi(2)).sqrt();
-                    //             let max_distance = size as f32 / 2.0;
-                    //             let alpha = ((1.0 - (distance / max_distance)) * 255.0) as u8;
-                                
-                    //             if pixel[3] >= 10 {
-                    //                 pixel[3] = std::cmp::max(pixel[3], alpha);
-                    //             } else {
-                    //                 let direction = Vec2::new(x as f32 - center_x as f32, y as f32 - center_y as f32).normalize();
-                    //                 //pixel[1] = (((direction.x * 0.5 + 0.5) * 255.0) as u8) << 8 | ((direction.y * 0.5 + 0.5) * 255.0) as u8;
-                    //                 //pixel[3] = std::cmp::max(pixel[3], alpha);
-                    //                 chunks.chunks.get_mut(&chunk.0).unwrap().1.edited_pixels.insert((x as u32, y as u32));
-                    //             }
-                    //         }
-                    //         changed = true;
-                    //     }
-                    // }
-
-                    // let center_x = uv.y * width as f32;
-                    // let center_y = uv.z * height as f32;
-                    
-                    // let start_x = center_x - size;
-                    // let start_y = center_y - size;
-                    // let end_x = center_x + size;
-                    // let end_y = center_y + size;
-                    
-                    // for x in start_x as i32..end_x as i32 {
-                    //     for y in start_y as i32..end_y as i32 {
-                    //         if x < 0 || x >= width as i32 || y < 0 || y >= height as i32 {
-                    //             continue;
-                    //         }
-                    //         if ((x as f32 - center_x as f32).powi(2) + (y as f32 - center_y as f32).powi(2)) <= radius_squared {
-                    //             let pixel = &mut chunks.chunks.get_mut(&chunk.0).unwrap().1.image_buffer.get_pixel_mut(x as u32, y as u32).0;
-                    //             let distance = ((x as f32 - center_x as f32).powi(2) + (y as f32 - center_y as f32).powi(2)).sqrt();
-                    //             let max_distance = size as f32 / 2.0;
-                    //             let alpha = ((1.0 - (distance / max_distance)) * 65535.0) as u8;
-                                
-                    //             if pixel[3] >= 10 {
-                    //                 pixel[3] = std::cmp::max(pixel[3], alpha);
-                    //             } else {
-                    //                 let direction = Vec2::new(x as f32 - center_x as f32, y as f32 - center_y as f32).normalize();
-                    //                 //pixel[2] = (((direction.x * 0.5 + 0.5) * 255.0) as u8) << 8 | ((direction.y * 0.5 + 0.5) * 255.0) as u8;
-                    //                 //pixel[3] = std::cmp::max(pixel[3], alpha);
-                    //                 chunks.chunks.get_mut(&chunk.0).unwrap().1.edited_pixels.insert((x as u32, y as u32));
-                    //             }
-                    //         }
-                    //         changed = true;
-                    //     }
-                    // }
                 }
             }
             
             if changed {
-                // let raw_buffer_u16 = chunks.chunks.get_mut(&chunk.0).unwrap().1.image_buffer.clone().into_raw();
-                // let mut raw_buffer_u8 = vec![0; raw_buffer_u16.len() * 2];
-                // byteorder::LittleEndian::write_u16_into(&raw_buffer_u16, &mut raw_buffer_u8);
-
                 
                 let image = images.get_mut(image_handle).unwrap();
                 *image = Image::new(

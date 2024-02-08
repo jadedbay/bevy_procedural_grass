@@ -708,7 +708,6 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_flycam",
  "bytemuck",
- "byteorder",
  "image",
  "noise",
  "rand 0.8.5",
