@@ -101,7 +101,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let displace_direction = vec2<f32>(-cos(angle), -sin(angle));
     var displace_strength = xz_displacement.a * (1.0 - clamp(abs(xz_displacement.b - vertex.i_chunk_uvw.y) / (length / 30.0), 0.0, 1.0));
     
-    xz += displace_direction * length * displace_strength;
+    xz += displace_direction * (length + blade.tilt) * displace_strength;
 
     xz += -wind_direction * (0.5 * (sin(t * wind.frequency))) * wind.amplitude * (1. - displace_strength);
     xz += base_normal * sin(r * 0.2) * wind.oscillation;

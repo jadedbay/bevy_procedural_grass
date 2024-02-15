@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::PresentMode, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues, pbr::wireframe::{WireframePlugin, Wireframe}};
+use bevy::{prelude::*, window::PresentMode, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
 use bevy_procedural_grass::prelude::*;
 use bevy_flycam::PlayerPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -10,14 +10,24 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    present_mode: PresentMode::Immediate,
+                    present_mode: PresentMode::Fifo,
                     ..default()
                 }),
                 ..default()
             }),
             PlayerPlugin,
             WorldInspectorPlugin::new(),
-            ProceduralGrassPlugin::default(),
+            ProceduralGrassPlugin {
+                config: GrassConfig::default(),
+                wind: GrassWind {
+                    wind_data: Wind {
+                        speed: 0.1,
+                        amplitude: 4.,
+                        ..default()
+                    },
+                    ..default()
+                }
+            },
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin,
         ))
@@ -32,14 +42,14 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let mut terrain_mesh = Mesh::from(shape::Plane { size: 100.0, subdivisions: 100 });
-    if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-        if let VertexAttributeValues::Float32x3(positions) = positions {
-            for position in positions.iter_mut() {
-                let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
-                position[1] += y;
-            }
-        }
-    }
+    // if let Some(positions) = terrain_mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+    //     if let VertexAttributeValues::Float32x3(positions) = positions {
+    //         for position in positions.iter_mut() {
+    //             let y = noise::Perlin::new(1).get([((position[0]) * 0.05) as f64, ((position[2]) * 0.05) as f64]) as f32;
+    //             position[1] += y;
+    //         }
+    //     }
+    // }
 
     let terrain = commands.spawn((
         PbrBundle {
@@ -76,7 +86,6 @@ fn setup(
         },
         GrassDisplacer {
             width: 10.,
-            height: 30.,
             base_offset: Vec3::new(0., -2., 0.),
         }
     ));

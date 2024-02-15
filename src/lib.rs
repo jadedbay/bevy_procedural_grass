@@ -17,7 +17,8 @@ pub mod prelude {
         grass::{GrassBundle, Grass, GrassLODMesh}, 
         mesh::GrassMesh, 
         wind::{GrassWind, Wind},
-        displacement::GrassDisplacer
+        displacement::GrassDisplacer,
+        config::GrassConfig,
     };
 }
 

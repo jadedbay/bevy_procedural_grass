@@ -51,7 +51,7 @@ fn setup(
             ..default()
         },
         GrassDisplacer {
-            size: 15,
+            width: 15.,
             base_offset: Vec3::new(0.0, -2.0, 0.0),
         }
     ));

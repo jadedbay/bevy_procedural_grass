@@ -197,7 +197,7 @@ impl Default for Blade {
             p1_flexibility: 0.5,
             p2_flexibility: 0.5,
             curve: 15.,
-            specular: 0.1,
+            specular: 0.02,
         }
     }
 }

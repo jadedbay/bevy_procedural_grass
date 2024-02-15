@@ -10,7 +10,6 @@ use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 #[cfg_attr(feature = "bevy-inspector-egui", reflect(InspectorOptions))]
 pub struct GrassDisplacer {
     pub width: f32,
-    pub height: f32,
     pub base_offset: Vec3,
 }
 
@@ -44,7 +43,6 @@ pub(crate) fn grass_displacement(
     mut grass_query: Query<&mut GrassChunks>,
     object_query: Query<(&Transform, &GrassDisplacer)>,
     mut images: ResMut<Assets<Image>>,
-    mut gizmos: Gizmos,
 ) {
     grass_timer.elapsed += time.delta_seconds();
     for mut chunks in grass_query.iter_mut() {
@@ -57,8 +55,6 @@ pub(crate) fn grass_displacement(
                 half_extents: Vec3A::splat(chunk_size as f32 / 2.0),
             };
             let offset = 2.;
-
-            crate::util::draw_chunk(&mut gizmos, &chunk_coord, chunk_size);
 
             let image_handle = chunks.chunks.get(&chunk.0).unwrap().1.image.clone();
 
