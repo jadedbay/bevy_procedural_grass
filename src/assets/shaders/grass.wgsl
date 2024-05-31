@@ -46,6 +46,7 @@ struct Wind {
     direction: f32,
     oscillation: f32,
     scale: f32,
+    _padding: vec2<f32>,
 };
 @group(3) @binding(0)
 var<uniform> wind: Wind;
@@ -87,26 +88,26 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let sample = sample_wind_map(wind_pos, wind.speed).rgb;
     let t = unpack_float(sample);
 
-    let length = mix(blade.length, blade.length + blade.length / 2., fract(hash_id));
+    let blade_length = mix(blade.length, blade.length + blade.length / 2., fract(hash_id));
 
     let theta = 2.0 * PI * random1D(hash_id);
-    let radius = length * mix(blade.tilt - blade.tilt_variance, blade.tilt, fract(hash_id * 123.));
+    let radius = blade_length * mix(blade.tilt - blade.tilt_variance, blade.tilt, fract(hash_id * 123.));
     var xz = radius * vec2<f32>(cos(theta), sin(theta)); 
-    let base_p3 = vec3<f32>(xz.x, sqrt(length * length - dot(xz, xz)), xz.y);
+    let base_p3 = vec3<f32>(xz.x, sqrt(blade_length * blade_length - dot(xz, xz)), xz.y);
     let base_normal = normalize(vec2<f32>(-base_p3.z, base_p3.x));
 
-    let xz_displacement = sample_displacement_image(vertex.i_chunk_uvw.xz);
+    //let xz_displacement = sample_displacement_image(vertex.i_chunk_uvw.xz);
 
-    let angle = xz_displacement.r * 2.0 * PI;
-    let displace_direction = vec2<f32>(-cos(angle), -sin(angle));
-    var displace_strength = xz_displacement.a * (1.0 - clamp(abs(xz_displacement.b - vertex.i_chunk_uvw.y) / (length / 30.0), 0.0, 1.0));
+    //let angle = xz_displacement.r * 2.0 * PI;
+    //let displace_direction = vec2<f32>(-cos(angle), -sin(angle));
+    //var displace_strength = xz_displacement.a * (1.0 - clamp(abs(xz_displacement.b - vertex.i_chunk_uvw.y) / (length / 30.0), 0.0, 1.0));
     
-    xz += displace_direction * (length + blade.tilt) * displace_strength;
+    //xz += displace_direction * (length + blade.tilt) * displace_strength;
 
-    xz += -wind_direction * (0.5 * (sin(t * wind.frequency))) * wind.amplitude * (1. - displace_strength);
+    xz += -wind_direction * (0.5 * (sin(t * wind.frequency))) * wind.amplitude;
     xz += base_normal * sin(r * 0.2) * wind.oscillation;
 
-    var y = max(-pow((length(xz) * 0.5), 2.) + length, 0.01);
+    var y = max(-pow((length(xz) * 0.5), 2.) + blade_length, 0.01);
     var p3 = vec3<f32>(xz.x, y, xz.y);
 
     let p0 = vec3<f32>(0.0);
@@ -118,8 +119,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let distance = distance(base_p3, p3);
 
-    p1 += blade_normal * (y - length) * mix(blade.p1_flexibility, blade.p1_flexibility + 0.2, fract(hash_id * 99.)) * -(displace_strength * 0.5);
-    p2 += blade_normal * (y - length) * mix(blade.p2_flexibility, blade.p2_flexibility + 0.2, fract(hash_id * 2480.)) * -(displace_strength);
+    p1 += blade_normal * (y - blade_length) * mix(blade.p1_flexibility, blade.p1_flexibility + 0.2, fract(hash_id * 99.));
+    p2 += blade_normal * (y - blade_length) * mix(blade.p2_flexibility, blade.p2_flexibility + 0.2, fract(hash_id * 2480.));
 
     let bezier = cubic_bezier(uv.y, p0, p1, p2, p3);
     let tangent = bezier_tangent(uv.y, p0, p1, p2, p3);

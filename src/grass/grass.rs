@@ -30,10 +30,7 @@ pub fn generate_grass(
     for (grass, mut chunks) in query.iter_mut() {
         let (transform, mesh_handle) = mesh_entity_query.get(grass.entity.unwrap()).unwrap();
         let mesh = meshes.get(mesh_handle).unwrap();
-        let start = std::time::Instant::now();
         chunks.chunks = grass.generate_grass(transform, mesh, chunks.chunk_size, &asset_server, &config);
-        let duration = start.elapsed();
-        println!("GRASS GENERATION TIME: {:?}", duration);
     }
 }
 

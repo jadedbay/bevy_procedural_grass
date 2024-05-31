@@ -17,8 +17,9 @@ pub struct Wind {
     pub frequency: f32,
     pub direction: f32,
     pub oscillation: f32,
-
     pub scale: f32,
+
+    pub _padding: [f32; 2]
 }
 
 impl Default for Wind {
@@ -29,8 +30,9 @@ impl Default for Wind {
             frequency: 1.,
             direction: 0.0,
             oscillation: 1.5,
-
             scale: 100.,
+
+            _padding: [0.0, 0.0]
         }
     }
 }

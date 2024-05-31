@@ -1,22 +1,12 @@
-use bevy::{prelude::*, window::PresentMode, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, render::mesh::VertexAttributeValues};
+use bevy::{prelude::*, render::mesh::VertexAttributeValues};
 use bevy_procedural_grass::prelude::*;
-use bevy_flycam::PlayerPlugin;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use noise::NoiseFn;
 
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    present_mode: PresentMode::Fifo,
-                    ..default()
-                }),
-                ..default()
-            }),
-            PlayerPlugin,
-            WorldInspectorPlugin::new(),
+            DefaultPlugins,
             ProceduralGrassPlugin {
                 config: GrassConfig::default(),
                 wind: GrassWind {
@@ -28,11 +18,8 @@ fn main() {
                     ..default()
                 }
             },
-            LogDiagnosticsPlugin::default(),
-            FrameTimeDiagnosticsPlugin,
         ))
         .add_systems(Startup, setup)
-        .add_systems(FixedUpdate, movement)
         .run();
 }
 
@@ -65,7 +52,7 @@ fn setup(
         },
     )).id();
 
-    commands.spawn((
+    commands.spawn(
         GrassBundle {
             mesh: meshes.add(GrassMesh::mesh(7)),
             lod: GrassLODMesh::new(meshes.add(GrassMesh::mesh(3))),
@@ -75,20 +62,16 @@ fn setup(
             },
             ..default()
         },
-    ));
+    );
 
-    commands.spawn((
+    commands.spawn(
         PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Cylinder { radius: 0.75, height: 4.0, ..default()})),
             material: materials.add(StandardMaterial::from(Color::WHITE)),
             transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)),
             ..default()
-        },
-        GrassDisplacer {
-            width: 10.,
-            base_offset: Vec3::new(0., -2., 0.),
         }
-    ));
+    );
 
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
@@ -103,24 +86,9 @@ fn setup(
         )),
         ..default()
     });
-}
 
-fn movement(
-    input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<GrassDisplacer>>
-) {
-    for mut transform in query.iter_mut() {
-        if input.pressed(KeyCode::W) {
-            transform.translation += Vec3::new(0.03, 0.0, 0.0);
-        }
-        if input.pressed(KeyCode::A) {
-            transform.translation += Vec3::new(0.0, 0.0, -0.03);
-        }
-        if input.pressed(KeyCode::S) {
-            transform.translation += Vec3::new(-0.03, 0.0, 0.0);
-        }
-        if input.pressed(KeyCode::D) {
-            transform.translation += Vec3::new(0.0, 0.0, 0.03);
-        }
-    }
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::new(2.5, 3.5, 0.0), Vec3::Y),
+        ..default()
+    });
 }
