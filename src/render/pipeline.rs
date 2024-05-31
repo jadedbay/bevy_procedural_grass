@@ -10,7 +10,6 @@ pub struct GrassPipeline {
     mesh_pipeline: MeshPipeline,
     pub grass_layout: BindGroupLayout,
     pub wind_layout: BindGroupLayout,
-    pub displacement_layout: BindGroupLayout,
 }
 
 impl FromWorld for GrassPipeline {
@@ -71,28 +70,11 @@ impl FromWorld for GrassPipeline {
             ]
         });
 
-        let displacement_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("displacement_layout"),
-            entries: &[
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::VERTEX,
-                    ty: BindingType::Texture {
-                        sample_type: TextureSampleType::Float { filterable: true },
-                        view_dimension: TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-            ]
-        });
-
         GrassPipeline {
             shader: GRASS_SHADER_HANDLE,
             mesh_pipeline: mesh_pipeline.clone(),
             grass_layout,
             wind_layout,
-            displacement_layout,
         }
     }
 }
@@ -136,7 +118,6 @@ impl SpecializedMeshPipeline for GrassPipeline {
         });
         descriptor.layout.push(self.grass_layout.clone());
         descriptor.layout.push(self.wind_layout.clone());
-        descriptor.layout.push(self.displacement_layout.clone());
 
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
         descriptor.primitive.cull_mode = None;

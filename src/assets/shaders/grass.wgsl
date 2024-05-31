@@ -54,9 +54,6 @@ var<uniform> wind: Wind;
 @group(3) @binding(1)
 var t_wind_map: texture_2d<f32>;
 
-@group(4) @binding(0)
-var t_displacement_image: texture_2d<f32>;
-
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(1) uv: vec2<f32>,

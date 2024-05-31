@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{render_phase::{SetItemPipeline, PhaseItem, Rende
 
 use crate::grass::{wind::GrassWind, chunk::{RenderGrassChunks, GrassLOD}, grass::{Grass, GrassLODMesh}};
 
-use super::{prepare::{BufferBindGroup, DisplacementBindGroups}, instance::GrassChunkData};
+use super::{prepare::BufferBindGroup, instance::GrassChunkData};
 
 pub type DrawGrass = (
     SetItemPipeline,
@@ -61,13 +61,13 @@ pub struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<Mesh>>, SRes<RenderMeshInstances>, SRes<RenderAssets<GrassChunkData>>);
     type ViewWorldQuery = ();
-    type ItemWorldQuery = (Read<GrassLODMesh>, Read<RenderGrassChunks>, Read<DisplacementBindGroups>);
+    type ItemWorldQuery = (Read<GrassLODMesh>, Read<RenderGrassChunks>);
 
     #[inline]
     fn render<'w>( 
         item: &P,
         _view: (),
-        (lod, chunks, displacement): (&'w GrassLODMesh, &'w RenderGrassChunks, &'w DisplacementBindGroups),
+        (lod, chunks): (&'w GrassLODMesh, &'w RenderGrassChunks),
         (meshes, render_mesh_instances, grass_data): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
@@ -106,8 +106,6 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
 
             pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
             pass.set_vertex_buffer(1, gpu_grass.buffer.slice(..));
-
-            pass.set_bind_group(4, &displacement.bind_groups[i], &[]);
 
             match &gpu_mesh.buffer_info {
                 GpuBufferInfo::Indexed {

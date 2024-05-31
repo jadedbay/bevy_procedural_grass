@@ -32,7 +32,6 @@ fn main() {
             FrameTimeDiagnosticsPlugin,
         ))
         .add_systems(Startup, setup)
-        .add_systems(FixedUpdate, movement)
         .run();
 }
 
@@ -84,10 +83,6 @@ fn setup(
             transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)),
             ..default()
         },
-        GrassDisplacer {
-            width: 10.,
-            base_offset: Vec3::new(0., -2., 0.),
-        }
     ));
 
     commands.spawn(DirectionalLightBundle {
@@ -103,24 +98,4 @@ fn setup(
         )),
         ..default()
     });
-}
-
-fn movement(
-    input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<GrassDisplacer>>
-) {
-    for mut transform in query.iter_mut() {
-        if input.pressed(KeyCode::W) {
-            transform.translation += Vec3::new(0.03, 0.0, 0.0);
-        }
-        if input.pressed(KeyCode::A) {
-            transform.translation += Vec3::new(0.0, 0.0, -0.03);
-        }
-        if input.pressed(KeyCode::S) {
-            transform.translation += Vec3::new(-0.03, 0.0, 0.0);
-        }
-        if input.pressed(KeyCode::D) {
-            transform.translation += Vec3::new(0.0, 0.0, 0.03);
-        }
-    }
 }

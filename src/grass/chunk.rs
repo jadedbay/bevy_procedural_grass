@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::HashMap, render::{primitives::{Frustum, Aabb}, extract_component::ExtractComponent}, ecs::query::QueryItem, math::{Vec3A, Affine3A}};
 
 use crate::render::instance::GrassChunkData;
-use super::{config::GrassConfig, displacement::GrassDisplacementImage};
+use super::config::GrassConfig;
 
 #[derive(Clone, Copy)]
 pub enum GrassLOD {
@@ -24,14 +24,13 @@ impl Default for CullDimension {
 pub type GrassRenderInfo = (
     GrassLOD, 
     Handle<GrassChunkData>, 
-    Handle<Image>,
 );
 
 #[derive(Component, Clone)]
 pub struct GrassChunks {
     pub chunk_size: f32,
     pub cull_dimension: CullDimension,
-    pub chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)>,
+    pub chunks: HashMap<(i32, i32, i32), GrassChunkData>,
     pub loaded: HashMap<(i32, i32, i32), Handle<GrassChunkData>>,
     pub render: Vec<GrassRenderInfo>,
 }
@@ -111,7 +110,7 @@ pub(crate) fn grass_culling(
             for chunk_coords in chunks_inside.iter() {
                 if !chunks.loaded.contains_key(&chunk_coords.0) {
                     let instance = &chunks.chunks.get(&chunk_coords.0).unwrap().0;
-                    let handle = grass_asset.add(instance.clone());
+                    let handle = grass_asset.add(GrassChunkData(instance.clone()));
                     chunks.loaded.insert(chunk_coords.0, handle);
                 }
             }
@@ -122,7 +121,6 @@ pub(crate) fn grass_culling(
                     render_chunks.push((
                         chunk_coords.1, 
                         handle.clone(), 
-                        chunks.chunks.get(&chunk_coords.0).unwrap().1.image.clone(),
                     ));
                 }
             }

@@ -7,7 +7,7 @@ use rand::Rng;
 
 use crate::render::instance::{GrassChunkData, GrassData};
 
-use super::{chunk::GrassChunks, displacement::GrassDisplacementImage, config::GrassConfig};
+use super::{chunk::GrassChunks, config::GrassConfig};
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -56,8 +56,8 @@ impl Default for Grass {
 }
 
 impl Grass {
-    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32, asset_server: &AssetServer, config: &GrassConfig) -> HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)> {
-        let mut chunks: HashMap<(i32, i32, i32), (GrassChunkData, GrassDisplacementImage)> = HashMap::new();
+    fn generate_grass(&self, transform: &Transform, mesh: &Mesh, chunk_size: f32, asset_server: &AssetServer, config: &GrassConfig) -> HashMap<(i32, i32, i32), GrassChunkData> {
+        let mut chunks: HashMap<(i32, i32, i32), GrassChunkData> = HashMap::new();
 
         if let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
             if let Some(indices) = mesh.indices() {
@@ -101,21 +101,7 @@ impl Grass {
                                     chunk_uvw,
                                 };
 
-                                chunks.entry(chunk_coords).or_insert_with(|| {
-                                    let image_handle = asset_server.add( 
-                                        Image::new_fill(
-                                            Extent3d {
-                                                width: config.displacement_resolution,
-                                                height: config.displacement_resolution,
-                                                depth_or_array_layers: 1,
-                                            }, 
-                                            TextureDimension::D2, 
-                                            &[0, 0, 0, 0], 
-                                            TextureFormat::Rgba8Unorm,
-                                        ));
-
-                                    (GrassChunkData(Vec::new()), GrassDisplacementImage::new(image_handle, config.displacement_resolution))
-                                }).0.0.push(instance);
+                                chunks.entry(chunk_coords).or_insert_with(|| { GrassChunkData(Vec::new())}).0.push(instance);
 
                                 None
                             }).collect::<Vec<_>>()
