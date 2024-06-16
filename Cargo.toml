@@ -1,0 +1,37 @@
+[package]
+name = "bevy_procedural_grass"
+version = "0.3.0"
+edition = "2021"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+keywords = ["bevy", "grass"]
+repository = "https://github.com/jadedbay/bevy_procedural_grass/"
+description = "A plugin for bevy to generate grass"
+documentation = "https://docs.rs/bevy_procedural_grass/latest/bevy_procedural_grass/"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy-inspector-egui = { version = "0.24.0", optional = true }
+bytemuck = "1.14.0"
+noise = "0.9.0"
+rand = "0.8.5"
+
+[dependencies.bevy]
+version = "0.13.2"
+default-features = false
+features = [ "bevy_core_pipeline", "bevy_render", "bevy_asset", "bevy_pbr", "bevy_gizmos" ]
+
+[dependencies.image]
+version = "0.25.1"
+features = ["png", "jpeg"]
+
+[dev-dependencies]
+bevy_flycam = "0.13.0"
+bevy = { version = "0.13.2", default-features = false, features = ["bevy_winit", "x11", "tonemapping_luts"] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
