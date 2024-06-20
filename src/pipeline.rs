@@ -2,8 +2,8 @@ use bevy::{prelude::*, render::{render_resource::{BindGroupLayout, BindGroupLayo
 
 #[derive(Resource)]
 pub(crate) struct GrassPipeline {
-    layout: BindGroupLayout,
-    compute_id: CachedComputePipelineId
+    pub layout: BindGroupLayout,
+    pub compute_id: CachedComputePipelineId
 }
 
 impl FromWorld for GrassPipeline {
