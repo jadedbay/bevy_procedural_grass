@@ -1,12 +1,12 @@
 use bevy::{prelude::*, render::{render_resource::{BindGroupLayout, BindGroupLayoutEntries, BindingType, BufferBindingType, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages}, renderer::RenderDevice}};
 
 #[derive(Resource)]
-pub(crate) struct GrassPipeline {
+pub(crate) struct GrassComputePipeline {
     pub layout: BindGroupLayout,
     pub compute_id: CachedComputePipelineId
 }
 
-impl FromWorld for GrassPipeline {
+impl FromWorld for GrassComputePipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
@@ -22,7 +22,7 @@ impl FromWorld for GrassPipeline {
             )
         );
 
-        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/generation.wgsl");
+        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_compute.wgsl");
 
         let compute_id = world
             .resource_mut::<PipelineCache>()

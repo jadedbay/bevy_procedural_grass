@@ -1,12 +1,17 @@
 use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, primitives::Aabb, render_graph::RenderGraphApp, render_phase::AddRenderCommand, Render, RenderApp, RenderSet}};
-use grass::create_chunks;
-use prepare::prepare_compute_bind_groups;
+use grass::chunk::create_chunks;
+use pipeline::GrassComputePipeline;
 
 mod pipeline;
 mod prepare;
 mod node;
 pub mod grass;
 pub mod util;
+
+pub mod prelude {
+    pub use crate::ProceduralGrassPlugin;
+    pub use crate::grass::{Grass, GrassBundle, chunk::GrassChunk};
+}
 
 pub struct ProceduralGrassPlugin;
 
@@ -19,5 +24,9 @@ impl Plugin for ProceduralGrassPlugin {
         // render_app
         //     .add_systems(Render, prepare_compute_bind_groups.in_set(RenderSet::PrepareBindGroups));
 
+    }
+
+    fn finish(&self, app: &mut App) {
+        app.init_resource::<GrassComputePipeline>();
     }
 }

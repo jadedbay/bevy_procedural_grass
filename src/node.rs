@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext}, render_resource::{ComputePassDescriptor, PipelineCache}, renderer::RenderContext}};
 
-use crate::pipeline::GrassPipeline;
+use crate::pipeline::GrassComputePipeline;
 
 pub struct ComputeGrassNode;
 
@@ -12,7 +12,7 @@ impl render_graph::Node for ComputeGrassNode {
         world: &'w World,
     ) -> Result<(), render_graph::NodeRunError> {
         
-        let pipeline_id = world.resource::<GrassPipeline>();
+        let pipeline_id = world.resource::<GrassComputePipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
         let pipeline = pipeline_cache

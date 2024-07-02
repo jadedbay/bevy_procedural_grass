@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::{primitives::Aabb, render_resource::{BindGroup, BindGroupEntries, BufferBinding, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
-use crate::pipeline::GrassPipeline;
+use crate::pipeline::GrassComputePipeline;
 
 #[derive(Component, Default)]
 pub struct BindGroups<T> {
@@ -12,7 +12,7 @@ pub struct BindGroups<T> {
 
 pub(crate) fn prepare_compute_bind_groups(
     mut commands: Commands,
-    pipeline: Res<GrassPipeline>,
+    pipeline: Res<GrassComputePipeline>,
     query: Query<(Entity, &Aabb)>,
     render_device: Res<RenderDevice>
 ) {
