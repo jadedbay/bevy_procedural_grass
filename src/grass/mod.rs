@@ -1,4 +1,4 @@
-use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, primitives::Aabb}};
+use bevy::{ecs::query::QueryItem, prelude::*, render::extract_component::ExtractComponent};
 
 pub mod chunk;
 

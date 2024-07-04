@@ -1,8 +1,8 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, BufferBinding, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
+use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, BufferBinding}, renderer::RenderDevice}};
 
 use super::{mesh_asset::GrassBaseMesh, pipeline::GrassComputePipeline};
 
-#[derive(Component, Resource)]
+#[derive(Component)]
 pub struct GrassComputeBindGroup {
     pub mesh_positions_bind_group: BindGroup,
 }
@@ -29,12 +29,8 @@ pub(crate) fn prepare_compute_bind_groups(
             )
         );
 
-        commands.insert_resource(GrassComputeBindGroup {
-            mesh_positions_bind_group
+        commands.entity(entity).insert(GrassComputeBindGroup {
+            mesh_positions_bind_group,
         });
-
-        // commands.entity(entity).insert(GrassComputeBindGroup {
-        //     mesh_positions_bind_group,
-        // });
     }
 }

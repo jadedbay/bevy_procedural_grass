@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{render_resource::{binding_types::{storage_buffer_read_only, storage_buffer_read_only_sized}, BindGroupLayout, BindGroupLayoutEntries, BindingType, BufferBindingType, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages}, renderer::RenderDevice}};
+use bevy::{prelude::*, render::{render_resource::{binding_types::storage_buffer_read_only, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages}, renderer::RenderDevice}};
 
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {

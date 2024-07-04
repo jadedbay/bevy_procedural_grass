@@ -1,4 +1,4 @@
-use bevy::{asset::embedded_asset, prelude::*, render::{extract_component::ExtractComponentPlugin, mesh::GpuMesh, render_asset::{ExtractedAssets, PrepareNextFrameAssets, RenderAssetPlugin}, render_graph::RenderGraph, texture::GpuImage, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, prelude::*, render::{extract_component::ExtractComponentPlugin, render_asset::RenderAssetPlugin, render_graph::RenderGraph, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::create_chunks, Grass};
 use render::{mesh_asset::GrassBaseMesh, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::prepare_compute_bind_groups};
@@ -26,12 +26,13 @@ impl Plugin for ProceduralGrassPlugin {
             .add_systems(PostStartup, create_chunks);
 
         let render_app = app.sub_app_mut(RenderApp);
+        let compute_node = ComputeGrassNode::from_world(render_app.world_mut());
 
         render_app
             .add_systems(Render, prepare_compute_bind_groups.in_set(RenderSet::PrepareBindGroups));
 
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(ComputeGrassNodeLabel, ComputeGrassNode);
+        render_graph.add_node(ComputeGrassNodeLabel, compute_node);
     }
 
     fn finish(&self, app: &mut App) {

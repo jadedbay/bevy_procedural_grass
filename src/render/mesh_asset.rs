@@ -1,4 +1,4 @@
-use bevy::{ecs::system::lifetimeless::SRes, prelude::*, render::{mesh::{GpuMesh, VertexAttributeValues}, render_asset::{PrepareAssetError, RenderAsset, RenderAssetUsages}, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice, Render}};
+use bevy::{ecs::system::lifetimeless::SRes, prelude::*, render::{mesh::VertexAttributeValues, render_asset::{PrepareAssetError, RenderAsset, RenderAssetUsages}, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
 pub(crate) struct GrassBaseMesh {
     pub(crate) positions_buffer: Buffer,

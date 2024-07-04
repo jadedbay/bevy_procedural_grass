@@ -1,5 +1,5 @@
-use bevy::{prelude::*, render::primitives::Aabb};
-use bevy_procedural_grass::{grass::{Grass, GrassBundle}, ProceduralGrassPlugin};
+use bevy::prelude::*;
+use bevy_procedural_grass::prelude::*;
 
 fn main() {
     App::new()  
