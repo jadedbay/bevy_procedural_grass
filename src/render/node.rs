@@ -1,32 +1,34 @@
-use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext}, render_resource::{ComputePassDescriptor, PipelineCache}, renderer::RenderContext}};
+use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{ComputePassDescriptor, PipelineCache}, renderer::RenderContext}};
 
-use super::pipeline::GrassComputePipeline;
+use super::{pipeline::GrassComputePipeline, prepare::GrassComputeBindGroup};
 
-pub struct ComputeGrassNode;
+#[derive(RenderLabel, Hash, Debug, Eq, PartialEq, Clone, Copy)]
+pub(crate) struct ComputeGrassNodeLabel;
+
+pub(crate) struct ComputeGrassNode;
 
 impl render_graph::Node for ComputeGrassNode {
     fn run<'w>(
         &self,
-        graph: &mut RenderGraphContext,
+        _graph: &mut RenderGraphContext,
         render_context: &mut RenderContext<'w>,
         world: &'w World,
     ) -> Result<(), render_graph::NodeRunError> {
-        
+        let bind_group = world.resource::<GrassComputeBindGroup>();
+
         let pipeline_id = world.resource::<GrassComputePipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
-        let pipeline = pipeline_cache
-            .get_compute_pipeline(pipeline_id.compute_id)
-            .unwrap();
-
-        {
-            let mut pass = render_context
+        if let Some(pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.compute_id) {
+            {
+                let mut pass = render_context
                 .command_encoder()
                 .begin_compute_pass(&ComputePassDescriptor::default());
 
-            pass.set_pipeline(pipeline);
-            //TODO
-
+                pass.set_pipeline(pipeline);
+                pass.set_bind_group(0, &bind_group.mesh_positions_bind_group, &[]);
+                pass.dispatch_workgroups(1, 1, 1);
+            }
         }
 
         Ok(())

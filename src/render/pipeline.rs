@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{render_resource::{binding_types::storage_buffer_read_only_sized, BindGroupLayout, BindGroupLayoutEntries, BindingType, BufferBindingType, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages}, renderer::RenderDevice}};
+use bevy::{prelude::*, render::{render_resource::{binding_types::{storage_buffer_read_only, storage_buffer_read_only_sized}, BindGroupLayout, BindGroupLayoutEntries, BindingType, BufferBindingType, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages}, renderer::RenderDevice}};
 
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
@@ -12,16 +12,13 @@ impl FromWorld for GrassComputePipeline {
 
         let mesh_layout = render_device.create_bind_group_layout(
             "grass_compute_mesh_layout", 
-            &BindGroupLayoutEntries::sequential(
+            &BindGroupLayoutEntries::single(
                 ShaderStages::COMPUTE,
-                (
-                    storage_buffer_read_only_sized(false, None), // positions
-                    storage_buffer_read_only_sized(false, None), // normals
-                )
+                storage_buffer_read_only::<Vec<[f32; 4]>>(false),
             )
         );
 
-        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_compute.wgsl");
+        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_grass.wgsl");
 
         let compute_id = world
             .resource_mut::<PipelineCache>()
@@ -31,7 +28,7 @@ impl FromWorld for GrassComputePipeline {
                 push_constant_ranges: Vec::new(),
                 shader,
                 shader_defs: vec![],
-                entry_point: "compute".into()
+                entry_point: "main".into()
             });
         
         Self {

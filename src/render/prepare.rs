@@ -1,49 +1,40 @@
-use std::marker::PhantomData;
+use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, BufferBinding, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
-use bevy::{prelude::*, render::{mesh::GpuMesh, primitives::Aabb, render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, BufferBinding, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
+use super::{mesh_asset::GrassBaseMesh, pipeline::GrassComputePipeline};
 
-use crate::grass::Grass;
-use super::pipeline::GrassComputePipeline;
-
-#[derive(Component, Default)]
-pub struct BindGroups<T> {
-    bind_groups: Vec<BindGroup>,
-    _phantom_data: PhantomData<T>,
+#[derive(Component, Resource)]
+pub struct GrassComputeBindGroup {
+    pub mesh_positions_bind_group: BindGroup,
 }
 
-// pub(crate) fn prepare_compute_bind_groups(
-//     mut commands: Commands,
-//     meshes: ResMut<RenderAssets<GpuMesh>>,
-//     pipeline: Res<GrassComputePipeline>,
-//     query: Query<(Entity, &Grass, &Handle<Mesh>)>,
-//     render_device: Res<RenderDevice>
-// ) {
-//     let layout = pipeline.mesh_layout.clone();
+pub(crate) fn prepare_compute_bind_groups(
+    mut commands: Commands,
+    grass_base_meshes: ResMut<RenderAssets<GrassBaseMesh>>,
+    pipeline: Res<GrassComputePipeline>,
+    query: Query<(Entity, &Handle<Mesh>)>,
+    render_device: Res<RenderDevice>
+) {
+    let layout = pipeline.mesh_layout.clone();
 
-//     for (entity, grass, mesh_handle) in query.iter() {
-//         let mesh = meshes.get(mesh_handle).unwrap()
+    for (entity, mesh_handle) in query.iter() {
+        let mesh_positions_bind_group = render_device.create_bind_group(
+            Some("mesh_position_bind_group"),
+            &layout,
+            &BindGroupEntries::single(
+                BufferBinding {
+                    buffer: &grass_base_meshes.get(mesh_handle).unwrap().positions_buffer,
+                    offset: 0,
+                    size: None,
+                }
+            )
+        );
 
-//         let mesh_pos_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-//             label: Some("mesh_pos_buffer"),
-//             contents: bytemuck::cast_slice(&[]),
-//             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
-//         });
+        commands.insert_resource(GrassComputeBindGroup {
+            mesh_positions_bind_group
+        });
 
-//         let aabb_bind_group = render_device.create_bind_group(
-//             Some("aabb_bind_group"),
-//             &layout,
-//             &BindGroupEntries::single(
-//                 BufferBinding {
-//                     buffer: &aabb_buffer,
-//                     offset: 0,
-//                     size: None,
-//                 }
-//             )
-//         );
-
-//         commands.entity(entity).insert(BindGroups::<Aabb> {
-//             bind_groups: vec![aabb_bind_group],
-//             ..default()
-//         });
-//     }
-// }
+        // commands.entity(entity).insert(GrassComputeBindGroup {
+        //     mesh_positions_bind_group,
+        // });
+    }
+}

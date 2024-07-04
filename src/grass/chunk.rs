@@ -5,7 +5,7 @@ use crate::util::aabb::triangle_intersects_aabb;
 pub(super) type ChunkPos = UVec2;
 pub(super) type GrassChunks = HashMap<ChunkPos, GrassChunk>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GrassChunk {
     pub aabb: Aabb,
     mesh_indices: Vec<u32>,
