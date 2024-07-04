@@ -17,6 +17,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let plane = Plane3d::default().mesh().size(10., 10.).subdivisions(0).build();
+    dbg!(&plane);
 
     commands.spawn((
         PbrBundle {

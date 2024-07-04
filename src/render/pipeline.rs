@@ -1,8 +1,8 @@
-use bevy::{prelude::*, render::{render_resource::{BindGroupLayout, BindGroupLayoutEntries, BindingType, BufferBindingType, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages}, renderer::RenderDevice}};
+use bevy::{prelude::*, render::{render_resource::{binding_types::storage_buffer_read_only_sized, BindGroupLayout, BindGroupLayoutEntries, BindingType, BufferBindingType, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages}, renderer::RenderDevice}};
 
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
-    pub layout: BindGroupLayout,
+    pub mesh_layout: BindGroupLayout,
     pub compute_id: CachedComputePipelineId
 }
 
@@ -10,15 +10,14 @@ impl FromWorld for GrassComputePipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        let layout = render_device.create_bind_group_layout(
-            "grass_layout", 
-            &BindGroupLayoutEntries::single(
+        let mesh_layout = render_device.create_bind_group_layout(
+            "grass_compute_mesh_layout", 
+            &BindGroupLayoutEntries::sequential(
                 ShaderStages::COMPUTE,
-                BindingType::Buffer {
-                    ty: BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                }
+                (
+                    storage_buffer_read_only_sized(false, None), // positions
+                    storage_buffer_read_only_sized(false, None), // normals
+                )
             )
         );
 
@@ -28,7 +27,7 @@ impl FromWorld for GrassComputePipeline {
             .resource_mut::<PipelineCache>()
             .queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("grass_gen_compute_pipeline".into()),
-                layout: vec![layout.clone()],
+                layout: vec![mesh_layout.clone()],
                 push_constant_ranges: Vec::new(),
                 shader,
                 shader_defs: vec![],
@@ -36,7 +35,7 @@ impl FromWorld for GrassComputePipeline {
             });
         
         Self {
-            layout,
+            mesh_layout,
             compute_id
         }
     }

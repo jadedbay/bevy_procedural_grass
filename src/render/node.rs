@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext}, render_resource::{ComputePassDescriptor, PipelineCache}, renderer::RenderContext}};
 
-use crate::pipeline::GrassComputePipeline;
+use super::pipeline::GrassComputePipeline;
 
 pub struct ComputeGrassNode;
 

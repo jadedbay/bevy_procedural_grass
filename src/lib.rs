@@ -1,10 +1,9 @@
-use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, primitives::Aabb, render_graph::RenderGraphApp, render_phase::AddRenderCommand, Render, RenderApp, RenderSet}};
-use grass::chunk::create_chunks;
-use pipeline::GrassComputePipeline;
+use bevy::{prelude::*, render::{render_asset::RenderAssetPlugin, RenderApp}};
 
-mod pipeline;
-mod prepare;
-mod node;
+use grass::chunk::create_chunks;
+use render::{mesh_asset::GrassBaseMesh, pipeline::GrassComputePipeline};
+
+mod render;
 pub mod grass;
 pub mod util;
 
@@ -17,7 +16,11 @@ pub struct ProceduralGrassPlugin;
 
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, create_chunks);
+        app
+            .add_plugins(
+                RenderAssetPlugin::<GrassBaseMesh>::default()
+            )
+            .add_systems(PostStartup, create_chunks);
 
         // let render_app = app.sub_app_mut(RenderApp);
 
@@ -27,6 +30,7 @@ impl Plugin for ProceduralGrassPlugin {
     }
 
     fn finish(&self, app: &mut App) {
-        app.init_resource::<GrassComputePipeline>();
+        app.sub_app_mut(RenderApp)
+            .init_resource::<GrassComputePipeline>();
     }
 }
