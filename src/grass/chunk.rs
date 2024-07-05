@@ -2,13 +2,12 @@ use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitiv
 use super::Grass;
 use crate::util::aabb::triangle_intersects_aabb;
 
-pub(super) type ChunkPos = UVec2;
-pub(super) type GrassChunks = HashMap<ChunkPos, GrassChunk>;
+pub(super) type GrassChunks = HashMap<UVec2, GrassChunk>;
 
 #[derive(Debug, Clone)]
 pub struct GrassChunk {
     pub aabb: Aabb,
-    mesh_indices: Vec<u32>,
+    pub(crate) mesh_indices: Vec<u32>,
 }
 
 pub(crate) fn create_chunks(
@@ -21,6 +20,8 @@ pub(crate) fn create_chunks(
         let mesh_size = mesh_aabb.max() - mesh_aabb.min();
         let chunk_count = (mesh_size / grass.chunk_size).ceil();
 
+        grass.chunk_count = UVec2::new(chunk_count.x as u32, chunk_count.z as u32);
+
         for x in 0..chunk_count.x as usize {
             for z in 0..chunk_count.z as usize {
                 let min = Vec3::from(mesh_aabb.min()) + Vec3::new(grass.chunk_size * x as f32, 0.0, grass.chunk_size * z as f32);
@@ -28,7 +29,7 @@ pub(crate) fn create_chunks(
                 let aabb = Aabb::from_min_max(min, max);
 
                 grass.chunks.insert(
-                    ChunkPos::new(x as u32, z as u32), 
+                    UVec2::new(x as u32, z as u32), 
                     GrassChunk {
                         aabb,
                         mesh_indices: Vec::new(),

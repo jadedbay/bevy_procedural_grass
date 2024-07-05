@@ -1,4 +1,4 @@
-use bevy::{ecs::system::lifetimeless::SRes, prelude::*, render::{mesh::VertexAttributeValues, render_asset::{PrepareAssetError, RenderAsset, RenderAssetUsages}, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
+use bevy::{ecs::system::{lifetimeless::SRes, SystemParamItem}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::{PrepareAssetError, RenderAsset, RenderAssetUsages}, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
 pub(crate) struct GrassBaseMesh {
     pub(crate) positions_buffer: Buffer,
@@ -10,7 +10,7 @@ impl RenderAsset for GrassBaseMesh {
     type Param = SRes<RenderDevice>;
 
     #[inline]
-    fn asset_usage(_source_asset: &Self::SourceAsset) -> bevy::render::render_asset::RenderAssetUsages {
+    fn asset_usage(_source_asset: &Self::SourceAsset) -> RenderAssetUsages {
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD
     }
 
@@ -20,8 +20,8 @@ impl RenderAsset for GrassBaseMesh {
 
     fn prepare_asset(
             mesh: Self::SourceAsset,
-            render_device: &mut bevy::ecs::system::SystemParamItem<Self::Param>,
-        ) -> Result<Self, bevy::render::render_asset::PrepareAssetError<Self::SourceAsset>> {
+            render_device: &mut SystemParamItem<Self::Param>,
+        ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
             let positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
                 Some(VertexAttributeValues::Float32x3(positions)) => positions,
                 _ => {

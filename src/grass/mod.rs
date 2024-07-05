@@ -12,6 +12,7 @@ pub struct GrassBundle {
 #[derive(Component, Clone)]
 pub struct Grass {
     pub chunk_size: f32,
+    pub chunk_count: UVec2,
     pub chunks: GrassChunks,
 }
 
@@ -19,6 +20,7 @@ impl Default for Grass {
     fn default() -> Self {
         Self {
             chunk_size: 3.0,
+            chunk_count: UVec2::new(0, 0),
             chunks: GrassChunks::new(),
         }
     }

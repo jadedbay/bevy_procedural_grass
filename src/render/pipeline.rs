@@ -3,6 +3,7 @@ use bevy::{prelude::*, render::{render_resource::{binding_types::storage_buffer_
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
     pub mesh_layout: BindGroupLayout,
+    pub indices_layout: BindGroupLayout,
     pub compute_id: CachedComputePipelineId
 }
 
@@ -18,13 +19,21 @@ impl FromWorld for GrassComputePipeline {
             )
         );
 
+        let indices_layout = render_device.create_bind_group_layout(
+            "grass_compute_indices_layout",
+            &BindGroupLayoutEntries::single(
+                ShaderStages::COMPUTE,
+                storage_buffer_read_only::<Vec<u32>>(false),
+            )
+        );
+
         let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_grass.wgsl");
 
         let compute_id = world
             .resource_mut::<PipelineCache>()
             .queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("grass_gen_compute_pipeline".into()),
-                layout: vec![mesh_layout.clone()],
+                layout: vec![mesh_layout.clone(), indices_layout.clone()],
                 push_constant_ranges: Vec::new(),
                 shader,
                 shader_defs: vec![],
@@ -33,6 +42,7 @@ impl FromWorld for GrassComputePipeline {
         
         Self {
             mesh_layout,
+            indices_layout,
             compute_id
         }
     }

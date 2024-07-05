@@ -1,12 +1,14 @@
 use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{ComputePassDescriptor, PipelineCache}, renderer::RenderContext}};
 
+use crate::prelude::Grass;
+
 use super::{pipeline::GrassComputePipeline, prepare::GrassComputeBindGroup};
 
 #[derive(RenderLabel, Hash, Debug, Eq, PartialEq, Clone, Copy)]
 pub(crate) struct ComputeGrassNodeLabel;
 
 pub(crate) struct ComputeGrassNode {
-    query: QueryState<&'static GrassComputeBindGroup>,
+    query: QueryState<(&'static Grass, &'static GrassComputeBindGroup)>,
 }
 
 impl FromWorld for ComputeGrassNode {
@@ -31,7 +33,7 @@ impl render_graph::Node for ComputeGrassNode {
         let pipeline_id = world.resource::<GrassComputePipeline>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
-        for grass_compute_bind_group in self.query.iter_manual(world) {
+        for (grass, grass_compute_bind_group) in self.query.iter_manual(world) {
             if let Some(pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.compute_id) {
                 {
                     let mut pass = render_context
@@ -40,7 +42,8 @@ impl render_graph::Node for ComputeGrassNode {
 
                     pass.set_pipeline(pipeline);
                     pass.set_bind_group(0, &grass_compute_bind_group.mesh_positions_bind_group, &[]);
-                    pass.dispatch_workgroups(1, 1, 1);
+                    pass.set_bind_group(1, &grass_compute_bind_group.chunk_indices_bind_groups[0], &[]);
+                    pass.dispatch_workgroups(grass.chunk_count.x, grass.chunk_count.y, 1);
 
                     dbg!("DISPATCHED");
                 }

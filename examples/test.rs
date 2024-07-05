@@ -8,7 +8,6 @@ fn main() {
             ProceduralGrassPlugin
         ))
         .add_systems(Startup, setup)
-        .add_systems(Update, bevy_procedural_grass::util::draw_chunks)
         .run();
 }
 
