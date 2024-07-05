@@ -12,7 +12,7 @@ Add `bevy_procedural_grass` dependency to `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_procedural_grass = "0.3.0"
+bevy_procedural_grass = "0.2.0"
 ```
 
 ### Generate grass on top of entity:
