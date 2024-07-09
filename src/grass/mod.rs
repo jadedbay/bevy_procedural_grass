@@ -1,6 +1,7 @@
 use bevy::{ecs::query::QueryItem, prelude::*, render::extract_component::ExtractComponent};
 
 pub mod chunk;
+pub mod mesh;
 
 use chunk::GrassChunks;
 

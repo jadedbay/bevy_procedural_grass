@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{render_resource::{binding_types::storage_buffer_read_only, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages}, renderer::RenderDevice}};
+use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::storage_buffer_read_only, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
 
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
@@ -45,5 +45,49 @@ impl FromWorld for GrassComputePipeline {
             indices_layout,
             compute_id
         }
+    }
+}
+
+#[derive(Resource)]
+pub(crate) struct GrassRenderPipeline {
+    shader: Handle<Shader>,
+    mesh_pipeline: MeshPipeline,
+}
+
+impl FromWorld for GrassRenderPipeline {
+    fn from_world(world: &mut World) -> Self {
+        let mesh_pipeline = world.resource::<MeshPipeline>();
+
+        GrassRenderPipeline {
+            shader: world.load_asset("embedded://bevy_procedural_grass/shaders/grass.wgsl"),
+            mesh_pipeline: mesh_pipeline.clone(),
+        }
+    }
+}
+
+impl SpecializedMeshPipeline for GrassRenderPipeline {
+    type Key = MeshPipelineKey;
+    
+    fn specialize(
+            &self,
+            key: Self::Key,
+            layout: &MeshVertexBufferLayoutRef,
+        ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
+            let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
+
+            descriptor.vertex.shader = self.shader.clone();
+            descriptor.vertex.buffers.push(VertexBufferLayout {
+                array_stride: std::mem::size_of::<[f32; 4]>() as u64,
+                step_mode: VertexStepMode::Instance,
+                attributes: vec![
+                    VertexAttribute {
+                        format: VertexFormat::Float32x4,
+                        offset: 0,
+                        shader_location: 3,
+                    },
+                ],
+            });
+            descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
+            Ok(descriptor)
     }
 }

@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, BufferBinding, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
+use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, BufferBinding, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
 use crate::grass::Grass;
 
@@ -62,6 +62,33 @@ pub(crate) fn prepare_compute_bind_groups(
         commands.entity(entity).insert(GrassComputeBindGroup {
             mesh_positions_bind_group,
             chunk_indices_bind_groups,
+        });
+    }
+}
+
+#[derive(Component)]
+pub(crate) struct GrassInstanceBuffer {
+    pub buffer: Buffer,
+    pub length: usize,
+}
+
+fn prepare_grass_instance_buffers(
+    mut commands: Commands,
+    query: Query<(Entity, &Grass)>,
+    render_device: Res<RenderDevice>,
+) {
+    for (entity, grass) in &query {
+        let data: [f32; 4] = [0.0, 0.0, 0.0, 0.0]; //temp
+
+        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            label: Some("grass_instance_buffer"),
+            contents: bytemuck::cast_slice(&data),
+            usage: BufferUsages::STORAGE,
+        });
+
+        commands.entity(entity).insert(GrassInstanceBuffer {
+            buffer,
+            length: 1,
         });
     }
 }
