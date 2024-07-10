@@ -7,7 +7,8 @@ use chunk::GrassChunks;
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
-    grass: Grass,
+    pub grass: Grass,
+    pub mesh: Handle<Mesh>,
 }
 
 #[derive(Component, Clone)]

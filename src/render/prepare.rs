@@ -72,7 +72,7 @@ pub(crate) struct GrassInstanceBuffer {
     pub length: usize,
 }
 
-fn prepare_grass_instance_buffers(
+pub(crate) fn prepare_grass_instance_buffers(
     mut commands: Commands,
     query: Query<(Entity, &Grass)>,
     render_device: Res<RenderDevice>,
@@ -83,7 +83,7 @@ fn prepare_grass_instance_buffers(
         let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("grass_instance_buffer"),
             contents: bytemuck::cast_slice(&data),
-            usage: BufferUsages::STORAGE,
+            usage: BufferUsages::VERTEX | BufferUsages::COPY_SRC,
         });
 
         commands.entity(entity).insert(GrassInstanceBuffer {

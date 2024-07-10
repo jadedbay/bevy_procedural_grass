@@ -2,14 +2,14 @@ use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, System
 
 use super::prepare::GrassInstanceBuffer;
 
-pub(super) type DrawGrass = (
+pub(crate) type DrawGrass = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
     SetMeshBindGroup<1>,
     DrawGrassInstanced,
 );
 
-pub(super) struct DrawGrassInstanced;
+pub(crate) struct DrawGrassInstanced;
 
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);

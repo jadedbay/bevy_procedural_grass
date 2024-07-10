@@ -1,7 +1,9 @@
-use bevy::{asset::embedded_asset, prelude::*, render::{extract_component::ExtractComponentPlugin, render_asset::RenderAssetPlugin, render_graph::RenderGraph, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, render_asset::RenderAssetPlugin, render_graph::RenderGraph, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::create_chunks, Grass};
 use render::{mesh_asset::GrassBaseMesh, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::prepare_compute_bind_groups};
+
+use crate::render::{draw::DrawGrass, pipeline::GrassRenderPipeline, prepare::prepare_grass_instance_buffers, queue::queue_grass};
 
 mod render;
 pub mod grass;
@@ -9,7 +11,7 @@ pub mod util;
 
 pub mod prelude {
     pub use crate::ProceduralGrassPlugin;
-    pub use crate::grass::{Grass, GrassBundle, chunk::GrassChunk};
+    pub use crate::grass::{Grass, GrassBundle, chunk::GrassChunk, mesh::GrassMesh};
 }
 
 pub struct ProceduralGrassPlugin;
@@ -17,6 +19,7 @@ pub struct ProceduralGrassPlugin;
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "shaders/compute_grass.wgsl");
+        embedded_asset!(app, "shaders/grass.wgsl");
 
         app
             .add_plugins((
@@ -29,14 +32,24 @@ impl Plugin for ProceduralGrassPlugin {
         let compute_node = ComputeGrassNode::from_world(render_app.world_mut());
 
         render_app
-            .add_systems(Render, prepare_compute_bind_groups.in_set(RenderSet::PrepareBindGroups));
+            .add_render_command::<Opaque3d, DrawGrass>()
+            .init_resource::<SpecializedMeshPipelines<GrassRenderPipeline>>()
+            .add_systems(
+                Render, 
+                (
+                    queue_grass.in_set(RenderSet::QueueMeshes),
+                    prepare_grass_instance_buffers.in_set(RenderSet::PrepareResources),
+                    prepare_compute_bind_groups.in_set(RenderSet::PrepareBindGroups)
+                )   
+            );
 
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(ComputeGrassNodeLabel, compute_node);
+        //render_graph.add_node(ComputeGrassNodeLabel, compute_node);
     }
 
     fn finish(&self, app: &mut App) {
         app.sub_app_mut(RenderApp)
-            .init_resource::<GrassComputePipeline>();
+            .init_resource::<GrassComputePipeline>()
+            .init_resource::<GrassRenderPipeline>();
     }
 }
