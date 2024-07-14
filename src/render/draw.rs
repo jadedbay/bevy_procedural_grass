@@ -1,7 +1,6 @@
-use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, prelude::*, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}}};
+use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}}};
 
-use super::prepare::{GrassComputeBindGroup, GrassInstanceBuffer};
-
+use super::prepare::GrassBufferBindGroup;
 pub(crate) type DrawGrass = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
@@ -14,7 +13,7 @@ pub(crate) struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
     type ViewQuery = ();
-    type ItemQuery = Read<GrassComputeBindGroup>;
+    type ItemQuery = Read<GrassBufferBindGroup>;
 
     #[inline]
     fn render<'w>(
@@ -37,7 +36,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             };
 
             pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
-            pass.set_vertex_buffer(1, grass_bind_groups.grass_output_buffer.slice(..));
+            pass.set_vertex_buffer(1, grass_bind_groups.grass_data_buffer.slice(..));
 
             match &gpu_mesh.buffer_info {
                 GpuBufferInfo::Indexed {

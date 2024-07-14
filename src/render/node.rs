@@ -2,13 +2,13 @@ use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderL
 
 use crate::prelude::Grass;
 
-use super::{pipeline::GrassComputePipeline, prepare::GrassComputeBindGroup};
+use super::{pipeline::GrassComputePipeline, prepare::GrassBufferBindGroup};
 
 #[derive(RenderLabel, Hash, Debug, Eq, PartialEq, Clone, Copy)]
 pub(crate) struct ComputeGrassNodeLabel;
 
 pub(crate) struct ComputeGrassNode {
-    query: QueryState<(&'static Grass, &'static GrassComputeBindGroup)>,
+    query: QueryState<(&'static Grass, &'static GrassBufferBindGroup)>,
 }
 
 impl FromWorld for ComputeGrassNode {
@@ -43,7 +43,7 @@ impl render_graph::Node for ComputeGrassNode {
                     pass.set_pipeline(pipeline);
                     pass.set_bind_group(0, &grass_compute_bind_group.mesh_positions_bind_group, &[]);
                     pass.set_bind_group(1, &grass_compute_bind_group.chunk_indices_bind_groups[0], &[]);
-                    pass.set_bind_group(2, &grass_compute_bind_group.grass_output_bind_group, &[]);
+                    pass.set_bind_group(2, &grass_compute_bind_group.grass_data_bind_group, &[]);
                     pass.dispatch_workgroups(grass.chunk_count.x, grass.chunk_count.y, 1);
                 }
             }

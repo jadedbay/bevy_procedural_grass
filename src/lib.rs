@@ -3,7 +3,7 @@ use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, 
 use grass::{chunk::create_chunks, Grass, GrassGround};
 use render::{compute_mesh::GrassGroundMesh, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::prepare_compute_bind_groups};
 
-use crate::render::{draw::DrawGrass, pipeline::GrassRenderPipeline, prepare::prepare_grass_instance_buffers, queue::queue_grass};
+use crate::render::{draw::DrawGrass, pipeline::GrassRenderPipeline, queue::queue_grass};
 
 mod render;
 pub mod grass;
@@ -39,7 +39,6 @@ impl Plugin for ProceduralGrassPlugin {
                 Render, 
                 (
                     queue_grass.in_set(RenderSet::QueueMeshes),
-                    prepare_grass_instance_buffers.in_set(RenderSet::PrepareResources),
                     prepare_compute_bind_groups.in_set(RenderSet::PrepareBindGroups)
                 )   
             );
