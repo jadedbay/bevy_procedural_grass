@@ -5,27 +5,29 @@ pub mod mesh;
 
 use chunk::GrassChunks;
 
-#[derive(Bundle)]
+#[derive(Bundle, Default)]
 pub struct GrassBundle {
     pub grass: Grass,
     pub mesh: Handle<Mesh>,
+    #[bundle()]
+    pub spatial_bundle: SpatialBundle,
 }
 
 #[derive(Component, Clone)]
 pub struct Grass {
-    pub ground_entity: Entity, 
+    pub ground_entity: Option<Entity>, 
     pub chunk_size: f32,
     pub chunk_count: UVec2,
     pub chunks: GrassChunks,
 }
 
-impl Grass {
-    pub fn default(ground_entity: Entity) -> Self {
+impl Default for Grass {
+    fn default() -> Self {
         Self {
-            ground_entity,
-            chunk_size: 3.0,
+            ground_entity: None,
+            chunk_size: 30.0,
             chunk_count: UVec2::new(0, 0),
-            chunks: GrassChunks::new(),
+            chunks: GrassChunks::new(), 
         }
     }
 }

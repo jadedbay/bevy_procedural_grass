@@ -1,7 +1,7 @@
 use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_asset::RenderAssetPlugin, render_graph::RenderGraph, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::create_chunks, Grass, GrassGround};
-use render::{compute_mesh::GrassGroundMesh, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::prepare_compute_bind_groups};
+use render::{compute_mesh::GrassGroundMesh, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::prepare_grass_bind_groups};
 
 use crate::render::{draw::DrawGrass, pipeline::GrassRenderPipeline, queue::queue_grass};
 
@@ -39,7 +39,7 @@ impl Plugin for ProceduralGrassPlugin {
                 Render, 
                 (
                     queue_grass.in_set(RenderSet::QueueMeshes),
-                    prepare_compute_bind_groups.in_set(RenderSet::PrepareBindGroups)
+                    prepare_grass_bind_groups.in_set(RenderSet::PrepareBindGroups)
                 )   
             );
 

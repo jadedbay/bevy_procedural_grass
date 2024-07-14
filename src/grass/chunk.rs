@@ -16,7 +16,7 @@ pub(crate) fn create_chunks(
     ground_query: Query<&Handle<Mesh>, With<GrassGround>>,
 ) {
     for mut grass in grass_query.iter_mut() {
-        let mesh = meshes.get(ground_query.get(grass.ground_entity).unwrap()).unwrap();
+        let mesh = meshes.get(ground_query.get(grass.ground_entity.unwrap()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
         let mesh_size = mesh_aabb.max() - mesh_aabb.min();
         let chunk_count = (mesh_size / grass.chunk_size).ceil();
@@ -67,6 +67,8 @@ pub(crate) fn create_chunks(
                 }
             }
         }
+
+        dbg!(&grass.chunks);
     }
 }
 

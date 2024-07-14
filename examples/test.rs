@@ -25,14 +25,16 @@ fn setup(
        GrassGround, 
     )).id();
 
-    commands.spawn((
-        TransformBundle::default(),
-        VisibilityBundle::default(),
+    commands.spawn(
         GrassBundle {
             mesh: meshes.add(GrassMesh::mesh(7)),
-            grass: Grass::default(ground),
+            grass: Grass {
+                ground_entity: Some(ground),
+                ..default()
+            },
+            ..default()
         }
-    ));
+    );
 
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(10., 5., 8.).looking_at(Vec3::ZERO, Vec3::Y),

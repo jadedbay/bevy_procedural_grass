@@ -1,19 +1,22 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, BufferBinding, BufferDescriptor, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
 use crate::grass::Grass;
+use super::{compute_mesh::GrassGroundMesh, instance::GrassInstanceData, pipeline::GrassComputePipeline};
 
-use super::{compute_mesh::GrassGroundMesh, pipeline::GrassComputePipeline};
+pub struct GrassChunkBufferBindGroup {
+    pub indices_bind_group: BindGroup,
+    pub grass_data_bind_group: BindGroup,
+    pub grass_data_buffer: Buffer,
+    pub grass_data_length: usize,
+}
 
 #[derive(Component)]
 pub struct GrassBufferBindGroup {
     pub mesh_positions_bind_group: BindGroup,
-    pub chunk_indices_bind_groups: Vec<BindGroup>,
-    pub grass_data_bind_group: BindGroup,
-    pub grass_data_buffer: Buffer,
-    pub length: usize,
+    pub chunks: Vec<GrassChunkBufferBindGroup>,
 }
 
-pub(crate) fn prepare_compute_bind_groups(
+pub(crate) fn prepare_grass_bind_groups(
     mut commands: Commands,
     grass_base_meshes: ResMut<RenderAssets<GrassGroundMesh>>,
     pipeline: Res<GrassComputePipeline>,
@@ -31,17 +34,17 @@ pub(crate) fn prepare_compute_bind_groups(
             &mesh_layout,
             &BindGroupEntries::single(
                 BufferBinding {
-                    buffer: &grass_base_meshes.get(ground_query.get(grass.ground_entity).unwrap()).unwrap().positions_buffer,
+                    buffer: &grass_base_meshes.get(ground_query.get(grass.ground_entity.unwrap()).unwrap()).unwrap().positions_buffer,
                     offset: 0,
                     size: None,
                 }
             )
         );
 
-        let mut chunk_indices_bind_groups = Vec::new();
+        let mut chunk_bind_groups = Vec::new();
 
         for (_, chunk) in grass.chunks.clone() {
-            let buffer = render_device.create_buffer_with_data(
+            let indices_buffer = render_device.create_buffer_with_data(
                 &BufferInitDescriptor {
                     label: Some("indices_buffer"),
                     contents: bytemuck::cast_slice(chunk.mesh_indices.as_slice()),
@@ -49,48 +52,51 @@ pub(crate) fn prepare_compute_bind_groups(
                 }
             );
 
-            let bind_group = render_device.create_bind_group(
+            let indices_bind_group = render_device.create_bind_group(
                 Some("indices_bind_group"),
                 &indices_layout,
                 &BindGroupEntries::single(
                     BufferBinding {
-                        buffer: &buffer,
+                        buffer: &indices_buffer,
+                        offset: 0,
+                        size: None,
+                    }
+                )
+            );
+ 
+            let grass_data_buffer = render_device.create_buffer(
+                &BufferDescriptor {
+                    label: Some("grass_data_buffer"),
+                    size: std::mem::size_of::<GrassInstanceData>() as u64 * 64,
+                    usage: BufferUsages::VERTEX | BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+                    mapped_at_creation: false,
+                }
+            );
+
+            let grass_data_bind_group = render_device.create_bind_group(
+                Some("output_bind_group"),
+                &grass_data_layout,
+                &BindGroupEntries::single(
+                    BufferBinding {
+                        buffer: &grass_data_buffer,
                         offset: 0,
                         size: None,
                     }
                 )
             );
 
-            chunk_indices_bind_groups.push(bind_group);
+            chunk_bind_groups.push(GrassChunkBufferBindGroup {
+                indices_bind_group,
+                grass_data_bind_group,
+                grass_data_buffer,
+                grass_data_length: 64, 
+            });
         }
 
-        let grass_data_buffer = render_device.create_buffer(
-            &BufferDescriptor {
-                label: Some("grass_data_buffer"),
-                size: std::mem::size_of::<[f32; 8]>() as u64,
-                usage: BufferUsages::VERTEX | BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
-                mapped_at_creation: false,
-            }
-        );
-
-        let grass_data_bind_group = render_device.create_bind_group(
-            Some("output_bind_group"),
-            &grass_data_layout,
-            &BindGroupEntries::single(
-                BufferBinding {
-                    buffer: &grass_data_buffer,
-                    offset: 0,
-                    size: None,
-                }
-            )
-        );
 
         commands.entity(entity).insert(GrassBufferBindGroup {
             mesh_positions_bind_group,
-            chunk_indices_bind_groups,
-            grass_data_bind_group,
-            grass_data_buffer,
-            length: 2,
+            chunks: chunk_bind_groups,
         });
     }
 }

@@ -1,5 +1,7 @@
 use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
 
+use super::instance::GrassInstanceData;
+
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
     pub mesh_layout: BindGroupLayout,
@@ -32,7 +34,7 @@ impl FromWorld for GrassComputePipeline {
             "grass_compute_grass_output_layout",
             &BindGroupLayoutEntries::single(
                 ShaderStages::COMPUTE,
-                storage_buffer::<[f32; 8]>(false)
+                storage_buffer::<[GrassInstanceData; 64]>(false)
             )
         );
 
