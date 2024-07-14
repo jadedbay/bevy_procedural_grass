@@ -60,10 +60,6 @@ fn setup(
             material: materials.add(StandardMaterial::from(Color::WHITE)),
             ..default()
         },
-        GrassDisplacer {
-            size: 15,
-            ..default()
-        }
     ));
 }
 ```
