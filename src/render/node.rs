@@ -43,6 +43,7 @@ impl render_graph::Node for ComputeGrassNode {
                     pass.set_pipeline(pipeline);
                     pass.set_bind_group(0, &grass_compute_bind_group.mesh_positions_bind_group, &[]);
                     pass.set_bind_group(1, &grass_compute_bind_group.chunk_indices_bind_groups[0], &[]);
+                    pass.set_bind_group(2, &grass_compute_bind_group.grass_output_bind_group, &[]);
                     pass.dispatch_workgroups(grass.chunk_count.x, grass.chunk_count.y, 1);
                 }
             }

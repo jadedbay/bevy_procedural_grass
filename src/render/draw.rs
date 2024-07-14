@@ -1,6 +1,6 @@
 use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, prelude::*, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}}};
 
-use super::prepare::GrassInstanceBuffer;
+use super::prepare::{GrassComputeBindGroup, GrassInstanceBuffer};
 
 pub(crate) type DrawGrass = (
     SetItemPipeline,
@@ -14,13 +14,13 @@ pub(crate) struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
     type ViewQuery = ();
-    type ItemQuery = Read<GrassInstanceBuffer>;
+    type ItemQuery = Read<GrassComputeBindGroup>;
 
     #[inline]
     fn render<'w>(
             item: &P,
             _view: ROQueryItem<'w, Self::ViewQuery>,
-            instance_buffer: Option<ROQueryItem<'w, Self::ItemQuery>>,
+            grass_bind_groups: Option<ROQueryItem<'w, Self::ItemQuery>>,
             (meshes, render_mesh_instances): SystemParamItem<'w, '_, Self::Param>,
             pass: &mut TrackedRenderPass<'w>,
         ) -> RenderCommandResult {
@@ -32,12 +32,12 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                 return RenderCommandResult::Failure;
             };
 
-            let Some(instance_buffer) = instance_buffer else {
+            let Some(grass_bind_groups) = grass_bind_groups else {
                 return RenderCommandResult::Failure;
             };
 
             pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
-            pass.set_vertex_buffer(1, instance_buffer.buffer.slice(..));
+            pass.set_vertex_buffer(1, grass_bind_groups.grass_output_buffer.slice(..));
 
             match &gpu_mesh.buffer_info {
                 GpuBufferInfo::Indexed {
@@ -46,10 +46,10 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                     count,
                 } => {
                     pass.set_index_buffer(buffer.slice(..), 0, *index_format);
-                    pass.draw_indexed(0..*count, 0, 0..instance_buffer.length as u32);
+                    pass.draw_indexed(0..*count, 0, 0..grass_bind_groups.length as u32);
                 }
                 GpuBufferInfo::NonIndexed => {
-                    pass.draw(0..gpu_mesh.vertex_count, 0..instance_buffer.length as u32);
+                    pass.draw(0..gpu_mesh.vertex_count, 0..grass_bind_groups.length as u32);
                 }
             }
             RenderCommandResult::Success

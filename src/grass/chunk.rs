@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::Aabb}, utils::HashMap};
-use super::Grass;
+use super::{Grass, GrassGround};
 use crate::util::aabb::triangle_intersects_aabb;
 
 pub(super) type GrassChunks = HashMap<UVec2, GrassChunk>;
@@ -12,10 +12,11 @@ pub struct GrassChunk {
 
 pub(crate) fn create_chunks(
     meshes: ResMut<Assets<Mesh>>,
-    mut query: Query<(&mut Grass, &Handle<Mesh>)>,
+    mut grass_query: Query<&mut Grass>,
+    ground_query: Query<&Handle<Mesh>, With<GrassGround>>,
 ) {
-    for (mut grass, mesh_handle) in query.iter_mut() {
-        let mesh = meshes.get(mesh_handle).unwrap();
+    for mut grass in grass_query.iter_mut() {
+        let mesh = meshes.get(ground_query.get(grass.ground_entity).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
         let mesh_size = mesh_aabb.max() - mesh_aabb.min();
         let chunk_count = (mesh_size / grass.chunk_size).ceil();

@@ -17,19 +17,20 @@ fn setup(
 ) {
     let plane = Plane3d::default().mesh().size(10., 10.).subdivisions(0).build();
 
-    // commands.spawn(
-    //     PbrBundle {
-    //         mesh: meshes.add(plane),
-    //         ..default()
-    //     },
-    // );
+    let ground = commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(plane),
+            ..default()
+        },
+       GrassGround, 
+    )).id();
 
     commands.spawn((
         TransformBundle::default(),
         VisibilityBundle::default(),
         GrassBundle {
             mesh: meshes.add(GrassMesh::mesh(7)),
-            ..default()
+            grass: Grass::default(ground),
         }
     ));
 

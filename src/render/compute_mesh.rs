@@ -1,11 +1,12 @@
 use bevy::{ecs::system::{lifetimeless::SRes, SystemParamItem}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::{PrepareAssetError, RenderAsset, RenderAssetUsages}, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
-pub(crate) struct GrassBaseMesh {
+
+pub(crate) struct GrassGroundMesh {
     pub(crate) positions_buffer: Buffer,
 }
 
-
-impl RenderAsset for GrassBaseMesh {
+// TODO: only prepare ground meshes, so probably dont use renderasset
+impl RenderAsset for GrassGroundMesh {
     type SourceAsset = Mesh;
     type Param = SRes<RenderDevice>;
 
@@ -38,7 +39,7 @@ impl RenderAsset for GrassBaseMesh {
                 usage: BufferUsages::STORAGE
             });
  
-            Ok(GrassBaseMesh {
+            Ok(GrassGroundMesh {
                 positions_buffer,
             })
     }

@@ -25,7 +25,7 @@ pub(crate) fn queue_grass(
         };
 
         let view_key = msaa_key | MeshPipelineKey::from_hdr(view.hdr);
-        let rangefinder = view.rangefinder3d();
+        
         for entity in &material_meshes {
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(entity) else {
                 continue;

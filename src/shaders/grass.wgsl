@@ -14,7 +14,7 @@ struct VertexOutput {
 
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
-    var position = vertex.position;
+    var position = vertex.position + vertex.i_pos.xyz;
     let width = 0.05 * (1.0 - pow(vertex.uv.y, 2.0));
     position.x *= width;
 

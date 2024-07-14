@@ -1,7 +1,7 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, render_asset::RenderAssetPlugin, render_graph::RenderGraph, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_asset::RenderAssetPlugin, render_graph::RenderGraph, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::create_chunks, Grass};
-use render::{mesh_asset::GrassBaseMesh, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::prepare_compute_bind_groups};
+use grass::{chunk::create_chunks, Grass, GrassGround};
+use render::{compute_mesh::GrassGroundMesh, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::prepare_compute_bind_groups};
 
 use crate::render::{draw::DrawGrass, pipeline::GrassRenderPipeline, prepare::prepare_grass_instance_buffers, queue::queue_grass};
 
@@ -11,7 +11,7 @@ pub mod util;
 
 pub mod prelude {
     pub use crate::ProceduralGrassPlugin;
-    pub use crate::grass::{Grass, GrassBundle, chunk::GrassChunk, mesh::GrassMesh};
+    pub use crate::grass::{Grass, GrassBundle, GrassGround, chunk::GrassChunk, mesh::GrassMesh};
 }
 
 pub struct ProceduralGrassPlugin;
@@ -23,8 +23,9 @@ impl Plugin for ProceduralGrassPlugin {
 
         app
             .add_plugins((
-                RenderAssetPlugin::<GrassBaseMesh>::default(),
+                RenderAssetPlugin::<GrassGroundMesh>::default(),
                 ExtractComponentPlugin::<Grass>::default(),
+                ExtractComponentPlugin::<GrassGround>::default(),
             ))
             .add_systems(PostStartup, create_chunks);
 
@@ -44,7 +45,8 @@ impl Plugin for ProceduralGrassPlugin {
             );
 
         let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        //render_graph.add_node(ComputeGrassNodeLabel, compute_node);
+        render_graph.add_node(ComputeGrassNodeLabel, compute_node);
+        render_graph.add_node_edge(ComputeGrassNodeLabel, CameraDriverLabel);
     }
 
     fn finish(&self, app: &mut App) {

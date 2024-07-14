@@ -1,9 +1,10 @@
-use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::storage_buffer_read_only, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
+use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
 
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
     pub mesh_layout: BindGroupLayout,
     pub indices_layout: BindGroupLayout,
+    pub grass_output_layout: BindGroupLayout,
     pub compute_id: CachedComputePipelineId
 }
 
@@ -27,13 +28,21 @@ impl FromWorld for GrassComputePipeline {
             )
         );
 
+        let grass_output_layout = render_device.create_bind_group_layout(
+            "grass_compute_grass_output_layout",
+            &BindGroupLayoutEntries::single(
+                ShaderStages::COMPUTE,
+                storage_buffer::<[f32; 8]>(false)
+            )
+        );
+
         let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_grass.wgsl");
 
         let compute_id = world
             .resource_mut::<PipelineCache>()
             .queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("grass_gen_compute_pipeline".into()),
-                layout: vec![mesh_layout.clone(), indices_layout.clone()],
+                layout: vec![mesh_layout.clone(), indices_layout.clone(), grass_output_layout.clone()],
                 push_constant_ranges: Vec::new(),
                 shader,
                 shader_defs: vec![],
@@ -43,6 +52,7 @@ impl FromWorld for GrassComputePipeline {
         Self {
             mesh_layout,
             indices_layout,
+            grass_output_layout,
             compute_id
         }
     }

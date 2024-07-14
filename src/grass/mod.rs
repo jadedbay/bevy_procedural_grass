@@ -5,7 +5,7 @@ pub mod mesh;
 
 use chunk::GrassChunks;
 
-#[derive(Bundle, Default)]
+#[derive(Bundle)]
 pub struct GrassBundle {
     pub grass: Grass,
     pub mesh: Handle<Mesh>,
@@ -13,14 +13,16 @@ pub struct GrassBundle {
 
 #[derive(Component, Clone)]
 pub struct Grass {
+    pub ground_entity: Entity, 
     pub chunk_size: f32,
     pub chunk_count: UVec2,
     pub chunks: GrassChunks,
 }
 
-impl Default for Grass {
-    fn default() -> Self {
+impl Grass {
+    pub fn default(ground_entity: Entity) -> Self {
         Self {
+            ground_entity,
             chunk_size: 3.0,
             chunk_count: UVec2::new(0, 0),
             chunks: GrassChunks::new(),
@@ -29,11 +31,24 @@ impl Default for Grass {
 }
 
 impl ExtractComponent for Grass {
-    type QueryData = (&'static Grass, &'static Handle<Mesh>);
+    type QueryData = &'static Grass;
     type QueryFilter = ();
-    type Out = (Grass, Handle<Mesh>);
+    type Out = Grass;
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
-        Some((item.0.clone(), item.1.clone()))
+        Some(item.clone())
+    }
+}
+
+#[derive(Component, Clone)]
+pub struct GrassGround;
+
+impl ExtractComponent for GrassGround {
+    type QueryData = &'static Handle<Mesh>;
+    type QueryFilter = With<GrassGround>;
+    type Out = Handle<Mesh>;
+
+    fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
+       Some(item.clone()) 
     }
 }
