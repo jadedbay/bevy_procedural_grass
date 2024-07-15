@@ -55,6 +55,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                     }
                 }
             }
+
             RenderCommandResult::Success
     }
 }

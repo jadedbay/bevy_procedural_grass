@@ -34,7 +34,7 @@ impl FromWorld for GrassComputePipeline {
             "grass_compute_grass_output_layout",
             &BindGroupLayoutEntries::single(
                 ShaderStages::COMPUTE,
-                storage_buffer::<[GrassInstanceData; 64]>(false)
+                storage_buffer::<Vec<GrassInstanceData>>(false)
             )
         );
 

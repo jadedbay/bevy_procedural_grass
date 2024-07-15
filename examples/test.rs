@@ -15,7 +15,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let plane = Plane3d::default().mesh().size(10., 10.).subdivisions(0).build();
+    let plane = Plane3d::default().mesh().size(10., 10.).subdivisions(10).build();
 
     let ground = commands.spawn((
         PbrBundle {
@@ -30,6 +30,7 @@ fn setup(
             mesh: meshes.add(GrassMesh::mesh(7)),
             grass: Grass {
                 ground_entity: Some(ground),
+                chunk_size: 5.0,
                 ..default()
             },
             ..default()

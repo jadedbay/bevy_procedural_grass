@@ -17,7 +17,6 @@ pub struct GrassBundle {
 pub struct Grass {
     pub ground_entity: Option<Entity>, 
     pub chunk_size: f32,
-    pub chunk_count: UVec2,
     pub chunks: GrassChunks,
 }
 
@@ -26,7 +25,6 @@ impl Default for Grass {
         Self {
             ground_entity: None,
             chunk_size: 30.0,
-            chunk_count: UVec2::new(0, 0),
             chunks: GrassChunks::new(), 
         }
     }

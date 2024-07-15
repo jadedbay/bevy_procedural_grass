@@ -21,8 +21,6 @@ pub(crate) fn create_chunks(
         let mesh_size = mesh_aabb.max() - mesh_aabb.min();
         let chunk_count = (mesh_size / grass.chunk_size).ceil();
 
-        grass.chunk_count = UVec2::new(chunk_count.x as u32, chunk_count.z as u32);
-
         for x in 0..chunk_count.x as usize {
             for z in 0..chunk_count.z as usize {
                 let min = Vec3::from(mesh_aabb.min()) + Vec3::new(grass.chunk_size * x as f32, 0.0, grass.chunk_size * z as f32);
@@ -67,8 +65,6 @@ pub(crate) fn create_chunks(
                 }
             }
         }
-
-        dbg!(&grass.chunks);
     }
 }
 

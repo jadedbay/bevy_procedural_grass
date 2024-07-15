@@ -46,6 +46,8 @@ pub(crate) fn prepare_grass_bind_groups(
         let mut chunk_bind_groups = Vec::new();
 
         for (_, chunk) in grass.chunks.clone() {
+            let triangle_count = chunk.mesh_indices.len() / 3;
+
             let indices_buffer = render_device.create_buffer_with_data(
                 &BufferInitDescriptor {
                     label: Some("indices_buffer"),
@@ -69,8 +71,8 @@ pub(crate) fn prepare_grass_bind_groups(
             let grass_data_buffer = render_device.create_buffer(
                 &BufferDescriptor {
                     label: Some("grass_data_buffer"),
-                    size: std::mem::size_of::<GrassInstanceData>() as u64 * 64,
-                    usage: BufferUsages::VERTEX | BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+                    size: (std::mem::size_of::<GrassInstanceData>() * triangle_count * 32) as u64,
+                    usage: BufferUsages::VERTEX | BufferUsages::STORAGE, 
                     mapped_at_creation: false,
                 }
             );
@@ -91,8 +93,8 @@ pub(crate) fn prepare_grass_bind_groups(
                 indices_bind_group,
                 grass_data_bind_group,
                 grass_data_buffer,
-                grass_data_length: 64,
-                triangle_count: chunk.mesh_indices.len() / 3,
+                grass_data_length: triangle_count * 32,
+                triangle_count,
             });
         }
 
