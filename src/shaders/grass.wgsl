@@ -20,7 +20,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     position.x *= width;
 
     let rotation_matrix = rotate_align(vec3<f32>(0.0, 1.0, 0.0), vertex.i_normal.xyz);
-    position *= rotation_matrix;
+    position = rotation_matrix * position;
 
     position += vertex.i_pos.xyz;
     
