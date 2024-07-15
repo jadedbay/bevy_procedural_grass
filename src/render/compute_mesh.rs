@@ -5,7 +5,7 @@ pub(crate) struct GrassGroundMesh {
     pub(crate) positions_buffer: Buffer,
 }
 
-// TODO: only prepare ground meshes, so probably dont use renderasset
+// TODO: only prepare ground meshes, so probably dont use renderasset and just manually extract mesh positions
 impl RenderAsset for GrassGroundMesh {
     type SourceAsset = Mesh;
     type Param = SRes<RenderDevice>;

@@ -44,7 +44,7 @@ impl render_graph::Node for ComputeGrassNode {
                     for chunk in &grass_bind_groups.chunks {
                         pass.set_bind_group(1, &chunk.indices_bind_group, &[]);
                         pass.set_bind_group(2, &chunk.grass_data_bind_group, &[]);
-                        pass.dispatch_workgroups(1, 1, 1);
+                        pass.dispatch_workgroups(chunk.triangle_count as u32, 1, 1);
                     }
                 }
             }

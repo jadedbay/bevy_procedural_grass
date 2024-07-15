@@ -8,6 +8,8 @@ pub struct GrassChunkBufferBindGroup {
     pub grass_data_bind_group: BindGroup,
     pub grass_data_buffer: Buffer,
     pub grass_data_length: usize,
+
+    pub triangle_count: usize,
 }
 
 #[derive(Component)]
@@ -89,7 +91,8 @@ pub(crate) fn prepare_grass_bind_groups(
                 indices_bind_group,
                 grass_data_bind_group,
                 grass_data_buffer,
-                grass_data_length: 64, 
+                grass_data_length: 64,
+                triangle_count: chunk.mesh_indices.len() / 3,
             });
         }
 
