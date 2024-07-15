@@ -1,11 +1,16 @@
 #import bevy_pbr::utils::rand_f
 
+struct GrassInstanceData {
+    position: vec4<f32>,
+    normal: vec4<f32>,
+}
+
 @group(0) @binding(0)
 var<storage, read> positions: array<vec4<f32>>;
 @group(1) @binding(0)
 var<storage, read> indices: array<u32>;
 @group(2) @binding(0)
-var<storage, read_write> output: array<vec4<f32>>;
+var<storage, read_write> output: array<GrassInstanceData>;
 
 @compute @workgroup_size(32)
 fn main(
@@ -17,6 +22,8 @@ fn main(
     let v1 = positions[indices[workgroup_id.x * 3 + 1]].xyz;
     let v2 = positions[indices[workgroup_id.x * 3 + 2]].xyz;
 
+    let normal = normalize(cross(v1 - v0, v2 - v0));
+
     var state: u32 = global_id.x;
     let r1 = sqrt(rand_f(&state));
     let r2 = rand_f(&state);
@@ -24,7 +31,7 @@ fn main(
 
     let position = (v0 * r.x + v1 * r.y + v2 * r.z);
 
-    output[global_id.x] = vec4<f32>(position, 0.0); 
+    output[global_id.x] = GrassInstanceData(vec4<f32>(position, 0.0), vec4<f32>(normal, 0.0)); 
 
     return;
 }

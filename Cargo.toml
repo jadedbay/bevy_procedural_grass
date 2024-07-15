@@ -27,7 +27,7 @@ version = "0.25.1"
 features = ["png", "jpeg"]
 
 [dev-dependencies]  
-# bevy_flycam = "0.13.0"
+bevy_flycam = "0.14.0"
 bevy = { version = "0.14.0", default-features = false, features = ["bevy_winit", "x11", "tonemapping_luts"] }
 
 [profile.dev]

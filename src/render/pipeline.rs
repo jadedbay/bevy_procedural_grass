@@ -89,7 +89,7 @@ impl SpecializedMeshPipeline for GrassRenderPipeline {
 
             descriptor.vertex.shader = self.shader.clone();
             descriptor.vertex.buffers.push(VertexBufferLayout {
-                array_stride: std::mem::size_of::<[f32; 4]>() as u64,
+                array_stride: std::mem::size_of::<GrassInstanceData>() as u64,
                 step_mode: VertexStepMode::Instance,
                 attributes: vec![
                     VertexAttribute {
@@ -97,9 +97,15 @@ impl SpecializedMeshPipeline for GrassRenderPipeline {
                         offset: 0,
                         shader_location: 3,
                     },
+                    VertexAttribute {
+                        format: VertexFormat::Float32x4,
+                        offset: std::mem::size_of::<[f32; 4]>() as u64,
+                        shader_location: 4,
+                    },
                 ],
             });
             descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
+            descriptor.primitive.cull_mode = None;
             Ok(descriptor)
     }
 }

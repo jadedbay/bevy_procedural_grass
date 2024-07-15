@@ -1,7 +1,8 @@
-use bevy::{ecs::query::QueryItem, prelude::*, render::extract_component::ExtractComponent};
+use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, view::NoFrustumCulling}};
 
 pub mod chunk;
 pub mod mesh;
+pub mod clump;
 
 use chunk::GrassChunks;
 
@@ -11,6 +12,7 @@ pub struct GrassBundle {
     pub mesh: Handle<Mesh>,
     #[bundle()]
     pub spatial_bundle: SpatialBundle,
+    pub frustum_culling: NoFrustumCulling,
 }
 
 #[derive(Component, Clone)]

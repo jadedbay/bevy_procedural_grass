@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitiv
 use super::{Grass, GrassGround};
 use crate::util::aabb::triangle_intersects_aabb;
 
-pub(super) type GrassChunks = HashMap<UVec2, GrassChunk>;
+pub(super) type GrassChunks = HashMap<UVec3, GrassChunk>;
 
 #[derive(Debug, Clone)]
 pub struct GrassChunk {
@@ -19,21 +19,23 @@ pub(crate) fn create_chunks(
         let mesh = meshes.get(ground_query.get(grass.ground_entity.unwrap()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
         let mesh_size = mesh_aabb.max() - mesh_aabb.min();
-        let chunk_count = (mesh_size / grass.chunk_size).ceil();
+        let chunk_count = (mesh_size / grass.chunk_size).ceil().max(Vec3::splat(1.0).into());
 
         for x in 0..chunk_count.x as usize {
-            for z in 0..chunk_count.z as usize {
-                let min = Vec3::from(mesh_aabb.min()) + Vec3::new(grass.chunk_size * x as f32, 0.0, grass.chunk_size * z as f32);
-                let max = min + Vec3::splat(grass.chunk_size);
-                let aabb = Aabb::from_min_max(min, max);
+            for y in 0..chunk_count.y as usize {
+                for z in 0..chunk_count.z as usize {
+                    let min = Vec3::from(mesh_aabb.min()) + Vec3::new(grass.chunk_size * x as f32, grass.chunk_size * y as f32, grass.chunk_size * z as f32);
+                    let max = min + Vec3::splat(grass.chunk_size);
+                    let aabb = Aabb::from_min_max(min, max);
 
-                grass.chunks.insert(
-                    UVec2::new(x as u32, z as u32), 
-                    GrassChunk {
-                        aabb,
-                        mesh_indices: Vec::new(),
-                    }
-                );
+                    grass.chunks.insert(
+                        UVec3::new(x as u32, y as u32, z as u32), 
+                        GrassChunk {
+                            aabb,
+                            mesh_indices: Vec::new(),
+                        }
+                    );
+                }
             }
         }
 

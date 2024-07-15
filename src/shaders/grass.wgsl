@@ -4,7 +4,8 @@ struct Vertex {
     @location(0) position: vec3<f32>,
     @location(2) uv: vec2<f32>,
 
-    @location(3) i_pos: vec4<f32>
+    @location(3) i_pos: vec4<f32>,
+    @location(4) i_normal: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -17,6 +18,9 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var position = vertex.position;
     let width = 0.05 * (1.0 - pow(vertex.uv.y, 2.0));
     position.x *= width;
+
+    let rotation_matrix = rotate_align(vec3<f32>(0.0, 1.0, 0.0), vertex.i_normal.xyz);
+    position *= rotation_matrix;
 
     position += vertex.i_pos.xyz;
     
@@ -39,3 +43,18 @@ const identity_matrix: mat4x4<f32> = mat4x4<f32>(
     vec4<f32>(0.0, 0.0, 1.0, 0.0),
     vec4<f32>(0.0, 0.0, 0.0, 1.0)
 );
+
+fn rotate_align(v1: vec3<f32>, v2: vec3<f32>) -> mat3x3<f32> {
+    let axis = cross(v1, v2);
+
+    let cos_a = dot(v1, v2);
+    let k = 1.0 / (1.0 + cos_a);
+
+    let result = mat3x3f( 
+            (axis.x * axis.x * k) + cos_a, (axis.x * axis.y * k) + axis.z, (axis.x * axis.z * k) - axis.y,
+            (axis.y * axis.x * k) - axis.z, (axis.y * axis.y * k) + cos_a,  (axis.y * axis.z * k) + axis.x, 
+            (axis.z * axis.x * k) + axis.y, (axis.z * axis.y * k) - axis.x, (axis.z * axis.z * k) + cos_a 
+        );
+
+    return result;
+}
