@@ -1,4 +1,8 @@
-#import bevy_pbr::mesh_functions::{get_world_from_local, mesh_position_local_to_clip}
+#import bevy_pbr::{
+    mesh_functions::{get_world_from_local, mesh_position_local_to_clip},
+    utils::rand_f,
+}
+#import bevy_render::maths::PI_2
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -16,8 +20,14 @@ struct VertexOutput {
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     var position = vertex.position;
+
     let width = 0.05 * (1.0 - pow(vertex.uv.y, 2.0));
     position.x *= width;
+
+    var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
+    let facing_angle: f32 = rand_f(&state) * PI_2;
+    let facing = vec2<f32>(cos(facing_angle), sin(facing_angle));
+    position = rotate(position, facing);
 
     let rotation_matrix = rotate_align(vec3<f32>(0.0, 1.0, 0.0), vertex.i_normal.xyz);
     position = rotation_matrix * position;
@@ -57,4 +67,15 @@ fn rotate_align(v1: vec3<f32>, v2: vec3<f32>) -> mat3x3<f32> {
         );
 
     return result;
+}
+
+fn rotate(v: vec3<f32>, direction: vec2<f32>) -> vec3<f32> {
+    let angle = atan2(direction.y, direction.x);
+    let rotation_matrix = mat3x3<f32>(
+        cos(angle), 0.0, -sin(angle),
+        0.0, 1.0, 0.0,
+        sin(angle), 0.0, cos(angle)
+    );
+
+    return rotation_matrix * v;
 }

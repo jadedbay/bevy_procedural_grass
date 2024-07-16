@@ -93,7 +93,7 @@ impl SpecializedMeshPipeline for GrassRenderPipeline {
                 step_mode: VertexStepMode::Instance,
                 attributes: vec![
                     VertexAttribute {
-                        format: VertexFormat::Float32x4,
+                        format: VertexFormat::Float32x3,
                         offset: 0,
                         shader_location: 3,
                     },

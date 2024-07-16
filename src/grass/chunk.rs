@@ -47,7 +47,6 @@ pub(crate) fn create_chunks(
             },
         };
 
-        // TODO: allow meshes that dont have indices
         let indices = match mesh.indices() {
             Some(Indices::U32(indices)) => indices,
             _ => {
