@@ -9,7 +9,7 @@ struct GrassInstanceData {
 var<storage, read> positions: array<vec4<f32>>;
 @group(1) @binding(0)
 var<storage, read> indices: array<u32>;
-@group(2) @binding(0)
+@group(1) @binding(1)
 var<storage, read_write> output: array<GrassInstanceData>;
 
 @compute @workgroup_size(64)
@@ -23,7 +23,7 @@ fn main(
     let v2 = positions[indices[workgroup_id.x * 3 + 2]].xyz;
 
     let area = length(cross(v1 - v0, v2 - v0)) / 2.0;
-    let scaled_density = u32(ceil(25.0 * area));
+    let scaled_density = u32(ceil(0.5 * area));
     if (scaled_density < local_id.x) {
         return;
     }

@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::mesh::{SphereKind, VertexAttributeValues}};
+use bevy::{pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::mesh::{SphereKind, VertexAttributeValues}};
 use bevy_procedural_grass::{prelude::*, util::draw_chunks};
 use bevy_flycam::prelude::*;
 
@@ -10,7 +10,7 @@ fn main() {
             DefaultPlugins,
             PlayerPlugin,
             ProceduralGrassPlugin,
-
+            WireframePlugin,
         ))
         .add_systems(Startup, setup)
     // .add_systems(Update, draw_chunks)
@@ -21,7 +21,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(10., 10.).subdivisions(2).build();
+    let mut plane = Plane3d::default().mesh().size(10., 10.).subdivisions(0).build();
     // if let Some(positions) = plane.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
     //     if let VertexAttributeValues::Float32x3(positions) = positions {
     //         for position in positions.iter_mut() {
@@ -38,7 +38,8 @@ fn setup(
             mesh: meshes.add(plane),
             ..default()
         },
-       GrassGround, 
+       GrassGround,
+       Wireframe,
     )).id();
 
     commands.spawn(

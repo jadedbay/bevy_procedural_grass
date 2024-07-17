@@ -7,7 +7,8 @@ pub(super) type GrassChunks = HashMap<UVec3, GrassChunk>;
 #[derive(Debug, Clone)]
 pub struct GrassChunk {
     pub aabb: Aabb,
-    pub(crate) mesh_indices: Vec<u32>,
+    pub mesh_indices: Vec<u32>,
+    pub indices_index: Vec<u32>,
 }
 
 pub(crate) fn create_chunks(
@@ -33,6 +34,7 @@ pub(crate) fn create_chunks(
                         GrassChunk {
                             aabb,
                             mesh_indices: Vec::new(),
+                            indices_index: Vec::new(),
                         }
                     );
                 }
@@ -60,9 +62,18 @@ pub(crate) fn create_chunks(
             let v1 = Vec3::from(positions[triangle[1] as usize]);
             let v2 = Vec3::from(positions[triangle[2] as usize]);
 
-            for (_, chunk) in grass.chunks.iter_mut() {
+            let density = 0.5; // TODO
+            let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
+            let blade_count = (density * area).ceil() as u32;
+
+            for (i, (_, chunk)) in grass.chunks.iter_mut().enumerate() {
                 if triangle_intersects_aabb(v0, v1, v2, &chunk.aabb) {
                     chunk.mesh_indices.extend_from_slice(triangle);
+                    
+                    let dispatch_count = (blade_count as f32 / 8.0).ceil() as u32;
+                    for _ in 0..dispatch_count {
+                        chunk.indices_index.push(i as u32);
+                    }
                 }
             }
         }
