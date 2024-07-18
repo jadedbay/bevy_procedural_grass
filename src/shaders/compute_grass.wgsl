@@ -10,17 +10,19 @@ var<storage, read> positions: array<vec4<f32>>;
 @group(1) @binding(0)
 var<storage, read> indices: array<u32>;
 @group(1) @binding(1)
+var<storage, read> indices_index: array<u32>;
+@group(1) @binding(2)
 var<storage, read_write> output: array<GrassInstanceData>;
 
-@compute @workgroup_size(64)
+@compute @workgroup_size(8)
 fn main(
     @builtin(global_invocation_id) global_id: vec3<u32>, 
     @builtin(local_invocation_id) local_id: vec3<u32>, 
     @builtin(workgroup_id) workgroup_id: vec3<u32>
 ) {
-    let v0 = positions[indices[workgroup_id.x * 3]].xyz;
-    let v1 = positions[indices[workgroup_id.x * 3 + 1]].xyz;
-    let v2 = positions[indices[workgroup_id.x * 3 + 2]].xyz;
+    let v0 = positions[indices[indices_index[workgroup_id.x] * 3]].xyz;
+    let v1 = positions[indices[indices_index[workgroup_id.x] * 3 + 1]].xyz;
+    let v2 = positions[indices[indices_index[workgroup_id.x] * 3 + 2]].xyz;
 
     let area = length(cross(v1 - v0, v2 - v0)) / 2.0;
     let scaled_density = u32(ceil(0.5 * area));

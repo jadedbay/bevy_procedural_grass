@@ -13,7 +13,7 @@ fn main() {
             WireframePlugin,
         ))
         .add_systems(Startup, setup)
-    // .add_systems(Update, draw_chunks)
+        .add_systems(Update, draw_chunks)
         .run();
 }
 
@@ -21,7 +21,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(10., 10.).subdivisions(0).build();
+    let mut plane = Plane3d::default().mesh().size(10., 10.).subdivisions(1).build();
     // if let Some(positions) = plane.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
     //     if let VertexAttributeValues::Float32x3(positions) = positions {
     //         for position in positions.iter_mut() {
@@ -31,7 +31,7 @@ fn setup(
     //     }
     // }
 
-    let sphere = Sphere::new(5.0).mesh().kind(SphereKind::Ico { subdivisions: 2 }).build();
+    let sphere = Sphere::new(5.0).mesh().kind(SphereKind::Ico { subdivisions: 1 }).build();
 
     let ground = commands.spawn((
         PbrBundle {
@@ -47,7 +47,7 @@ fn setup(
             mesh: meshes.add(GrassMesh::mesh(7)),
             grass: Grass {
                 ground_entity: Some(ground),
-                chunk_size: 25.0,
+                chunk_size: 5.0,
                 ..default()
             },
             ..default()

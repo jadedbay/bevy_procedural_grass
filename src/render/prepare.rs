@@ -8,7 +8,7 @@ pub struct GrassChunkBufferBindGroup {
     pub output_buffer: Buffer,
     pub blade_count: usize, // change this later
 
-    pub triangle_count: usize,
+    pub workgroup_count: usize,
 }
 
 #[derive(Component)]
@@ -44,7 +44,7 @@ pub(crate) fn prepare_grass_bind_groups(
         let mut chunk_bind_groups = Vec::new();
 
         for (_, chunk) in grass.chunks.clone() {
-            let triangle_count = chunk.mesh_indices.len() / 3;
+            let workgroup_count = chunk.indices_index.len();
 
             let indices_buffer = render_device.create_buffer_with_data(
                 &BufferInitDescriptor {
@@ -54,10 +54,18 @@ pub(crate) fn prepare_grass_bind_groups(
                 }
             );
 
+            let indices_index_buffer = render_device.create_buffer_with_data(
+                &BufferInitDescriptor {
+                    label: Some("indices_index_buffer"),
+                    contents: bytemuck::cast_slice(chunk.indices_index.as_slice()),
+                    usage: BufferUsages::STORAGE,
+                }
+            );
+
             let output_buffer = render_device.create_buffer(
                 &BufferDescriptor {
                     label: Some("grass_data_buffer"),
-                    size: (std::mem::size_of::<GrassInstanceData>() * triangle_count * 64) as u64,
+                    size: (std::mem::size_of::<GrassInstanceData>() * workgroup_count * 8) as u64,
                     usage: BufferUsages::VERTEX | BufferUsages::STORAGE, 
                     mapped_at_creation: false,
                 }
@@ -73,6 +81,11 @@ pub(crate) fn prepare_grass_bind_groups(
                         size: None,
                     },
                     BufferBinding {
+                        buffer: &indices_index_buffer,
+                        offset: 0,
+                        size: None,
+                    },
+                    BufferBinding {
                         buffer: &output_buffer,
                         offset: 0,
                         size: None,
@@ -83,8 +96,8 @@ pub(crate) fn prepare_grass_bind_groups(
             chunk_bind_groups.push(GrassChunkBufferBindGroup {
                 chunk_bind_group,
                 output_buffer,
-                blade_count: triangle_count * 64,
-                triangle_count,
+                blade_count: workgroup_count * 8,
+                workgroup_count,
             });
         }
 

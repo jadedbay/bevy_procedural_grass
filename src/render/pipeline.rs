@@ -27,6 +27,7 @@ impl FromWorld for GrassComputePipeline {
                 ShaderStages::COMPUTE,
                 (
                     storage_buffer_read_only::<Vec<u32>>(false),
+                    storage_buffer_read_only::<Vec<u32>>(false),
                     storage_buffer::<Vec<GrassInstanceData>>(false)
                 )
             )
