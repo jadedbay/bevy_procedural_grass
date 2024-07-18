@@ -1,6 +1,6 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, BufferBinding, BufferDescriptor, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
+use bevy::{prelude::*, render::{primitives::Aabb, render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, BufferBinding, BufferDescriptor, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
-use crate::grass::Grass;
+use crate::grass::{chunk::GrassChunks, Grass};
 use super::{compute_mesh::GrassGroundMesh, instance::GrassInstanceData, pipeline::GrassComputePipeline};
 
 pub struct GrassChunkBufferBindGroup {
@@ -22,13 +22,13 @@ pub(crate) fn prepare_grass_bind_groups(
     grass_base_meshes: ResMut<RenderAssets<GrassGroundMesh>>,
     pipeline: Res<GrassComputePipeline>,
     ground_query: Query<&Handle<Mesh>>,
-    query: Query<(Entity, &Grass)>,
+    query: Query<(Entity, &Grass, &GrassChunks)>,
     render_device: Res<RenderDevice>
 ) {
     let mesh_layout = pipeline.mesh_layout.clone();
     let chunk_layout = pipeline.chunk_layout.clone();
 
-    for (entity, grass) in query.iter() {
+    for (entity, grass, chunks) in query.iter() {
         let mesh_positions_bind_group = render_device.create_bind_group(
             Some("mesh_position_bind_group"),
             &mesh_layout,
@@ -43,8 +43,16 @@ pub(crate) fn prepare_grass_bind_groups(
 
         let mut chunk_bind_groups = Vec::new();
 
-        for (_, chunk) in grass.chunks.clone() {
+        for (_, chunk) in chunks.0.clone() {
             let workgroup_count = chunk.indices_index.len();
+
+            let aabb_buffer = render_device.create_buffer_with_data(
+                &BufferInitDescriptor {
+                    label: Some("aabb_buffer"),
+                    contents: bytemuck::cast_slice(&[BoundingBox::from(chunk.aabb)]),
+                    usage: BufferUsages::UNIFORM,
+                }
+            );
 
             let indices_buffer = render_device.create_buffer_with_data(
                 &BufferInitDescriptor {
@@ -76,6 +84,11 @@ pub(crate) fn prepare_grass_bind_groups(
                 &chunk_layout,
                 &BindGroupEntries::sequential((
                     BufferBinding {
+                        buffer: &aabb_buffer,
+                        offset: 0,
+                        size: None,
+                    },
+                    BufferBinding {
                         buffer: &indices_buffer,
                         offset: 0,
                         size: None,
@@ -106,5 +119,25 @@ pub(crate) fn prepare_grass_bind_groups(
             mesh_positions_bind_group,
             chunks: chunk_bind_groups,
         });
+    }
+}
+
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+#[repr(C)]
+pub(crate) struct BoundingBox {
+    min: Vec3,
+    _padding: f32,
+    max: Vec3,
+    _padding2: f32,
+}
+
+impl From<Aabb> for BoundingBox {
+    fn from(aabb: Aabb) -> Self {
+        Self {
+            min: aabb.min().into(),
+            _padding: 0.0,
+            max: aabb.max().into(),
+            _padding2: 0.0,
+        }
     }
 }

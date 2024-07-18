@@ -5,13 +5,22 @@ struct GrassInstanceData {
     normal: vec4<f32>,
 }
 
+struct Aabb {
+    min: vec3<f32>,
+    _padding: f32,
+    max: vec3<f32>,
+    _padding2: f32,
+}
+
 @group(0) @binding(0)
 var<storage, read> positions: array<vec4<f32>>;
 @group(1) @binding(0)
-var<storage, read> indices: array<u32>;
+var<uniform> aabb: Aabb;
 @group(1) @binding(1)
-var<storage, read> indices_index: array<u32>;
+var<storage, read> indices: array<u32>;
 @group(1) @binding(2)
+var<storage, read> indices_index: array<u32>;
+@group(1) @binding(3)
 var<storage, read_write> output: array<GrassInstanceData>;
 
 @compute @workgroup_size(8)
@@ -25,7 +34,7 @@ fn main(
     let v2 = positions[indices[indices_index[workgroup_id.x] * 3 + 2]].xyz;
 
     let area = length(cross(v1 - v0, v2 - v0)) / 2.0;
-    let scaled_density = u32(ceil(0.5 * area));
+    let scaled_density = u32(ceil(4.0 * area));
     if (scaled_density < local_id.x) {
         return;
     }
@@ -39,7 +48,15 @@ fn main(
 
     let position = (v0 * r.x + v1 * r.y + v2 * r.z);
 
+    if (!point_in_aabb(position, aabb)) {
+        return;
+    }
+
     output[global_id.x] = GrassInstanceData(vec4<f32>(position, 0.0), vec4<f32>(normal, 0.0)); 
 
     return;
+}
+
+fn point_in_aabb(point: vec3<f32>, aabb: Aabb) -> bool {
+    return all(point >= aabb.min && point <= aabb.max);
 }

@@ -1,8 +1,9 @@
-use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::Aabb}, utils::HashMap};
+use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::Aabb, render_resource::ShaderType}, utils::HashMap};
 use super::{Grass, GrassGround};
 use crate::util::aabb::triangle_intersects_aabb;
 
-pub(super) type GrassChunks = HashMap<UVec3, GrassChunk>;
+#[derive(Component, Clone)]
+pub struct GrassChunks(pub HashMap<UVec3, GrassChunk>);
 
 #[derive(Debug, Clone)]
 pub struct GrassChunk {
@@ -12,11 +13,14 @@ pub struct GrassChunk {
 }
 
 pub(crate) fn create_chunks(
+    mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    mut grass_query: Query<&mut Grass>,
+    grass_query: Query<(Entity, &Grass)>,
     ground_query: Query<&Handle<Mesh>, With<GrassGround>>,
 ) {
-    for mut grass in grass_query.iter_mut() {
+    for (entity, grass) in grass_query.iter() {
+        let mut grass_chunks = GrassChunks(HashMap::new());
+
         let mesh = meshes.get(ground_query.get(grass.ground_entity.unwrap()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
         let mesh_size = mesh_aabb.max() - mesh_aabb.min();
@@ -29,7 +33,7 @@ pub(crate) fn create_chunks(
                     let max = min + Vec3::splat(grass.chunk_size);
                     let aabb = Aabb::from_min_max(min, max);
 
-                    grass.chunks.insert(
+                    grass_chunks.0.insert(
                         UVec3::new(x as u32, y as u32, z as u32), 
                         GrassChunk {
                             aabb,
@@ -66,7 +70,7 @@ pub(crate) fn create_chunks(
             let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
             let blade_count = (density * area).ceil() as u32;
 
-            for (_, chunk) in grass.chunks.iter_mut() {
+            for (_, chunk) in grass_chunks.0.iter_mut() {
                 if triangle_intersects_aabb(v0, v1, v2, &chunk.aabb) {
                     let index = chunk.mesh_indices.len() / 3;
 
@@ -80,9 +84,10 @@ pub(crate) fn create_chunks(
             }
         }
 
-        for (_, chunk) in &grass.chunks {
-            dbg!(&chunk.indices_index);
-        }
+        commands.entity(entity).insert(grass_chunks);
+
+        // for (_, chunk) in &grass.chunks {
+        //     dbg!(&chunk.indices_index);
+        // }
     }
 }
-

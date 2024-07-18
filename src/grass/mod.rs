@@ -19,7 +19,6 @@ pub struct GrassBundle {
 pub struct Grass {
     pub ground_entity: Option<Entity>, 
     pub chunk_size: f32,
-    pub chunks: GrassChunks,
 }
 
 impl Default for Grass {
@@ -27,18 +26,17 @@ impl Default for Grass {
         Self {
             ground_entity: None,
             chunk_size: 30.0,
-            chunks: GrassChunks::new(), 
         }
     }
 }
 
 impl ExtractComponent for Grass {
-    type QueryData = &'static Grass;
+    type QueryData = (&'static Grass, &'static GrassChunks);
     type QueryFilter = ();
-    type Out = Grass;
+    type Out = (Grass, GrassChunks);
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
-        Some(item.clone())
+        Some((item.0.clone(), item.1.clone()))
     }
 }
 

@@ -31,11 +31,11 @@ fn setup(
     //     }
     // }
 
-    let sphere = Sphere::new(5.0).mesh().kind(SphereKind::Ico { subdivisions: 1 }).build();
+    let sphere = Sphere::new(5.0).mesh().kind(SphereKind::Ico { subdivisions: 2 }).build();
 
     let ground = commands.spawn((
         PbrBundle {
-            mesh: meshes.add(plane),
+            mesh: meshes.add(sphere),
             ..default()
         },
        GrassGround,
