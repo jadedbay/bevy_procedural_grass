@@ -1,8 +1,9 @@
-use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, view::NoFrustumCulling}};
+use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, mesh::{Indices, VertexAttributeValues}, render_resource::{BufferInitDescriptor, BufferUsages}, renderer::RenderDevice, view::NoFrustumCulling}};
 
 pub mod chunk;
 pub mod mesh;
 pub mod clump;
+pub mod ground_mesh;
 
 use chunk::GrassChunks;
 
@@ -42,13 +43,3 @@ impl ExtractComponent for Grass {
 
 #[derive(Component, Clone)]
 pub struct GrassGround;
-
-impl ExtractComponent for GrassGround {
-    type QueryData = &'static Handle<Mesh>;
-    type QueryFilter = With<GrassGround>;
-    type Out = Handle<Mesh>;
-
-    fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
-       Some(item.clone()) 
-    }
-}

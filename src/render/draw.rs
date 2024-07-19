@@ -1,4 +1,4 @@
-use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}}};
+use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}, render_resource::{Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Maintain, MapMode}, renderer::{RenderDevice, RenderQueue}}};
 
 use super::prepare::GrassBufferBindGroup;
 
@@ -39,7 +39,9 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
             
             for chunk in &grass_bind_groups.chunks {
-                pass.set_vertex_buffer(1, chunk.output_buffer.slice(..));
+                
+
+                pass.set_vertex_buffer(1, chunk.instance_buffer.slice(..));
 
                 match &gpu_mesh.buffer_info {
                     GpuBufferInfo::Indexed {

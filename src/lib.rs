@@ -1,9 +1,9 @@
 use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_asset::RenderAssetPlugin, render_graph::RenderGraph, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::create_chunks, Grass, GrassGround};
-use render::{compute_mesh::GrassGroundMesh, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::prepare_grass_bind_groups};
+use grass::{chunk::create_chunks, Grass};
+use render::{node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::{GrassComputePipeline, GrassComputeSPSPipelines}, prepare::prepare_grass_bind_groups};
 
-use crate::render::{draw::DrawGrass, pipeline::GrassRenderPipeline, queue::queue_grass};
+use crate::{grass::ground_mesh::{prepare_ground_mesh, GroundMesh}, render::{draw::DrawGrass, pipeline::GrassRenderPipeline, queue::queue_grass}};
 
 mod render;
 pub mod grass;
@@ -19,15 +19,15 @@ pub struct ProceduralGrassPlugin;
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "shaders/compute_grass.wgsl");
+        embedded_asset!(app, "shaders/compute_sps_grass.wgsl");
         embedded_asset!(app, "shaders/grass.wgsl");
 
         app
             .add_plugins((
-                RenderAssetPlugin::<GrassGroundMesh>::default(),
                 ExtractComponentPlugin::<Grass>::default(),
-                ExtractComponentPlugin::<GrassGround>::default(),
+                ExtractComponentPlugin::<GroundMesh>::default(),
             ))
-            .add_systems(PostStartup, create_chunks);
+            .add_systems(PostStartup, (create_chunks, prepare_ground_mesh));
 
         let render_app = app.sub_app_mut(RenderApp);
         let compute_node = ComputeGrassNode::from_world(render_app.world_mut());
@@ -51,6 +51,7 @@ impl Plugin for ProceduralGrassPlugin {
     fn finish(&self, app: &mut App) {
         app.sub_app_mut(RenderApp)
             .init_resource::<GrassComputePipeline>()
+            .init_resource::<GrassComputeSPSPipelines>()
             .init_resource::<GrassRenderPipeline>();
     }
 }

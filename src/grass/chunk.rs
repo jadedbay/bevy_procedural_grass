@@ -8,7 +8,6 @@ pub struct GrassChunks(pub HashMap<UVec3, GrassChunk>);
 #[derive(Debug, Clone)]
 pub struct GrassChunk {
     pub aabb: Aabb,
-    pub mesh_indices: Vec<u32>,
     pub indices_index: Vec<u32>,
 }
 
@@ -37,7 +36,6 @@ pub(crate) fn create_chunks(
                         UVec3::new(x as u32, y as u32, z as u32), 
                         GrassChunk {
                             aabb,
-                            mesh_indices: Vec::new(),
                             indices_index: Vec::new(),
                         }
                     );
@@ -48,7 +46,7 @@ pub(crate) fn create_chunks(
         let positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
             Some(VertexAttributeValues::Float32x3(positions)) => positions,
             _ => {
-                warn!("Mesh does not contain positions, not generating grass.");
+                warn!("Mesh does not contain positions");
                 return;
             },
         };
@@ -56,38 +54,50 @@ pub(crate) fn create_chunks(
         let indices = match mesh.indices() {
             Some(Indices::U32(indices)) => indices,
             _ => {
-                warn!("Mesh does not contain indices, not generating grass.");
+                warn!("Mesh does not contain indices");
                 return;
             }, 
         };
 
-        for triangle in indices.chunks(3) {
+        for (i, triangle) in indices.chunks(3).enumerate() {
             let v0 = Vec3::from(positions[triangle[0] as usize]);
             let v1 = Vec3::from(positions[triangle[1] as usize]);
             let v2 = Vec3::from(positions[triangle[2] as usize]);
 
-            let density = 4.0; // TODO
+            let density = 12.0; // TODO
             let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
             let blade_count = (density * area).ceil() as u32;
+            let dispatch_count = (blade_count as f32 / 8.0).ceil() as u32;
 
             for (_, chunk) in grass_chunks.0.iter_mut() {
                 if triangle_intersects_aabb(v0, v1, v2, &chunk.aabb) {
-                    let index = chunk.mesh_indices.len() / 3;
-
-                    chunk.mesh_indices.extend_from_slice(triangle);
-                    
-                    let dispatch_count = (blade_count as f32 / 8.0).ceil() as u32;
                     for _ in 0..dispatch_count {
-                        chunk.indices_index.push(index as u32);
+                        chunk.indices_index.push(i as u32);
                     }
                 }
             }
         }
 
         commands.entity(entity).insert(grass_chunks);
+    }
+}
 
-        // for (_, chunk) in &grass.chunks {
-        //     dbg!(&chunk.indices_index);
-        // }
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, ShaderType)]
+#[repr(C)]
+pub(crate) struct BoundingBox {
+    min: Vec3,
+    _padding: f32,
+    max: Vec3,
+    _padding2: f32,
+}
+
+impl From<Aabb> for BoundingBox {
+    fn from(aabb: Aabb) -> Self {
+        Self {
+            min: aabb.min().into(),
+            _padding: 0.0,
+            max: aabb.max().into(),
+            _padding2: 0.0,
+        }
     }
 }

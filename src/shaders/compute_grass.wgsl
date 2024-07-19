@@ -12,16 +12,13 @@ struct Aabb {
     _padding2: f32,
 }
 
-@group(0) @binding(0)
-var<storage, read> positions: array<vec4<f32>>;
-@group(1) @binding(0)
-var<uniform> aabb: Aabb;
-@group(1) @binding(1)
-var<storage, read> indices: array<u32>;
-@group(1) @binding(2)
-var<storage, read> indices_index: array<u32>;
-@group(1) @binding(3)
-var<storage, read_write> output: array<GrassInstanceData>;
+@group(0) @binding(0) var<storage, read> positions: array<vec3<f32>>;
+@group(0) @binding(1) var<storage, read> indices: array<u32>;
+
+@group(1) @binding(0) var<uniform> aabb: Aabb;
+@group(1) @binding(1) var<storage, read> indices_index: array<u32>;
+@group(1) @binding(2) var<storage, read_write> vote: array<u32>;
+@group(1) @binding(3) var<storage, read_write> output: array<GrassInstanceData>;
 
 @compute @workgroup_size(8)
 fn main(
@@ -34,7 +31,7 @@ fn main(
     let v2 = positions[indices[indices_index[workgroup_id.x] * 3 + 2]].xyz;
 
     let area = length(cross(v1 - v0, v2 - v0)) / 2.0;
-    let scaled_density = u32(ceil(4.0 * area));
+    let scaled_density = u32(ceil(12.0 * area));
     if (scaled_density < local_id.x) {
         return;
     }
@@ -53,6 +50,7 @@ fn main(
     }
 
     output[global_id.x] = GrassInstanceData(vec4<f32>(position, 0.0), vec4<f32>(normal, 0.0)); 
+    vote[global_id.x] = 1u;
 
     return;
 }
