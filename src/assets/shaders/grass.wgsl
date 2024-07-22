@@ -270,13 +270,6 @@ fn sample_wind_map(uv: vec2<f32>, speed: f32) -> vec4<f32> {
     return textureLoad(t_wind_map, pixel_coords, 0);
 }
 
-fn sample_displacement_image(uv: vec2<f32>) -> vec4<f32> {
-    let texture_size = textureDimensions(t_displacement_image);
-
-    let pixel_coords = vec2<i32>(uv * vec2<f32>(texture_size));
-    return textureLoad(t_displacement_image, pixel_coords, 0);
-}
-
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(
     vec4<f32>(1.0, 0.0, 0.0, 0.0),
     vec4<f32>(0.0, 1.0, 0.0, 0.0),
