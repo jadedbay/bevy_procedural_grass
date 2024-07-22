@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderLabel, SlotInfo, SlotType}, render_resource::{Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor, Maintain, MapMode, PipelineCache}, renderer::{RenderContext, RenderDevice, RenderQueue}}};
 
-use super::{pipeline::{GrassComputePipeline, GrassComputeSPSPipelines}, prepare::GrassBufferBindGroup};
+use super::{pipeline::{GrassComputePipeline, GrassComputePPSPipelines}, prepare::GrassBufferBindGroup};
 
 #[derive(RenderLabel, Hash, Debug, Eq, PartialEq, Clone, Copy)]
 pub(crate) struct ComputeGrassNodeLabel;
@@ -29,7 +29,7 @@ impl render_graph::Node for ComputeGrassNode {
         world: &'w World,
     ) -> Result<(), render_graph::NodeRunError> {
         let pipeline_id = world.resource::<GrassComputePipeline>();
-        let sps_pipeline = world.resource::<GrassComputeSPSPipelines>();
+        let sps_pipeline = world.resource::<GrassComputePPSPipelines>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
         for grass_bind_groups in self.query.iter_manual(world) {
@@ -48,7 +48,24 @@ impl render_graph::Node for ComputeGrassNode {
                     }
                 }
             }
+
+            
+            
             if let Some(pipeline) = pipeline_cache.get_compute_pipeline(sps_pipeline.scan_pipeline) {
+                {
+                    let mut pass = render_context
+                    .command_encoder()
+                    .begin_compute_pass(&ComputePassDescriptor::default());
+                
+                pass.set_pipeline(pipeline);
+                
+                    for chunk in &grass_bind_groups.chunks {
+                        pass.set_bind_group(0, &chunk.scan_bind_group, &[]);
+                        pass.dispatch_workgroups(chunk.scan_workgroup_count as u32, 1, 1)
+                    }
+                }
+            }
+            if let Some(pipeline) = pipeline_cache.get_compute_pipeline(sps_pipeline.scan_blocks_pipeline) {
                 {
                     let mut pass = render_context
                         .command_encoder()
@@ -57,8 +74,9 @@ impl render_graph::Node for ComputeGrassNode {
                     pass.set_pipeline(pipeline);
 
                     for chunk in &grass_bind_groups.chunks {
-                        pass.set_bind_group(0, &chunk.sps_bind_group, &[]);
-                        pass.dispatch_workgroups((chunk.workgroup_count / 8) as u32, 1, 1)
+                        pass.set_push_constants(0, &(chunk.scan_workgroup_count as u32).to_le_bytes());
+                        pass.set_bind_group(0, &chunk.scan_blocks_bind_group, &[]);
+                        pass.dispatch_workgroups(chunk.scan_blocks_workgroup_count as u32, 1, 1)
                     }
                 }
             }
@@ -71,8 +89,8 @@ impl render_graph::Node for ComputeGrassNode {
                     pass.set_pipeline(pipeline);
 
                     for chunk in &grass_bind_groups.chunks {
-                        pass.set_bind_group(0, &chunk.sps_bind_group, &[]);
-                        pass.dispatch_workgroups((chunk.workgroup_count / 8) as u32, 1, 1)
+                        pass.set_bind_group(0, &chunk.compact_bind_group, &[]);
+                        pass.dispatch_workgroups(chunk.scan_workgroup_count as u32, 1, 1)
                     }
                 }
             }

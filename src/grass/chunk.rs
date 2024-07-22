@@ -5,10 +5,15 @@ use crate::util::aabb::triangle_intersects_aabb;
 #[derive(Component, Clone)]
 pub struct GrassChunks(pub HashMap<UVec3, GrassChunk>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GrassChunk {
     pub aabb: Aabb,
     pub indices_index: Vec<u32>,
+
+    pub instance_count: usize,
+    pub workgroup_count: usize,
+    pub scan_workgroup_count: usize,
+    pub scan_groups_workgroup_count: usize,
 }
 
 pub(crate) fn create_chunks(
@@ -36,7 +41,7 @@ pub(crate) fn create_chunks(
                         UVec3::new(x as u32, y as u32, z as u32), 
                         GrassChunk {
                             aabb,
-                            indices_index: Vec::new(),
+                            ..default()
                         }
                     );
                 }
@@ -59,23 +64,52 @@ pub(crate) fn create_chunks(
             }, 
         };
 
+        // Add indices to chunk
         for (i, triangle) in indices.chunks(3).enumerate() {
             let v0 = Vec3::from(positions[triangle[0] as usize]);
             let v1 = Vec3::from(positions[triangle[1] as usize]);
             let v2 = Vec3::from(positions[triangle[2] as usize]);
 
-            let density = 12.0; // TODO
+            let density = 6.0; // TODO
             let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
             let blade_count = (density * area).ceil() as u32;
-            let dispatch_count = (blade_count as f32 / 8.0).ceil() as u32;
 
             for (_, chunk) in grass_chunks.0.iter_mut() {
                 if triangle_intersects_aabb(v0, v1, v2, &chunk.aabb) {
-                    for _ in 0..dispatch_count {
+                    for _ in 0..(blade_count as f32 / 8.0).ceil() as u32 {
                         chunk.indices_index.push(i as u32);
                     }
                 }
             }
+        }
+
+        // Calculate workgroup counts
+        for (_, chunk) in grass_chunks.0.iter_mut() {
+            let workgroup_count = chunk.indices_index.len();
+            let instance_count = workgroup_count * 8;
+
+            dbg!(instance_count);
+
+            let mut scan_workgroup_count = (instance_count as f32 / 128.).ceil() as u32;
+            if scan_workgroup_count > 128 {
+                let mut p2 = 128;
+                while p2 < scan_workgroup_count {
+                    p2 *= 2;
+                }
+
+                scan_workgroup_count = p2;
+            } else {
+                while 128 % scan_workgroup_count != 0 {
+                    scan_workgroup_count += 1;
+                }
+            }
+
+            let scan_groups_workgroup_count = (instance_count as f32 / 1024.).ceil() as u32;
+
+            chunk.instance_count = instance_count;
+            chunk.workgroup_count = workgroup_count;
+            chunk.scan_workgroup_count = scan_workgroup_count as usize;
+            chunk.scan_groups_workgroup_count = scan_groups_workgroup_count as usize;
         }
 
         commands.entity(entity).insert(grass_chunks);

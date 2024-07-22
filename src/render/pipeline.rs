@@ -1,6 +1,6 @@
 use std::num::NonZeroU64;
 
-use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, uniform_buffer, uniform_buffer_sized}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
+use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_sized, uniform_buffer, uniform_buffer_sized}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, DrawIndexedIndirectArgs, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
 
 use crate::grass::chunk::BoundingBox;
 
@@ -34,7 +34,6 @@ impl FromWorld for GrassComputePipeline {
                 ShaderStages::COMPUTE,
                 (
                     uniform_buffer::<BoundingBox>(false),
-                   // storage_buffer_read_only::<Vec<u32>>(false),
                     storage_buffer_read_only::<Vec<u32>>(false),
                     storage_buffer::<Vec<u32>>(false),
                     storage_buffer::<Vec<GrassInstanceData>>(false)
@@ -64,57 +63,109 @@ impl FromWorld for GrassComputePipeline {
 }
 
 #[derive(Resource)]
-pub(crate) struct GrassComputeSPSPipelines {
-    pub sps_layout: BindGroupLayout,
+pub(crate) struct GrassComputePPSPipelines {
+    pub scan_layout: BindGroupLayout,
+    pub scan_blocks_layout: BindGroupLayout,
+    pub compact_layout: BindGroupLayout,
     pub scan_pipeline: CachedComputePipelineId,
+    pub scan_blocks_pipeline: CachedComputePipelineId,
     pub compact_pipeline: CachedComputePipelineId,
+
+    _grass_types_shader: Handle<Shader>,
 }
 
-impl FromWorld for GrassComputeSPSPipelines {
+impl FromWorld for GrassComputePPSPipelines {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        let sps_layout = render_device.create_bind_group_layout(
+        let scan_layout = render_device.create_bind_group_layout(
+            "scan_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    storage_buffer_read_only::<Vec<u32>>(false),
+                    storage_buffer::<Vec<u32>>(false),
+                    storage_buffer::<Vec<u32>>(false),
+                )
+            )
+        );
+
+        let scan_blocks_layout = render_device.create_bind_group_layout(
+            "scan_blocks_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    storage_buffer_read_only::<Vec<u32>>(false),
+                    storage_buffer::<Vec<u32>>(false),
+                )
+            )
+        );
+
+        let compact_layout = render_device.create_bind_group_layout(
             "compact_layout",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::COMPUTE,
                 (
                     storage_buffer_read_only::<Vec<GrassInstanceData>>(false),
                     storage_buffer_read_only::<Vec<u32>>(false),
-                    storage_buffer::<Vec<u32>>(false),
+                    storage_buffer_read_only::<Vec<u32>>(false),
+                    storage_buffer_read_only::<Vec<u32>>(false),
                     storage_buffer::<Vec<GrassInstanceData>>(false),
+                    storage_buffer_sized(false, None),
                 )
             )
         );
 
-        let sps_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_sps_grass.wgsl");
+        let scan_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/scan.wgsl");
+        let scan_blocks_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/scan_blocks.wgsl");
+        let compact_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compact.wgsl");
+
+        let _grass_types_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_types.wgsl");
         
-        let scan_pipeline = world
-            .resource_mut::<PipelineCache>()
-            .queue_compute_pipeline(ComputePipelineDescriptor {
+        let pipeline_cache = world.resource_mut::<PipelineCache>();
+
+        let scan_pipeline = pipeline_cache.queue_compute_pipeline(
+            ComputePipelineDescriptor {
                 label: Some("compute_scan_grass_pipeline".into()),
-                layout: vec![sps_layout.clone()],
+                layout: vec![scan_layout.clone()],
                 push_constant_ranges: Vec::new(),
-                shader: sps_shader.clone(),
+                shader: scan_shader.clone(),
                 shader_defs: vec![],
                 entry_point: "scan".into(),
         });
+
+        let scan_blocks_pipeline = pipeline_cache.queue_compute_pipeline(
+            ComputePipelineDescriptor {
+                label: Some("compute_scan_blocks_pipeline".into()),
+                layout: vec![scan_blocks_layout.clone()],
+                push_constant_ranges: vec![PushConstantRange {
+                    stages: ShaderStages::COMPUTE,
+                    range: 0..4,
+                }],
+                shader: scan_blocks_shader.clone(),
+                shader_defs: vec![],
+                entry_point: "scan_blocks".into(),
+            });
         
-        let compact_pipeline = world
-            .resource_mut::<PipelineCache>()
-            .queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("compute_scan_grass_pipeline".into()),
-                layout: vec![sps_layout.clone()],
+        let compact_pipeline = pipeline_cache.queue_compute_pipeline(
+            ComputePipelineDescriptor {
+                label: Some("compute_compact_grass_pipeline".into()),
+                layout: vec![compact_layout.clone()],
                 push_constant_ranges: Vec::new(),
-                shader: sps_shader,
+                shader: compact_shader.clone(),
                 shader_defs: vec![],
                 entry_point: "compact".into(),
         });
         
         Self {
-            sps_layout,
+            scan_layout,
+            scan_blocks_layout,
+            compact_layout,
             scan_pipeline,
+            scan_blocks_pipeline,
             compact_pipeline,
+
+            _grass_types_shader,
         }
     }
 }

@@ -38,26 +38,21 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
 
             pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
             
-            for chunk in &grass_bind_groups.chunks {
-                
-
-                pass.set_vertex_buffer(1, chunk.instance_buffer.slice(..));
-
-                match &gpu_mesh.buffer_info {
-                    GpuBufferInfo::Indexed {
-                        buffer,
-                        index_format,
-                        count,
-                    } => {
-                        pass.set_index_buffer(buffer.slice(..), 0, *index_format);
-                        pass.draw_indexed(0..*count, 0, 0..chunk.blade_count as u32);
-                    }
-                    GpuBufferInfo::NonIndexed => {
-                        pass.draw(0..gpu_mesh.vertex_count, 0..chunk.blade_count as u32);
+            match &gpu_mesh.buffer_info {
+                GpuBufferInfo::Indexed {
+                    buffer,
+                    index_format,
+                    count: _,
+                } => {
+                    pass.set_index_buffer(buffer.slice(..), 0, *index_format);
+                    for chunk in &grass_bind_groups.chunks {
+                        pass.set_vertex_buffer(1, chunk.compact_buffer.slice(..));
+                        pass.draw_indexed_indirect(&chunk.indirect_buffer, 0);
                     }
                 }
+                GpuBufferInfo::NonIndexed => {} // will always be indexed
             }
-
+            
             RenderCommandResult::Success
     }
 }

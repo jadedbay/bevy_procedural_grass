@@ -1,7 +1,7 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_asset::RenderAssetPlugin, render_graph::RenderGraph, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
+use bevy::{asset::{embedded_asset, load_internal_asset}, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_asset::RenderAssetPlugin, render_graph::RenderGraph, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::create_chunks, Grass};
-use render::{node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::{GrassComputePipeline, GrassComputeSPSPipelines}, prepare::prepare_grass_bind_groups};
+use render::{node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::{GrassComputePipeline, GrassComputePPSPipelines}, prepare::prepare_grass_bind_groups};
 
 use crate::{grass::ground_mesh::{prepare_ground_mesh, GroundMesh}, render::{draw::DrawGrass, pipeline::GrassRenderPipeline, queue::queue_grass}};
 
@@ -18,8 +18,11 @@ pub struct ProceduralGrassPlugin;
 
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
+        embedded_asset!(app, "shaders/grass_types.wgsl");
         embedded_asset!(app, "shaders/compute_grass.wgsl");
-        embedded_asset!(app, "shaders/compute_sps_grass.wgsl");
+        embedded_asset!(app, "shaders/scan.wgsl");
+        embedded_asset!(app, "shaders/scan_blocks.wgsl");
+        embedded_asset!(app, "shaders/compact.wgsl");
         embedded_asset!(app, "shaders/grass.wgsl");
 
         app
@@ -51,7 +54,7 @@ impl Plugin for ProceduralGrassPlugin {
     fn finish(&self, app: &mut App) {
         app.sub_app_mut(RenderApp)
             .init_resource::<GrassComputePipeline>()
-            .init_resource::<GrassComputeSPSPipelines>()
+            .init_resource::<GrassComputePPSPipelines>()
             .init_resource::<GrassRenderPipeline>();
     }
 }

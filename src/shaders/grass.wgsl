@@ -21,6 +21,15 @@ struct VertexOutput {
 fn vertex(vertex: Vertex) -> VertexOutput {
     var position = vertex.position;
 
+    var out: VertexOutput;
+    var ipos = vertex.i_pos.xyz;
+    out.color = vec4<f32>(0.0, 1.0, 0.0, 1.0);
+
+    // if (all(vertex.i_normal.xyz == vec3<f32>(1.0))) {
+    //     out.color = vec4<f32>(1.0, 1.0, 0.5, 1.0);
+    //     ipos = vec3<f32>(0.0, 0.0, 0.0);
+    // }
+
     let width = 0.05 * (1.0 - pow(vertex.uv.y, 2.0));
     position.x *= width;
 
@@ -32,14 +41,15 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let rotation_matrix = rotate_align(vec3<f32>(0.0, 1.0, 0.0), vertex.i_normal.xyz);
     position = rotation_matrix * position;
 
-    position += vertex.i_pos.xyz;
+    // position += vertex.i_pos.xyz;
+    position += ipos;
     
-    var out: VertexOutput;
+    // var out: VertexOutput;
     out.clip_position = mesh_position_local_to_clip(
         identity_matrix,
         vec4<f32>(position, 1.0)
     );
-    out.color = vec4<f32>(1.0, 1.0, 0.5, 1.0);
+    
     return out;
 }
 

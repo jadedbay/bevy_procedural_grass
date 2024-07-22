@@ -39,6 +39,7 @@ impl GrassMesh {
         grass_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
         grass_mesh.insert_indices(Indices::U32(indices));
 
+
         grass_mesh
     }
 }
