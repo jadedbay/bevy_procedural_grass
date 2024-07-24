@@ -1,6 +1,4 @@
-use std::num::NonZeroU64;
-
-use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_sized, uniform_buffer, uniform_buffer_sized}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, DrawIndexedIndirectArgs, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
+use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_sized, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
 
 use crate::grass::chunk::BoundingBox;
 
@@ -173,7 +171,7 @@ impl FromWorld for GrassComputePPSPipelines {
 #[derive(Resource)]
 pub(crate) struct GrassRenderPipeline {
     shader: Handle<Shader>,
-    mesh_pipeline: MeshPipeline,
+    pub mesh_pipeline: MeshPipeline,
 }
 
 impl FromWorld for GrassRenderPipeline {

@@ -1,6 +1,6 @@
-use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}, render_resource::{Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Maintain, MapMode}, renderer::{RenderDevice, RenderQueue}}};
+use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}}};
 
-use super::prepare::GrassBufferBindGroup;
+use super::{gpu_scene::GrassGpuScene, prepare::GrassBufferBindGroup};
 
 pub(crate) type DrawGrass = (
     SetItemPipeline,
@@ -12,7 +12,7 @@ pub(crate) type DrawGrass = (
 pub(crate) struct DrawGrassInstanced;
 
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
-    type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
+    type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>, SRes<GrassGpuScene>);
     type ViewQuery = ();
     type ItemQuery = Read<GrassBufferBindGroup>;
 
@@ -21,7 +21,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             item: &P,
             _view: ROQueryItem<'w, Self::ViewQuery>,
             grass_bind_groups: Option<ROQueryItem<'w, Self::ItemQuery>>,
-            (meshes, render_mesh_instances): SystemParamItem<'w, '_, Self::Param>,
+            (meshes, render_mesh_instances, _grass_gpu_scene): SystemParamItem<'w, '_, Self::Param>,
             pass: &mut TrackedRenderPass<'w>,
         ) -> RenderCommandResult {
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(item.entity()) else { 
@@ -53,6 +53,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                 GpuBufferInfo::NonIndexed => {} // will always be indexed
             }
             
+            dbg!("draw");
             RenderCommandResult::Success
     }
 }

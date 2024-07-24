@@ -70,13 +70,13 @@ pub(crate) fn create_chunks(
             let v1 = Vec3::from(positions[triangle[1] as usize]);
             let v2 = Vec3::from(positions[triangle[2] as usize]);
 
-            let density = 6.0; // TODO
+            let density = 48.0; // TODO
             let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
             let blade_count = (density * area).ceil() as u32;
 
             for (_, chunk) in grass_chunks.0.iter_mut() {
                 if triangle_intersects_aabb(v0, v1, v2, &chunk.aabb) {
-                    for _ in 0..(blade_count as f32 / 8.0).ceil() as u32 {
+                    for _ in 0..(blade_count as f32 / 16.0).ceil() as u32 {
                         chunk.indices_index.push(i as u32);
                     }
                 }
@@ -86,7 +86,7 @@ pub(crate) fn create_chunks(
         // Calculate workgroup counts
         for (_, chunk) in grass_chunks.0.iter_mut() {
             let workgroup_count = chunk.indices_index.len();
-            let instance_count = workgroup_count * 8;
+            let instance_count = workgroup_count * 16;
 
             dbg!(instance_count);
 

@@ -1,4 +1,4 @@
-use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, mesh::{Indices, VertexAttributeValues}, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}, utils::HashMap};
+use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, mesh::{Indices, VertexAttributeValues}, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
 
 use super::{Grass, GrassGround};
 

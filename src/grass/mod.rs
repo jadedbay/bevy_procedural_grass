@@ -1,4 +1,4 @@
-use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, mesh::{Indices, VertexAttributeValues}, render_resource::{BufferInitDescriptor, BufferUsages}, renderer::RenderDevice, view::NoFrustumCulling}};
+use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, view::NoFrustumCulling}};
 
 pub mod chunk;
 pub mod mesh;
