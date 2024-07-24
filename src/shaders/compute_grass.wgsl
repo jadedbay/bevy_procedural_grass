@@ -27,7 +27,7 @@ fn main(
     let v2 = positions[indices[indices_index[workgroup_id.x] * 3 + 2]].xyz;
 
     let area = length(cross(v1 - v0, v2 - v0)) / 2.0;
-    let scaled_density = u32(ceil(48.0 * area));
+    let scaled_density = u32(ceil(12.0 * area));
     if (scaled_density < local_id.x) { return; }
 
     let normal = normalize(cross(v1 - v0, v2 - v0));

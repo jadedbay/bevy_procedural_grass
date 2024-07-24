@@ -1,9 +1,9 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::Core3d, Opaque3d}, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp, ViewNode, ViewNodeRunner}, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp, ViewNode, ViewNodeRunner}, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::create_chunks, Grass};
-use render::{gpu_scene::GrassGpuScene, node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::{GrassComputePPSPipelines, GrassComputePipeline}, prepare::prepare_grass_bind_groups};
+use render::{node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::{GrassComputePPSPipelines, GrassComputePipeline}, prepare::prepare_grass_bind_groups};
 
-use crate::{grass::ground_mesh::{prepare_ground_mesh, GroundMesh}, render::{draw::DrawGrass, draw_node::{GrassDrawNode, GrassDrawNodeLabel}, pipeline::GrassRenderPipeline, queue::queue_grass}};
+use crate::{grass::ground_mesh::{prepare_ground_mesh, GroundMesh}, render::{draw::DrawGrass, pipeline::GrassRenderPipeline, queue::queue_grass}};
 
 mod render;
 pub mod grass;
@@ -54,7 +54,6 @@ impl Plugin for ProceduralGrassPlugin {
         app.sub_app_mut(RenderApp)
             .init_resource::<GrassComputePipeline>()
             .init_resource::<GrassComputePPSPipelines>()
-            .init_resource::<GrassRenderPipeline>()
-            .init_resource::<GrassGpuScene>();
+            .init_resource::<GrassRenderPipeline>();
     }
 }

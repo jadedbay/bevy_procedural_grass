@@ -70,7 +70,7 @@ pub(crate) fn create_chunks(
             let v1 = Vec3::from(positions[triangle[1] as usize]);
             let v2 = Vec3::from(positions[triangle[2] as usize]);
 
-            let density = 48.0; // TODO
+            let density = 12.0; // TODO
             let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
             let blade_count = (density * area).ceil() as u32;
 

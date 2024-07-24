@@ -33,7 +33,6 @@ impl render_graph::Node for ComputeGrassNode {
         let pipeline_cache = world.resource::<PipelineCache>();
 
         for grass_bind_groups in self.query.iter_manual(world) {
-            dbg!("node");
             if let Some(pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.compute_id) {
                 {
                     let mut pass = render_context
