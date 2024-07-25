@@ -1,4 +1,4 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::Opaque3d, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp, ViewNode, ViewNodeRunner}, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::Core3d, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp}, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::create_chunks, Grass};
 use render::{node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::{GrassComputePPSPipelines, GrassComputePipeline}, prepare::prepare_grass_bind_groups};
@@ -33,7 +33,6 @@ impl Plugin for ProceduralGrassPlugin {
             .add_systems(PostStartup, (create_chunks, prepare_ground_mesh));
 
         let render_app = app.sub_app_mut(RenderApp);
-        let compute_node = ComputeGrassNode::from_world(render_app.world_mut());
 
         render_app
             .add_render_command::<Opaque3d, DrawGrass>()
@@ -45,9 +44,11 @@ impl Plugin for ProceduralGrassPlugin {
                     prepare_grass_bind_groups.in_set(RenderSet::PrepareBindGroups)
                 )   
             );
-        let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        render_graph.add_node(ComputeGrassNodeLabel, compute_node);
-        render_graph.add_node_edge(ComputeGrassNodeLabel, CameraDriverLabel);
+        // let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
+        // render_graph.add_node(ComputeGrassNodeLabel, compute_node);
+        // render_graph.add_node_edge(ComputeGrassNodeLabel, CameraDriverLabel);
+        render_app.add_render_graph_node::<ComputeGrassNode>(Core3d, ComputeGrassNodeLabel);
+        render_app.add_render_graph_edges(Core3d, (NodePbr::ShadowPass, ComputeGrassNodeLabel));
     }
 
     fn finish(&self, app: &mut App) {

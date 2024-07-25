@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{render_resource::{BindGroup, BindGroupEntries, Buffer, BufferBinding, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs}, renderer::RenderDevice}};
+use bevy::{prelude::*, render::{render_resource::{BindGroup, BindGroupEntries, Buffer, BufferBinding, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs}, renderer::RenderDevice, view::ViewUniforms}};
 
 use crate::grass::{chunk::{BoundingBox, GrassChunks}, ground_mesh::GroundMesh};
 use super::{instance::GrassInstanceData, pipeline::{GrassComputePPSPipelines, GrassComputePipeline}};
@@ -30,6 +30,7 @@ pub(crate) fn prepare_grass_bind_groups(
     sps_pipelines: Res<GrassComputePPSPipelines>,
     query: Query<(Entity, &GrassChunks, &GroundMesh)>,
     render_device: Res<RenderDevice>,
+    view_uniforms: Res<ViewUniforms>,
 ) {
     let mesh_layout = pipeline.mesh_layout.clone();
     let chunk_layout = pipeline.chunk_layout.clone();
@@ -37,6 +38,10 @@ pub(crate) fn prepare_grass_bind_groups(
     let scan_layout = sps_pipelines.scan_layout.clone();
     let scan_blocks_layout = sps_pipelines.scan_blocks_layout.clone();
     let compact_layout = sps_pipelines.compact_layout.clone();
+
+    let Some(view_uniform) = view_uniforms.uniforms.binding() else {
+        return;
+    };
 
     for (entity, chunks, ground_mesh) in query.iter() {        
         let mesh_positions_bind_group = render_device.create_bind_group(
@@ -95,7 +100,7 @@ pub(crate) fn prepare_grass_bind_groups(
             );
 
             let chunk_bind_group = render_device.create_bind_group(
-                Some("indices_bind_group"),
+                Some("chunk_bind_group"),
                 &chunk_layout,
                 &BindGroupEntries::sequential((
                     BufferBinding {
@@ -118,6 +123,7 @@ pub(crate) fn prepare_grass_bind_groups(
                         offset: 0,
                         size: None,
                     },
+                    view_uniform.clone(),
                 ))
             );
 

@@ -1,4 +1,4 @@
-use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_sized, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice}};
+use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_sized, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
 
 use crate::grass::chunk::BoundingBox;
 
@@ -34,7 +34,8 @@ impl FromWorld for GrassComputePipeline {
                     uniform_buffer::<BoundingBox>(false),
                     storage_buffer_read_only::<Vec<u32>>(false),
                     storage_buffer::<Vec<u32>>(false),
-                    storage_buffer::<Vec<GrassInstanceData>>(false)
+                    storage_buffer::<Vec<GrassInstanceData>>(false),
+                    uniform_buffer::<ViewUniform>(true),
                 )
             )
         );
