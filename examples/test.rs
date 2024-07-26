@@ -34,15 +34,15 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(100).build();
-    // if let Some(positions) = plane.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-    //     if let VertexAttributeValues::Float32x3(positions) = positions {
-    //         for position in positions.iter_mut() {
-    //             let y = noise::Perlin::new(1).get([(position[0] * 0.2) as f64, (position[2] * 0.2) as f64]) as f32;
-    //             position[1] += y;
-    //         }
-    //     }
-    // }
+    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(200).build();
+    if let Some(positions) = plane.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+        if let VertexAttributeValues::Float32x3(positions) = positions {
+            for position in positions.iter_mut() {
+                let y = noise::Perlin::new(1).get([(position[0] * 0.2) as f64, (position[2] * 0.2) as f64]) as f32;
+                position[1] += y;
+            }
+        }
+    }
 
     let sphere = Sphere::new(5.0).mesh().kind(SphereKind::Ico { subdivisions: 2 }).build();
 
@@ -60,7 +60,7 @@ fn setup(
             mesh: meshes.add(GrassMesh::mesh(7)),
             grass: Grass {
                 ground_entity: Some(ground),
-                chunk_size: 50.0,
+                chunk_size: 25.0,
                 ..default()
             },
             ..default()

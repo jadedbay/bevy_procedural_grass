@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::Aabb, render_resource::ShaderType}, utils::HashMap};
 use super::{Grass, GrassGround};
 use crate::util::aabb::triangle_intersects_aabb;
@@ -16,6 +18,12 @@ pub struct GrassChunk {
     pub scan_groups_workgroup_count: usize,
 }
 
+#[derive(Clone, Component)]
+pub struct GrassChunksP {
+    aabbs: Vec<Aabb>,
+    chunks: UVec3,
+}
+
 pub(crate) fn create_chunks(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
@@ -23,7 +31,9 @@ pub(crate) fn create_chunks(
     ground_query: Query<&Handle<Mesh>, With<GrassGround>>,
 ) {
     for (entity, grass) in grass_query.iter() {
+        let start = Instant::now();
         let mut grass_chunks = GrassChunks(HashMap::new());
+        let mut aabbs = Vec::new();
 
         let mesh = meshes.get(ground_query.get(grass.ground_entity.unwrap()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
@@ -44,9 +54,16 @@ pub(crate) fn create_chunks(
                             ..default()
                         }
                     );
+
+                    aabbs.push(aabb);
                 }
             }
         }
+
+        commands.entity(entity).insert(GrassChunksP {
+            aabbs,
+            chunks: UVec3::new(chunk_count.x as u32, chunk_count.y as u32, chunk_count.z as u32),
+        });
 
         let positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
             Some(VertexAttributeValues::Float32x3(positions)) => positions,
@@ -70,15 +87,15 @@ pub(crate) fn create_chunks(
             let v1 = Vec3::from(positions[triangle[1] as usize]);
             let v2 = Vec3::from(positions[triangle[2] as usize]);
 
-            let density = 40.0; // TODO
-            let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
-            let blade_count = (density * area).ceil() as u32;
+            // let density = 0.5; // TODO
+            // let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
+            // let blade_count = (density * area).ceil() as u32;
 
             for (_, chunk) in grass_chunks.0.iter_mut() {
                 if triangle_intersects_aabb(v0, v1, v2, &chunk.aabb) {
-                    for _ in 0..(blade_count as f32 / 16.0).ceil() as u32 {
+                    //for _ in 0..(blade_count as f32 / 8.0).ceil() as u32 {
                         chunk.indices_index.push(i as u32);
-                    }
+                    //}
                 }
             }
         }
@@ -86,7 +103,7 @@ pub(crate) fn create_chunks(
         // Calculate workgroup counts
         for (_, chunk) in grass_chunks.0.iter_mut() {
             let workgroup_count = chunk.indices_index.len();
-            let instance_count = workgroup_count * 16;
+            let instance_count = workgroup_count * 32;
 
             dbg!(instance_count);
 
@@ -113,6 +130,8 @@ pub(crate) fn create_chunks(
         }
 
         commands.entity(entity).insert(grass_chunks);
+
+        dbg!(start.elapsed());
     }
 }
 

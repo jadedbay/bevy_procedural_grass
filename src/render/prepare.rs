@@ -18,10 +18,16 @@ pub struct GrassChunkBufferBindGroup {
     pub compact_bind_group: BindGroup,
 }
 
+#[derive(Clone)]
+pub struct GrassBindGroupsP {
+    pub chunk_bind_group: BindGroup,
+}
+
 #[derive(Component, Clone)]
 pub struct GrassBufferBindGroup {
     pub mesh_positions_bind_group: BindGroup,
     pub chunks: Vec<GrassChunkBufferBindGroup>,
+    // pub chunksp: Vec<>
 }
 
 pub(crate) fn prepare_grass_bind_groups(
@@ -48,16 +54,8 @@ pub(crate) fn prepare_grass_bind_groups(
             Some("mesh_position_bind_group"),
             &mesh_layout,
             &BindGroupEntries::sequential((
-                BufferBinding {
-                    buffer: &ground_mesh.positions_buffer,
-                    offset: 0,
-                    size: None,
-                },
-                BufferBinding {
-                    buffer: &ground_mesh.indices_buffer,
-                    offset: 0,
-                    size: None,
-                }
+                ground_mesh.positions_buffer.as_entire_binding(),
+                ground_mesh.indices_buffer.as_entire_binding(),
             ))
         );
 
@@ -103,26 +101,10 @@ pub(crate) fn prepare_grass_bind_groups(
                 Some("chunk_bind_group"),
                 &chunk_layout,
                 &BindGroupEntries::sequential((
-                    BufferBinding {
-                        buffer: &aabb_buffer,
-                        offset: 0,
-                        size: None,
-                    },
-                    BufferBinding {
-                        buffer: &indices_index_buffer,
-                        offset: 0,
-                        size: None,
-                    },
-                    BufferBinding {
-                        buffer: &vote_buffer,
-                        offset: 0,
-                        size: None,
-                    },
-                    BufferBinding {
-                        buffer: &instance_buffer,
-                        offset: 0,
-                        size: None,
-                    },
+                    aabb_buffer.as_entire_binding(),
+                    indices_index_buffer.as_entire_binding(),
+                    vote_buffer.as_entire_binding(),
+                    instance_buffer.as_entire_binding(),
                     view_uniform.clone(),
                 ))
             );
@@ -181,9 +163,9 @@ pub(crate) fn prepare_grass_bind_groups(
                 Some("scan_bind_group"),
                 &scan_layout,
                 &BindGroupEntries::sequential((
-                    BufferBinding { buffer: &vote_buffer, offset: 0, size: None },
-                    BufferBinding { buffer: &scan_buffer, offset: 0, size: None },
-                    BufferBinding { buffer: &scan_blocks_buffer, offset: 0, size: None },
+                    vote_buffer.as_entire_binding(),
+                    scan_buffer.as_entire_binding(),
+                    scan_blocks_buffer.as_entire_binding(),
                 ))
             );
 
@@ -191,8 +173,8 @@ pub(crate) fn prepare_grass_bind_groups(
                 Some("scan_bind_group"),
                 &scan_blocks_layout,
                 &BindGroupEntries::sequential((
-                    BufferBinding { buffer: &scan_blocks_buffer, offset: 0, size: None },
-                    BufferBinding { buffer: &scan_blocks_out_buffer, offset: 0, size: None },
+                    scan_blocks_buffer.as_entire_binding(),
+                    scan_blocks_out_buffer.as_entire_binding(),
                 ))
             );
 
@@ -200,12 +182,12 @@ pub(crate) fn prepare_grass_bind_groups(
                 Some("scan_bind_group"),
                 &compact_layout,
                 &BindGroupEntries::sequential((
-                    BufferBinding { buffer: &instance_buffer, offset: 0, size: None },
-                    BufferBinding { buffer: &vote_buffer, offset: 0, size: None },
-                    BufferBinding { buffer: &scan_buffer, offset: 0, size: None },
-                    BufferBinding { buffer: &scan_blocks_out_buffer, offset: 0, size: None },
-                    BufferBinding { buffer: &compact_buffer, offset: 0, size: None }, 
-                    BufferBinding { buffer: &indirect_indexed_args_buffer, offset: 0, size: None },
+                    instance_buffer.as_entire_binding(),
+                    vote_buffer.as_entire_binding(),
+                    scan_buffer.as_entire_binding(),
+                    scan_blocks_out_buffer.as_entire_binding(),
+                    compact_buffer.as_entire_binding(),
+                    indirect_indexed_args_buffer.as_entire_binding(),
                 ))
             );
 

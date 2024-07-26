@@ -7,6 +7,8 @@ pub mod ground_mesh;
 
 use chunk::GrassChunks;
 
+use self::chunk::GrassChunksP;
+
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
     pub grass: Grass,
@@ -32,12 +34,12 @@ impl Default for Grass {
 }
 
 impl ExtractComponent for Grass {
-    type QueryData = (&'static Grass, &'static GrassChunks);
+    type QueryData = (&'static Grass, &'static GrassChunks, &'static GrassChunksP);
     type QueryFilter = ();
-    type Out = (Grass, GrassChunks);
+    type Out = (Grass, GrassChunks, GrassChunksP);
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
-        Some((item.0.clone(), item.1.clone()))
+        Some((item.0.clone(), item.1.clone(), item.2.clone()))
     }
 }
 

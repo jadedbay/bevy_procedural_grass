@@ -1,13 +1,7 @@
 #import bevy_pbr::utils::rand_f
 #import bevy_render::view::View
-#import bevy_procedural_grass::grass_types::GrassInstance;
+#import bevy_procedural_grass::grass_types::{GrassInstance, Aabb};
 
-struct Aabb {
-    min: vec3<f32>,
-    _padding: f32,
-    max: vec3<f32>,
-    _padding2: f32,
-}
 
 @group(0) @binding(0) var<storage, read> positions: array<vec3<f32>>;
 @group(0) @binding(1) var<storage, read> indices: array<u32>;
@@ -18,18 +12,18 @@ struct Aabb {
 @group(1) @binding(3) var<storage, read_write> output: array<GrassInstance>;
 @group(1) @binding(4) var<uniform> view: View;
 
-@compute @workgroup_size(16)
+@compute @workgroup_size(32)
 fn main(
     @builtin(global_invocation_id) global_id: vec3<u32>, 
     @builtin(local_invocation_id) local_id: vec3<u32>, 
-    @builtin(workgroup_id) workgroup_id: vec3<u32>
+    @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
     let v0 = positions[indices[indices_index[workgroup_id.x] * 3]].xyz;
     let v1 = positions[indices[indices_index[workgroup_id.x] * 3 + 1]].xyz;
     let v2 = positions[indices[indices_index[workgroup_id.x] * 3 + 2]].xyz;
 
     let area = length(cross(v1 - v0, v2 - v0)) / 2.0;
-    let scaled_density = u32(ceil(40.0 * area));
+    let scaled_density = u32(ceil(50.0 * area));
     if (scaled_density < local_id.x) { return; }
 
     let normal = normalize(cross(v1 - v0, v2 - v0));

@@ -5,6 +5,61 @@ use crate::grass::chunk::BoundingBox;
 use super::instance::GrassInstanceData;
 
 #[derive(Resource)]
+pub struct GrassComputeChunkPipeline {
+    pub mesh_layout: BindGroupLayout,
+    pub chunk_layout: BindGroupLayout,
+    pub compute_id: CachedComputePipelineId,
+}
+
+impl FromWorld for GrassComputeChunkPipeline {
+    fn from_world(world: &mut World) -> Self {
+        let render_device = world.resource::<RenderDevice>();
+
+        let mesh_layout = render_device.create_bind_group_layout(
+            "grass_compute_mesh_layout", 
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    storage_buffer_read_only::<Vec<[f32; 4]>>(false),
+                    storage_buffer_read_only::<Vec<u32>>(false),
+                )
+            )
+        );
+
+        let chunk_layout = render_device.create_bind_group_layout(
+            "chunk_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    uniform_buffer::<BoundingBox>(false),
+                    storage_buffer::<Vec<u32>>(false), // indices_index
+                    storage_buffer_sized(false, None), // counts
+                )
+            )
+        );
+
+        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_chunk.wgsl");
+
+        let compute_id = world
+            .resource_mut::<PipelineCache>()
+            .queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some("grass_compute_chunk_pipelin".into()),
+                layout: vec![mesh_layout.clone(), chunk_layout.clone()],
+                push_constant_ranges: Vec::new(),
+                shader,
+                shader_defs: vec![],
+                entry_point: "main".into()
+            });
+
+        Self {
+            mesh_layout,
+            chunk_layout,
+            compute_id,
+        }
+    }
+}
+
+#[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
     pub mesh_layout: BindGroupLayout,
     pub chunk_layout: BindGroupLayout,
