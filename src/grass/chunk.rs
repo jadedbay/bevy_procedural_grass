@@ -20,8 +20,15 @@ pub struct GrassChunk {
 
 #[derive(Clone, Component)]
 pub struct GrassChunksP {
-    aabbs: Vec<Aabb>,
-    chunks: UVec3,
+    pub aabbs: Vec<Aabb>,
+    pub chunks: UVec3,
+    pub triangle_count: usize,
+}
+
+impl GrassChunksP {
+    pub fn chunk_count(&self) -> u32 {
+        self.chunks.x * self.chunks.y * self.chunks.z
+    }
 }
 
 pub(crate) fn create_chunks(
@@ -60,10 +67,6 @@ pub(crate) fn create_chunks(
             }
         }
 
-        commands.entity(entity).insert(GrassChunksP {
-            aabbs,
-            chunks: UVec3::new(chunk_count.x as u32, chunk_count.y as u32, chunk_count.z as u32),
-        });
 
         let positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
             Some(VertexAttributeValues::Float32x3(positions)) => positions,
@@ -80,6 +83,13 @@ pub(crate) fn create_chunks(
                 return;
             }, 
         };
+
+        commands.entity(entity).insert(GrassChunksP {
+            aabbs,
+            chunks: UVec3::new(chunk_count.x as u32, chunk_count.y as u32, chunk_count.z as u32),
+            triangle_count: (indices.len() / 3), // NOTE: triangle count for entire mesh (not just
+            // chunk)
+        });
 
         // Add indices to chunk
         for (i, triangle) in indices.chunks(3).enumerate() {

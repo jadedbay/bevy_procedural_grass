@@ -4,6 +4,7 @@ pub mod chunk;
 pub mod mesh;
 pub mod clump;
 pub mod ground_mesh;
+pub mod config;
 
 use chunk::GrassChunks;
 

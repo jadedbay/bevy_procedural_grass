@@ -1,9 +1,9 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::Core3d, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp}, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::Core3d, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp}, render_phase::AddRenderCommand, render_resource::{SpecializedComputePipelines, SpecializedMeshPipelines}, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::create_chunks, Grass};
-use render::{node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::{GrassComputePPSPipelines, GrassComputePipeline}, prepare::prepare_grass_bind_groups};
+use render::{node::{ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::{GrassComputeChunkPipeline, GrassComputePPSPipelines, GrassComputePipeline}, prepare::prepare_grass_bind_groups};
 
-use crate::{grass::ground_mesh::{prepare_ground_mesh, GroundMesh}, render::{draw::DrawGrass, pipeline::GrassRenderPipeline, queue::queue_grass}};
+use crate::{grass::ground_mesh::{prepare_ground_mesh, GroundMesh}, render::{draw::DrawGrass, pipeline::GrassRenderPipeline, prepare::prepare_compute_chunk_pipeline, queue::queue_grass}};
 
 mod render;
 pub mod grass;
@@ -41,18 +41,18 @@ impl Plugin for ProceduralGrassPlugin {
                 Render, 
                 (
                     queue_grass.in_set(RenderSet::QueueMeshes),
-                    prepare_grass_bind_groups.in_set(RenderSet::PrepareBindGroups)
+                    prepare_compute_chunk_pipeline.in_set(RenderSet::Prepare),
+                    prepare_grass_bind_groups.in_set(RenderSet::PrepareBindGroups),
                 )   
             );
-        // let mut render_graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        // render_graph.add_node(ComputeGrassNodeLabel, compute_node);
-        // render_graph.add_node_edge(ComputeGrassNodeLabel, CameraDriverLabel);
         render_app.add_render_graph_node::<ComputeGrassNode>(Core3d, ComputeGrassNodeLabel);
         render_app.add_render_graph_edges(Core3d, (NodePbr::ShadowPass, ComputeGrassNodeLabel));
     }
 
     fn finish(&self, app: &mut App) {
         app.sub_app_mut(RenderApp)
+            .init_resource::<SpecializedComputePipelines<GrassComputeChunkPipeline>>()
+            .init_resource::<GrassComputeChunkPipeline>() // Todo change this
             .init_resource::<GrassComputePipeline>()
             .init_resource::<GrassComputePPSPipelines>()
             .init_resource::<GrassRenderPipeline>();

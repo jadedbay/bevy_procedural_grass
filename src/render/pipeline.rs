@@ -1,14 +1,46 @@
-use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_sized, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
+use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderDefVal, ShaderStages, SpecializedComputePipeline, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
 
 use crate::grass::chunk::BoundingBox;
 
 use super::instance::GrassInstanceData;
 
+#[derive(Component)]
+pub struct GrassComputeChunkPipelineId(pub CachedComputePipelineId);
+
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub struct GrassComputeChunkPipelineKey {
+    pub workgroup_count: UVec3,
+}
+
 #[derive(Resource)]
 pub struct GrassComputeChunkPipeline {
     pub mesh_layout: BindGroupLayout,
     pub chunk_layout: BindGroupLayout,
-    pub compute_id: CachedComputePipelineId,
+    shader: Handle<Shader>,
+}
+
+impl SpecializedComputePipeline for GrassComputeChunkPipeline {
+    type Key = GrassComputeChunkPipelineKey;
+
+    fn specialize(&self, key: Self::Key) -> ComputePipelineDescriptor {
+        let shader_defs = vec![
+            ShaderDefVal::UInt("CHUNK_SIZE_X".into(), key.workgroup_count.x),
+            ShaderDefVal::UInt("CHUNK_SIZE_Y".into(), key.workgroup_count.y),
+            ShaderDefVal::UInt("CHUNK_SIZE_Z".into(), key.workgroup_count.z),
+        ];
+
+        ComputePipelineDescriptor {
+            label: Some("compute_chunk_pipeline".into()),
+            layout: vec![self.mesh_layout.clone()],
+            push_constant_ranges: vec![PushConstantRange {
+                stages: ShaderStages::COMPUTE,
+                range: 0..4,
+            }],
+            shader: self.shader.clone(),
+            shader_defs,
+            entry_point: "main".into(),
+        }
+    } 
 }
 
 impl FromWorld for GrassComputeChunkPipeline {
@@ -22,6 +54,7 @@ impl FromWorld for GrassComputeChunkPipeline {
                 (
                     storage_buffer_read_only::<Vec<[f32; 4]>>(false),
                     storage_buffer_read_only::<Vec<u32>>(false),
+                    storage_buffer::<Vec<u32>>(false),
                 )
             )
         );
@@ -40,20 +73,38 @@ impl FromWorld for GrassComputeChunkPipeline {
 
         let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_chunk.wgsl");
 
-        let compute_id = world
-            .resource_mut::<PipelineCache>()
-            .queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("grass_compute_chunk_pipelin".into()),
-                layout: vec![mesh_layout.clone(), chunk_layout.clone()],
-                push_constant_ranges: Vec::new(),
-                shader,
-                shader_defs: vec![],
-                entry_point: "main".into()
-            });
-
         Self {
             mesh_layout,
             chunk_layout,
+            shader,
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct GrassComputeChunkCountsPipeline {
+    pub layout: BindGroupLayout,
+    pub compute_id: CachedComputePipelineId,
+}
+impl FromWorld for GrassComputeChunkCountsPipeline {
+    fn from_world(world: &mut World) -> Self {
+        let render_device = world.resource::<RenderDevice>();
+
+        let layout = render_device.create_bind_group_layout(
+            "counts_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    storage_buffer_read_only_sized(false, None),  
+                    storage_buffer_sized(false, None),
+                )
+            ) 
+        );
+
+        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/chunk_counts.wgsl");
+
+        Self {
+            layout,
             compute_id,
         }
     }
