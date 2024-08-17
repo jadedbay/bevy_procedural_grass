@@ -60,7 +60,7 @@ fn setup(
             mesh: meshes.add(GrassMesh::mesh(7)),
             grass: Grass {
                 ground_entity: Some(ground),
-                chunk_size: 100.0,
+                chunk_size: 25.0,
                 ..default()
             },
             ..default()

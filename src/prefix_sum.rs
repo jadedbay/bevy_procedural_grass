@@ -126,6 +126,7 @@ pub fn prefix_sum_pass_vec(
 
         pass.set_pipeline(scan_blocks_pipeline);
         for chunk in bind_groups {
+            pass.set_push_constants(0, &(chunk.scan_workgroups as u32).to_le_bytes());
             pass.set_bind_group(0, &chunk.scan_blocks_bind_group, &[]);
             pass.dispatch_workgroups(chunk.scan_blocks_workgroups, 1, 1);
         }
@@ -137,9 +138,9 @@ pub fn create_prefix_sum_bind_group_buffers(
     pipeline: &PrefixSumPipeline,
     input_buffer: &Buffer,
     input_length: u32,
+    scan_workgroups: u32,
+    scan_blocks_workgroups: u32,
 ) -> PrefixSumBindGroup {
-    let (scan_workgroups, scan_blocks_workgroups) = calculate_workgroup_counts(input_length); 
-
     let scan_buffer = render_device.create_buffer(&BufferDescriptor {
         label: Some("scan_buffer"),
         size: (std::mem::size_of::<u32>() * input_length as usize) as u64,

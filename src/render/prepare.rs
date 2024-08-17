@@ -59,10 +59,10 @@ pub(crate) fn prepare_grass_bind_groups(
     };
 
     for (entity, chunks, ground_mesh, chunksp) in query.iter() {
-        if grass_entities.0.contains_key(&entity) {
-            commands.entity(entity).insert(grass_entities.0.get(&entity).unwrap().clone());
-            continue;
-        }
+        // if grass_entities.0.contains_key(&entity) {
+        //     commands.entity(entity).insert(grass_entities.0.get(&entity).unwrap().clone());
+        //     continue;
+        // }
         let mesh_bind_group = render_device.create_bind_group(
 
             Some("mesh_position_bind_group"),
@@ -99,12 +99,12 @@ pub(crate) fn prepare_grass_bind_groups(
             //     mapped_at_creation: false,
             // });
 
-            let counts_buffer = render_device.create_buffer(&BufferDescriptor {
-                label: Some("counts_buffer"),
-                size: (std::mem::size_of::<u32>() * 4) as u64,
-                usage: BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            });
+            // let counts_buffer = render_device.create_buffer(&BufferDescriptor {
+            //     label: Some("counts_buffer"),
+            //     size: (std::mem::size_of::<u32>() * 4) as u64,
+            //     usage: BufferUsages::STORAGE,
+            //     mapped_at_creation: false,
+            // });
 
             let vote_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("vote_buffer"),
@@ -158,6 +158,8 @@ pub(crate) fn prepare_grass_bind_groups(
                 &prefix_sum_pipeline,
                 &vote_buffer,
                 chunk.instance_count as u32,
+                chunk.scan_workgroup_count,
+                chunk.scan_groups_workgroup_count,
             );
 
             let compact_bind_group = render_device.create_bind_group(
@@ -179,7 +181,6 @@ pub(crate) fn prepare_grass_bind_groups(
 
                 workgroup_count: chunk.workgroup_count,
                 compact_workgroup_count: chunk.scan_workgroup_count,
-
 
                 compact_buffer,
                 compact_bind_group,

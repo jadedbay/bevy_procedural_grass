@@ -97,7 +97,7 @@ pub(crate) fn create_chunks(
             let v1 = Vec3::from(positions[triangle[1] as usize]);
             let v2 = Vec3::from(positions[triangle[2] as usize]);
 
-            let density = 0.5; // TODO
+            let density = 6.0; // TODO
             let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
             let blade_count = (density * area).ceil() as u32;
 
@@ -113,7 +113,7 @@ pub(crate) fn create_chunks(
         // Calculate workgroup counts
         for (_, chunk) in grass_chunks.0.iter_mut() {
             let workgroup_count = chunk.indices_index.len();
-            let instance_count = workgroup_count * 32;
+            let instance_count = workgroup_count * 16;
 
             dbg!(instance_count);
 

@@ -58,12 +58,12 @@ pub fn prepare_ground_mesh_bindgroup(
             ))
         );
 
-        let prefix_sum_bind_group = create_prefix_sum_bind_group_buffers(
-            &render_device, 
-            &prefix_sum_pipeline, 
-            &dispatch_counts_buffer, 
-            ground_mesh.triangle_count as u32,
-        );
+        // let prefix_sum_bind_group = create_prefix_sum_bind_group_buffers(
+        //     &render_device, 
+        //     &prefix_sum_pipeline, 
+        //     &dispatch_counts_buffer, 
+        //     ground_mesh.triangle_count as u32,
+        // );
 
 
         // commands.entity(entity).insert(GroundMeshBindGroup {

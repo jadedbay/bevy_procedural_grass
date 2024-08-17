@@ -1,3 +1,4 @@
 /target
 Cargo.lock
 notes.txt
+.DS_Store
