@@ -6,6 +6,7 @@ use super::{Grass, GrassGround};
 pub struct GroundMesh {
     pub positions_buffer: Buffer,
     pub indices_buffer: Buffer,
+    pub triangle_count: usize,
 }
 
 pub(crate) fn prepare_ground_mesh(
@@ -54,6 +55,7 @@ pub(crate) fn prepare_ground_mesh(
         commands.entity(entity).insert(GroundMesh {
             positions_buffer,
             indices_buffer,
+            triangle_count: indices.len() / 3,
         });
     }
 }

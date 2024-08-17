@@ -4,117 +4,15 @@ use crate::grass::chunk::BoundingBox;
 
 use super::instance::GrassInstanceData;
 
-#[derive(Component)]
-pub struct GrassComputeChunkPipelineId(pub CachedComputePipelineId);
-
-#[derive(PartialEq, Eq, Hash, Clone)]
-pub struct GrassComputeChunkPipelineKey {
-    pub workgroup_count: UVec3,
-}
-
-#[derive(Resource)]
-pub struct GrassComputeChunkPipeline {
-    pub mesh_layout: BindGroupLayout,
-    pub chunk_layout: BindGroupLayout,
-    shader: Handle<Shader>,
-}
-
-impl SpecializedComputePipeline for GrassComputeChunkPipeline {
-    type Key = GrassComputeChunkPipelineKey;
-
-    fn specialize(&self, key: Self::Key) -> ComputePipelineDescriptor {
-        let shader_defs = vec![
-            ShaderDefVal::UInt("CHUNK_SIZE_X".into(), key.workgroup_count.x),
-            ShaderDefVal::UInt("CHUNK_SIZE_Y".into(), key.workgroup_count.y),
-            ShaderDefVal::UInt("CHUNK_SIZE_Z".into(), key.workgroup_count.z),
-        ];
-
-        ComputePipelineDescriptor {
-            label: Some("compute_chunk_pipeline".into()),
-            layout: vec![self.mesh_layout.clone()],
-            push_constant_ranges: vec![PushConstantRange {
-                stages: ShaderStages::COMPUTE,
-                range: 0..4,
-            }],
-            shader: self.shader.clone(),
-            shader_defs,
-            entry_point: "main".into(),
-        }
-    } 
-}
-
-impl FromWorld for GrassComputeChunkPipeline {
-    fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
-
-        let mesh_layout = render_device.create_bind_group_layout(
-            "grass_compute_mesh_layout", 
-            &BindGroupLayoutEntries::sequential(
-                ShaderStages::COMPUTE,
-                (
-                    storage_buffer_read_only::<Vec<[f32; 4]>>(false),
-                    storage_buffer_read_only::<Vec<u32>>(false),
-                    storage_buffer::<Vec<u32>>(false),
-                )
-            )
-        );
-
-        let chunk_layout = render_device.create_bind_group_layout(
-            "chunk_layout",
-            &BindGroupLayoutEntries::sequential(
-                ShaderStages::COMPUTE,
-                (
-                    uniform_buffer::<BoundingBox>(false),
-                    storage_buffer::<Vec<u32>>(false), // indices_index
-                    storage_buffer_sized(false, None), // counts
-                )
-            )
-        );
-
-        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_chunk.wgsl");
-
-        Self {
-            mesh_layout,
-            chunk_layout,
-            shader,
-        }
-    }
-}
-
-#[derive(Resource)]
-pub struct GrassComputeChunkCountsPipeline {
-    pub layout: BindGroupLayout,
-    pub compute_id: CachedComputePipelineId,
-}
-impl FromWorld for GrassComputeChunkCountsPipeline {
-    fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
-
-        let layout = render_device.create_bind_group_layout(
-            "counts_layout",
-            &BindGroupLayoutEntries::sequential(
-                ShaderStages::COMPUTE,
-                (
-                    storage_buffer_read_only_sized(false, None),  
-                    storage_buffer_sized(false, None),
-                )
-            ) 
-        );
-
-        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/chunk_counts.wgsl");
-
-        Self {
-            layout,
-            compute_id,
-        }
-    }
-}
-
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
     pub mesh_layout: BindGroupLayout,
     pub chunk_layout: BindGroupLayout,
-    pub compute_id: CachedComputePipelineId
+    pub compact_layout: BindGroupLayout,
+    pub compute_id: CachedComputePipelineId,
+    pub compact_pipeline_id: CachedComputePipelineId,
+
+    _grass_types_shader: Handle<Shader>,
 }
 
 impl FromWorld for GrassComputePipeline {
@@ -146,66 +44,6 @@ impl FromWorld for GrassComputePipeline {
             )
         );
 
-        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_grass.wgsl");
-
-        let compute_id = world
-            .resource_mut::<PipelineCache>()
-            .queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("grass_gen_compute_pipeline".into()),
-                layout: vec![mesh_layout.clone(), chunk_layout.clone()],
-                push_constant_ranges: Vec::new(),
-                shader,
-                shader_defs: vec![],
-                entry_point: "main".into()
-            });
-        
-        Self {
-            mesh_layout,
-            chunk_layout,
-            compute_id,
-        }
-    }
-}
-
-#[derive(Resource)]
-pub(crate) struct GrassComputePPSPipelines {
-    pub scan_layout: BindGroupLayout,
-    pub scan_blocks_layout: BindGroupLayout,
-    pub compact_layout: BindGroupLayout,
-    pub scan_pipeline: CachedComputePipelineId,
-    pub scan_blocks_pipeline: CachedComputePipelineId,
-    pub compact_pipeline: CachedComputePipelineId,
-
-    _grass_types_shader: Handle<Shader>,
-}
-
-impl FromWorld for GrassComputePPSPipelines {
-    fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
-
-        let scan_layout = render_device.create_bind_group_layout(
-            "scan_layout",
-            &BindGroupLayoutEntries::sequential(
-                ShaderStages::COMPUTE,
-                (
-                    storage_buffer_read_only::<Vec<u32>>(false),
-                    storage_buffer::<Vec<u32>>(false),
-                    storage_buffer::<Vec<u32>>(false),
-                )
-            )
-        );
-
-        let scan_blocks_layout = render_device.create_bind_group_layout(
-            "scan_blocks_layout",
-            &BindGroupLayoutEntries::sequential(
-                ShaderStages::COMPUTE,
-                (
-                    storage_buffer_read_only::<Vec<u32>>(false),
-                    storage_buffer::<Vec<u32>>(false),
-                )
-            )
-        );
-
         let compact_layout = render_device.create_bind_group_layout(
             "compact_layout",
             &BindGroupLayoutEntries::sequential(
@@ -221,38 +59,13 @@ impl FromWorld for GrassComputePPSPipelines {
             )
         );
 
-        let scan_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/scan.wgsl");
-        let scan_blocks_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/scan_blocks.wgsl");
-        let compact_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compact.wgsl");
+        let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_grass.wgsl");
 
-        let _grass_types_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_types.wgsl");
+        let compact_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compact.wgsl");
         
         let pipeline_cache = world.resource_mut::<PipelineCache>();
 
-        let scan_pipeline = pipeline_cache.queue_compute_pipeline(
-            ComputePipelineDescriptor {
-                label: Some("compute_scan_grass_pipeline".into()),
-                layout: vec![scan_layout.clone()],
-                push_constant_ranges: Vec::new(),
-                shader: scan_shader.clone(),
-                shader_defs: vec![],
-                entry_point: "scan".into(),
-        });
-
-        let scan_blocks_pipeline = pipeline_cache.queue_compute_pipeline(
-            ComputePipelineDescriptor {
-                label: Some("compute_scan_blocks_pipeline".into()),
-                layout: vec![scan_blocks_layout.clone()],
-                push_constant_ranges: vec![PushConstantRange {
-                    stages: ShaderStages::COMPUTE,
-                    range: 0..4,
-                }],
-                shader: scan_blocks_shader.clone(),
-                shader_defs: vec![],
-                entry_point: "scan_blocks".into(),
-            });
-        
-        let compact_pipeline = pipeline_cache.queue_compute_pipeline(
+        let compact_pipeline_id = pipeline_cache.queue_compute_pipeline(
             ComputePipelineDescriptor {
                 label: Some("compute_compact_grass_pipeline".into()),
                 layout: vec![compact_layout.clone()],
@@ -261,16 +74,24 @@ impl FromWorld for GrassComputePPSPipelines {
                 shader_defs: vec![],
                 entry_point: "compact".into(),
         });
+
+        let compute_id = pipeline_cache
+            .queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some("grass_gen_compute_pipeline".into()),
+                layout: vec![mesh_layout.clone(), chunk_layout.clone()],
+                push_constant_ranges: Vec::new(),
+                shader,
+                shader_defs: vec![],
+                entry_point: "main".into()
+            });
         
         Self {
-            scan_layout,
-            scan_blocks_layout,
+            mesh_layout,
+            chunk_layout,
             compact_layout,
-            scan_pipeline,
-            scan_blocks_pipeline,
-            compact_pipeline,
-
-            _grass_types_shader,
+            compute_id,
+            compact_pipeline_id,
+            _grass_types_shader: world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_types.wgsl")
         }
     }
 }

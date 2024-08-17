@@ -1,42 +1,35 @@
 use bevy::{
-    prelude::*,
-    render::{
+    ecs::world, prelude::*, render::{
         render_resource::{
             BindGroup, BindGroupEntries, Buffer, BufferBinding, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, PipelineCache, SpecializedComputePipelines
         },
         renderer::RenderDevice,
         view::ViewUniforms,
-    },
+    }, utils::HashMap
 };
 
 use super::{
     instance::GrassInstanceData,
-    pipeline::{GrassComputeChunkPipeline, GrassComputeChunkPipelineId, GrassComputeChunkPipelineKey, GrassComputePPSPipelines, GrassComputePipeline},
+    pipeline::GrassComputePipeline,
 };
-use crate::grass::{
+use crate::{grass::{
     chunk::{BoundingBox, GrassChunks, GrassChunksP},
     ground_mesh::GroundMesh,
-};
+}, prefix_sum::{create_prefix_sum_bind_group_buffers, PrefixSumBindGroup, PrefixSumPipeline}};
+
+#[derive(Resource, Default)]
+pub struct GrassEntities(HashMap<Entity, GrassBufferBindGroup>);
 
 #[derive(Clone)]
 pub struct GrassChunkBufferBindGroup {
     pub chunk_bind_group: BindGroup,
     pub indirect_buffer: Buffer,
 
-    pub workgroup_count: usize,
-    pub scan_workgroup_count: usize,
-    pub scan_blocks_workgroup_count: usize,
+    pub workgroup_count: u32,
+    pub compact_workgroup_count: u32,
 
     pub compact_buffer: Buffer,
-    pub scan_bind_group: BindGroup,
-    pub scan_blocks_bind_group: BindGroup,
     pub compact_bind_group: BindGroup,
-}
-
-#[derive(Clone)]
-pub struct GrassBindGroupsP {
-    pub chunk_bind_group: BindGroup,
-    pub workgroup_count: UVec3,
 }
 
 #[derive(Component, Clone)]
@@ -44,14 +37,14 @@ pub struct GrassBufferBindGroup {
     pub mesh_bind_group: BindGroup,
     pub triangle_count: u32,
     pub chunks: Vec<GrassChunkBufferBindGroup>,
-    pub chunksp: Vec<GrassBindGroupsP>,
+    pub prefix_sum_chunks: Vec<PrefixSumBindGroup>,
 }
 
 pub(crate) fn prepare_grass_bind_groups(
     mut commands: Commands,
     pipeline: Res<GrassComputePipeline>,
-    sps_pipelines: Res<GrassComputePPSPipelines>,
-    chunk_pipeline: Res<GrassComputeChunkPipeline>,
+    prefix_sum_pipeline: Res<PrefixSumPipeline>,
+    mut grass_entities: ResMut<GrassEntities>,
     query: Query<(Entity, &GrassChunks, &GroundMesh, &GrassChunksP)>,
     render_device: Res<RenderDevice>,
     view_uniforms: Res<ViewUniforms>,
@@ -59,18 +52,19 @@ pub(crate) fn prepare_grass_bind_groups(
     let mesh_layout = pipeline.mesh_layout.clone();
     let chunk_layout = pipeline.chunk_layout.clone();
 
-    let chunkp_layout = chunk_pipeline.chunk_layout.clone();
-
-    let scan_layout = sps_pipelines.scan_layout.clone();
-    let scan_blocks_layout = sps_pipelines.scan_blocks_layout.clone();
-    let compact_layout = sps_pipelines.compact_layout.clone();
+    let compact_layout = pipeline.compact_layout.clone();
 
     let Some(view_uniform) = view_uniforms.uniforms.binding() else {
         return;
     };
 
     for (entity, chunks, ground_mesh, chunksp) in query.iter() {
+        if grass_entities.0.contains_key(&entity) {
+            commands.entity(entity).insert(grass_entities.0.get(&entity).unwrap().clone());
+            continue;
+        }
         let mesh_bind_group = render_device.create_bind_group(
+
             Some("mesh_position_bind_group"),
             &mesh_layout,
             &BindGroupEntries::sequential((
@@ -80,7 +74,7 @@ pub(crate) fn prepare_grass_bind_groups(
         );
 
         let mut chunk_bind_groups = Vec::new();
-        let mut chunkp_bind_groups = Vec::new();
+        let mut prefix_sum_bind_groups = Vec::new();
 
         for (_, chunk) in chunks.0.clone() {
             let aabb_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
@@ -89,21 +83,21 @@ pub(crate) fn prepare_grass_bind_groups(
                 usage: BufferUsages::UNIFORM,
             });
 
-            // let indices_index_buffer = render_device.create_buffer_with_data(
-            //     &BufferInitDescriptor {
-            //         label: Some("indices_index_buffer"),
-            //         contents: bytemuck::cast_slice(chunk.indices_index.as_slice()),
-            //         usage: BufferUsages::STORAGE,
-            //     }
-            // );
+            let indices_index_buffer = render_device.create_buffer_with_data(
+                &BufferInitDescriptor {
+                    label: Some("indices_index_buffer"),
+                    contents: bytemuck::cast_slice(chunk.indices_index.as_slice()),
+                    usage: BufferUsages::STORAGE,
+                }
+            );
 
-            let indices_index_buffer = render_device.create_buffer(&BufferDescriptor {
-                label: Some("indices_index"),
-                size: (std::mem::size_of::<u32>() * chunksp.triangle_count * chunksp.chunk_count() as usize)
-                    as u64,
-                usage: BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            });
+            // let indices_index_buffer = render_device.create_buffer(&BufferDescriptor {
+            //     label: Some("indices_index"),
+            //     size: (std::mem::size_of::<u32>() * chunksp.triangle_count * chunksp.chunk_count() as usize)
+            //         as u64,
+            //     usage: BufferUsages::STORAGE,
+            //     mapped_at_creation: false,
+            // });
 
             let counts_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("counts_buffer"),
@@ -111,16 +105,6 @@ pub(crate) fn prepare_grass_bind_groups(
                 usage: BufferUsages::STORAGE,
                 mapped_at_creation: false,
             });
-
-            let chunkp_bind_group = render_device.create_bind_group(
-                Some("chunkp_bind_group"),
-                &chunkp_layout,
-                &BindGroupEntries::sequential((
-                    aabb_buffer.as_entire_binding(),
-                    indices_index_buffer.as_entire_binding(),
-                    counts_buffer.as_entire_binding(),
-                )),
-            );
 
             let vote_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("vote_buffer"),
@@ -148,26 +132,6 @@ pub(crate) fn prepare_grass_bind_groups(
                 )),
             );
 
-            let scan_buffer = render_device.create_buffer(&BufferDescriptor {
-                label: Some("scan_output_buffer"),
-                size: (std::mem::size_of::<u32>() * chunk.instance_count) as u64,
-                usage: BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            });
-            let scan_blocks_buffer = render_device.create_buffer(&BufferDescriptor {
-                label: Some("scan_output_buffer"),
-                size: (std::mem::size_of::<u32>() * chunk.scan_workgroup_count) as u64,
-                usage: BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            });
-
-            let scan_blocks_out_buffer = render_device.create_buffer(&BufferDescriptor {
-                label: Some("scan_output_buffer"),
-                size: (std::mem::size_of::<u32>() * chunk.scan_workgroup_count) as u64,
-                usage: BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            });
-
             let compact_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("compact_buffer"),
                 size: (std::mem::size_of::<GrassInstanceData>() * chunk.instance_count) as u64,
@@ -188,24 +152,12 @@ pub(crate) fn prepare_grass_bind_groups(
                     .as_bytes(),
                     usage: BufferUsages::STORAGE | BufferUsages::INDIRECT,
                 });
-
-            let scan_bind_group = render_device.create_bind_group(
-                Some("scan_bind_group"),
-                &scan_layout,
-                &BindGroupEntries::sequential((
-                    vote_buffer.as_entire_binding(),
-                    scan_buffer.as_entire_binding(),
-                    scan_blocks_buffer.as_entire_binding(),
-                )),
-            );
-
-            let scan_blocks_bind_group = render_device.create_bind_group(
-                Some("scan_bind_group"),
-                &scan_blocks_layout,
-                &BindGroupEntries::sequential((
-                    scan_blocks_buffer.as_entire_binding(),
-                    scan_blocks_out_buffer.as_entire_binding(),
-                )),
+            
+            let prefix_sum_bind_group = create_prefix_sum_bind_group_buffers(
+                &render_device,
+                &prefix_sum_pipeline,
+                &vote_buffer,
+                chunk.instance_count as u32,
             );
 
             let compact_bind_group = render_device.create_bind_group(
@@ -214,8 +166,8 @@ pub(crate) fn prepare_grass_bind_groups(
                 &BindGroupEntries::sequential((
                     instance_buffer.as_entire_binding(),
                     vote_buffer.as_entire_binding(),
-                    scan_buffer.as_entire_binding(),
-                    scan_blocks_out_buffer.as_entire_binding(),
+                    prefix_sum_bind_group.scan_buffer.as_entire_binding(),
+                    prefix_sum_bind_group.scan_blocks_out_buffer.as_entire_binding(),
                     compact_buffer.as_entire_binding(),
                     indirect_indexed_args_buffer.as_entire_binding(),
                 )),
@@ -226,42 +178,26 @@ pub(crate) fn prepare_grass_bind_groups(
                 indirect_buffer: indirect_indexed_args_buffer,
 
                 workgroup_count: chunk.workgroup_count,
-                scan_workgroup_count: chunk.scan_workgroup_count,
-                scan_blocks_workgroup_count: chunk.scan_groups_workgroup_count,
+                compact_workgroup_count: chunk.scan_workgroup_count,
+
 
                 compact_buffer,
-                scan_bind_group,
-                scan_blocks_bind_group,
                 compact_bind_group,
             });
 
-            chunkp_bind_groups.push(GrassBindGroupsP {
-                chunk_bind_group: chunkp_bind_group,
-                workgroup_count: chunksp.chunks,
-            })
+            prefix_sum_bind_groups.push(prefix_sum_bind_group);
         }
 
-        commands.entity(entity).insert(GrassBufferBindGroup {
+        let buffer_bind_group = GrassBufferBindGroup {
             mesh_bind_group,
             triangle_count: chunksp.triangle_count as u32,
             chunks: chunk_bind_groups,
-            chunksp: chunkp_bind_groups,
-        });
-    }
-}
+            prefix_sum_chunks: prefix_sum_bind_groups,
+        };
+ 
 
-pub fn prepare_compute_chunk_pipeline(
-    mut commands: Commands,
-    pipeline_cache: Res<PipelineCache>,
-    mut pipelines: ResMut<SpecializedComputePipelines<GrassComputeChunkPipeline>>,
-    pipeline: Res<GrassComputeChunkPipeline>,
-    query: Query<(Entity, &GrassChunksP)>,
-) {
-    for (entity, chunks) in &query {
-        let pipeline_id = pipelines.specialize(&pipeline_cache, &pipeline, GrassComputeChunkPipelineKey {
-            workgroup_count: chunks.chunks,
-        });
+        commands.entity(entity).insert(buffer_bind_group.clone());
+        grass_entities.0.insert(entity, buffer_bind_group); 
 
-        commands.entity(entity).insert(GrassComputeChunkPipelineId(pipeline_id));
     }
 }

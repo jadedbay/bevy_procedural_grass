@@ -1,43 +1,28 @@
 #import bevy_procedural_grass::grass_types::Aabb;
 
-struct Counts {
-    instance_count: u32,
-    workgroup_count: atomic<u32>,
-    scan_workgroup_count: u32,
-    scan_groups_workgroup_count: u32,
-}
-
 @group(0) @binding(0) var<storage, read> positions: array<vec4<f32>>;
 @group(0) @binding(1) var<storage, read> indices: array<u32>;
-@group(0) @binding(2) var<storage, read_write> areas: array<u32>;
+@group(0) @binding(2) var<storage, read> dispatch_counts: array<u32>;
 
-var<push_constant> triangle_count: u32;
 @group(1) @binding(0) var<uniform> aabb: Aabb;
-@group(1) @binding(1) var<storage, read_write> triangle_dispatch_count: array<u32>;
-@group(1) @binding(2) var<storage, read_write> counts: Counts;
+@group(1) @binding(1) var<storage, read_write> chunk_dispatch_counts: array<u32>;
+@group(1) @binding(2) var<storage, read_write> indices_index_length: atomic<u32>;
 
-@compute @workgroup_size(#{CHUNK_SIZE_X}, #{CHUNK_SIZE_Y}, #{CHUNK_SIZE_Z})
+@compute @workgroup_size(128)
 fn main(
     @builtin(global_invocation_id) global_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
     @builtin(local_invocation_id) local_id: vec3<u32>,
 ) {
     let base_index = global_id * 3;
-    let v0 = positions[base_index].xyz;
-    let v1 = positions[base_index + 1].xyz;
-    let v2 = positions[base_index + 2].xyz;
+    let v0 = positions[indices[base_index]].xyz;
+    let v1 = positions[indices[base_index + 1]].xyz;
+    let v2 = positions[indices[base_index + 2]].xyz;
     
-    let density = 0.5;
-    let area = length(cross(v1 - v0, v2 - v0)) / 2.0;
-    let blade_count = ceil(density * area);
-    
-    let dispatch_count = u32(ceil(blade_count / 32.0));
-
     if (triangle_intersects_aabb(v0, v1, v2)) {
-        triangle_dispatch_count[(local_id.z * #{CHUNK_SIZE_X} * #{CHUNK_SIZE_Y} + local_id.y * #{CHUNK_SIZE_X} + local_id.x) * triangle_count + workgroup_id.x] = dispatch_count;
+      chunk_dispatch_counts[global_id] = dispatch_counts[global_id]; 
+      atmoicAdd(&indices_index_length, dispatch_counts[global_id]); 
     }     
-
-    atmoicAdd(&counts.workgroup_count, dispatch_count); 
 }
 
 fn aabb_contains_point(point: vec3<f32>) -> bool {
