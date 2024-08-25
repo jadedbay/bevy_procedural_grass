@@ -47,7 +47,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                     pass.set_index_buffer(buffer.slice(..), 0, *index_format);
                     for chunk in &grass_bind_groups.chunks {
                         pass.set_vertex_buffer(1, chunk.compact_buffer.slice(..));
-                        pass.draw_indexed_indirect(&chunk.indirect_buffer, 0);
+                        pass.draw_indexed_indirect(&chunk.indirect_args_buffer, 0);
                     }
                 }
                 GpuBufferInfo::NonIndexed => {} // will always be indexed

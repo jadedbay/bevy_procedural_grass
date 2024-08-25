@@ -29,6 +29,7 @@ impl Plugin for ProceduralGrassPlugin {
         embedded_asset!(app, "shaders/compact.wgsl");
         embedded_asset!(app, "shaders/grass.wgsl");
         embedded_asset!(app, "shaders/dispatch_counts.wgsl");
+        embedded_asset!(app, "shaders/grass_cull.wgsl");
 
         app
             .add_plugins((

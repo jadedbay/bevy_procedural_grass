@@ -8,8 +8,10 @@ use super::instance::GrassInstanceData;
 pub(crate) struct GrassComputePipeline {
     pub mesh_layout: BindGroupLayout,
     pub chunk_layout: BindGroupLayout,
+    pub cull_layout: BindGroupLayout,
     pub compact_layout: BindGroupLayout,
     pub compute_id: CachedComputePipelineId,
+    pub cull_pipeline_id: CachedComputePipelineId,
     pub compact_pipeline_id: CachedComputePipelineId,
 
     _grass_types_shader: Handle<Shader>,
@@ -37,8 +39,20 @@ impl FromWorld for GrassComputePipeline {
                 (
                     uniform_buffer::<BoundingBox>(false),
                     storage_buffer_read_only::<Vec<u32>>(false),
-                    storage_buffer::<Vec<u32>>(false),
                     storage_buffer::<Vec<GrassInstanceData>>(false),
+                    uniform_buffer::<ViewUniform>(true),
+                )
+            )
+        );
+
+        let cull_layout = render_device.create_bind_group_layout(
+            "cull_grass_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    uniform_buffer::<BoundingBox>(false),
+                    storage_buffer_read_only_sized(false, None),
+                    storage_buffer::<Vec<u32>>(false),
                     uniform_buffer::<ViewUniform>(true),
                 )
             )
@@ -60,8 +74,9 @@ impl FromWorld for GrassComputePipeline {
         );
 
         let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_grass.wgsl");
-
+        let cull_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_cull.wgsl");
         let compact_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compact.wgsl");
+
         
         let pipeline_cache = world.resource_mut::<PipelineCache>();
 
@@ -74,6 +89,17 @@ impl FromWorld for GrassComputePipeline {
                 shader_defs: vec![],
                 entry_point: "compact".into(),
         });
+
+        let cull_pipeline_id = pipeline_cache.queue_compute_pipeline(
+            ComputePipelineDescriptor {
+                label: Some("cull_grass_pipeline".into()),
+                layout: vec![cull_layout.clone()],
+                push_constant_ranges: Vec::new(),
+                shader: cull_shader.clone(),
+                shader_defs: vec![],
+                entry_point: "main".into(),
+            }
+        );
 
         let compute_id = pipeline_cache
             .queue_compute_pipeline(ComputePipelineDescriptor {
@@ -88,8 +114,10 @@ impl FromWorld for GrassComputePipeline {
         Self {
             mesh_layout,
             chunk_layout,
+            cull_layout,
             compact_layout,
             compute_id,
+            cull_pipeline_id,
             compact_pipeline_id,
             _grass_types_shader: world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_types.wgsl")
         }
