@@ -17,7 +17,7 @@ fn main() {
             }),
             PlayerPlugin,
             ProceduralGrassPlugin,
-            // WireframePlugin,
+            WireframePlugin,
         ))
         .add_plugins((
             bevy::diagnostic::FrameTimeDiagnosticsPlugin,
@@ -34,7 +34,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(10., 10.).subdivisions(1).build();
+    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(0).build();
     // if let Some(positions) = plane.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
     //     if let VertexAttributeValues::Float32x3(positions) = positions {
     //         for position in positions.iter_mut() {
@@ -52,7 +52,7 @@ fn setup(
             ..default()
         },
        GrassGround,
-    //    Wireframe,
+       Wireframe,
     )).id();
 
     commands.spawn(

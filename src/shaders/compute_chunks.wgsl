@@ -21,8 +21,8 @@ fn main(
     
     if (triangle_intersects_aabb(v0, v1, v2)) {
       chunk_dispatch_counts[global_id] = dispatch_counts[global_id]; 
-      atmoicAdd(&indices_index_length, dispatch_counts[global_id]); 
-    }     
+      atomicAdd(&indices_index_length, dispatch_counts[global_id]); 
+    }
 }
 
 fn aabb_contains_point(point: vec3<f32>) -> bool {

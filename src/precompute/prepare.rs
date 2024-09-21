@@ -4,16 +4,6 @@ use crate::{grass::ground_mesh::GroundMesh, prefix_sum::{create_prefix_sum_bind_
 
 use super::pipeline::GrassPrecomputePipeline;
 
-#[derive(Default)]
-pub enum GrassPreComputeStep {
-    #[default]
-    PreReadback,
-    PostReadback,
-}
-
-#[derive(Resource)]
-pub struct GrassPrecomputeEntities(HashMap<Entity, GrassPreComputeStep>);
-
 #[derive(Component, Clone)]
 pub struct GroundMeshBindGroup {
     pub bind_group: BindGroup,
@@ -64,7 +54,6 @@ pub fn prepare_ground_mesh_bindgroup(
         //     &dispatch_counts_buffer, 
         //     ground_mesh.triangle_count as u32,
         // );
-
 
         // commands.entity(entity).insert(GroundMeshBindGroup {
         //     bind_group: mesh_bind_group,

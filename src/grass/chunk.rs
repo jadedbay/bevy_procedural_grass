@@ -1,17 +1,20 @@
 use std::time::Instant;
 
-use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::Aabb, render_resource::ShaderType}, utils::HashMap};
+use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::Aabb, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, ShaderType}, renderer::RenderDevice}, utils::HashMap};
 use super::{Grass, GrassGround};
 use crate::{prefix_sum::calculate_workgroup_counts, util::aabb::triangle_intersects_aabb};
 
 #[derive(Component, Clone)]
 pub struct GrassChunks(pub HashMap<UVec3, GrassChunk>);
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct GrassChunk {
     pub aabb: Aabb,
-    pub indices_index: Vec<u32>,
+    pub aabb_buffer: Buffer,
+    pub indices_index_buffer: Option<Buffer>,
+    pub instances_buffer: Option<Buffer>,
 
+    pub indices_index: Vec<u32>,
     pub instance_count: usize,
     pub workgroup_count: u32,
     pub scan_workgroup_count: u32,
@@ -36,6 +39,7 @@ pub(crate) fn create_chunks(
     meshes: ResMut<Assets<Mesh>>,
     grass_query: Query<(Entity, &Grass)>,
     ground_query: Query<&Handle<Mesh>, With<GrassGround>>,
+    render_device: Res<RenderDevice>,
 ) {
     for (entity, grass) in grass_query.iter() {
         let start = Instant::now();
@@ -58,7 +62,18 @@ pub(crate) fn create_chunks(
                         UVec3::new(x as u32, y as u32, z as u32), 
                         GrassChunk {
                             aabb,
-                            ..default()
+                            aabb_buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {
+                                label: Some("aabb_buffer"),
+                                contents: bytemuck::cast_slice(&[BoundingBox::from(aabb)]),
+                                usage: BufferUsages::UNIFORM,
+                            }),
+                            indices_index_buffer: None,
+                            instances_buffer: None,
+                            indices_index: Vec::new(),
+                            instance_count: 0,
+                            workgroup_count: 0,
+                            scan_groups_workgroup_count: 0,
+                            scan_workgroup_count: 0,
                         }
                     );
 

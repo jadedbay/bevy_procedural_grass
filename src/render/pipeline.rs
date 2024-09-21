@@ -40,7 +40,6 @@ impl FromWorld for GrassComputePipeline {
                     uniform_buffer::<BoundingBox>(false),
                     storage_buffer_read_only::<Vec<u32>>(false),
                     storage_buffer::<Vec<GrassInstanceData>>(false),
-                    uniform_buffer::<ViewUniform>(true),
                 )
             )
         );

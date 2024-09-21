@@ -9,7 +9,6 @@
 @group(1) @binding(0) var<uniform> aabb: Aabb;
 @group(1) @binding(1) var<storage, read> indices_index: array<u32>;
 @group(1) @binding(2) var<storage, read_write> output: array<GrassInstance>;
-@group(1) @binding(3) var<uniform> view: View; // TODO remove view
 
 @compute @workgroup_size(16)
 fn main(
