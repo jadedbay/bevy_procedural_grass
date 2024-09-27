@@ -19,11 +19,15 @@ fn main(
     let local_uv = vec2<f32>(u, v);
 
     let chunk_position = chunk_aabb.min + (local_uv * (chunk_aabb.max - chunk_aabb.min));
-
+    
     let global_uv = (chunk_position - aabb.min) / (aabb.max - aabb.min); 
 
     let dimensions = textureDimensions(heightmap);
-    let height = textureLoad(heightmap, vec2<i32>(global_uv * vec2<f32>(dimensions)), 0).r;
+    var texture_coords = vec2<i32>(global_uv * vec2<f32>(dimensions));
 
-    output[global_id.x] = GrassInstance(vec4<f32>(chunk_position.x, height * 6.0 - 0.1, chunk_position.y, 1.0));  
+    texture_coords = max(vec2<i32>(0), min(texture_coords, vec2<i32>(dimensions) - vec2<i32>(1)));
+
+    let height = textureLoad(heightmap, texture_coords, 0).r;
+
+    output[global_id.x] = GrassInstance(vec4<f32>(chunk_position.x, height * 6.0 - 0.01, chunk_position.y, 1.0));  
 }

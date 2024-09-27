@@ -100,18 +100,17 @@ pub fn compute_grass(
     let Some(compute_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.compute_id) else { return; };
 
     for (entity, grass_bind_groups) in query.iter() {
-        //if !grass_entities.0.contains_key(&entity) {
+        if !grass_entities.0.contains_key(&entity) {
             let mut pass = command_encoder.begin_compute_pass(&ComputePassDescriptor::default());
 
             pass.set_pipeline(compute_pipeline);
-
             for chunk in &grass_bind_groups.chunks {
-                pass.set_bind_group(0, &chunk.chunk_bind_group, &[]);
+                pass.set_bind_group(0, &chunk.chunk_bind_group.as_ref().unwrap(), &[]);
                 pass.dispatch_workgroups(chunk.workgroup_count as u32, 1, 1);
             }
-        //}
 
-        grass_entities.0.insert(entity, GrassStage::Cull);
+            grass_entities.0.insert(entity, GrassStage::Cull);
+        }
     }
 
     render_queue.submit([command_encoder.finish()]);

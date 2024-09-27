@@ -76,9 +76,9 @@ fn setup(
             mesh: meshes.add(GrassMesh::mesh(7)),
             grass: Grass {
                 ground_entity: Some(ground),
-                chunk_count: UVec2::splat(1),
+                chunk_count: UVec2::splat(8),
                 height_map: Some(images.add(noise_image)),
-                density: 100,
+                density: 10000,
                 ..default()
             },
             ..default()

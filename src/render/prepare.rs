@@ -11,16 +11,11 @@ use super::{
     pipeline::GrassComputePipeline,
 };
 use crate::{grass::{
-    chunk::{Aabb2dGpu, GrassAabb, GrassChunks}, Grass},
+    chunk::{GrassAabb, GrassChunks}, Grass},
 prefix_sum::{create_prefix_sum_bind_group_buffers, PrefixSumBindGroup, PrefixSumPipeline}};
 
 #[derive(Resource, Default)]
 pub struct GrassEntities(pub HashMap<Entity, GrassStage>);
-
-pub struct GrassEntityPersistentBuffers {
-    pub indices_index_buffers: Option<Vec<Buffer>>,
-    pub instances_buffers: Option<Vec<Buffer>>,
-}
 
 #[derive(Clone, Copy, Default, PartialEq)]
 pub enum GrassStage {
@@ -31,7 +26,7 @@ pub enum GrassStage {
 
 #[derive(Clone)]
 pub struct GrassChunkBufferBindGroup {
-    pub chunk_bind_group: BindGroup,
+    pub chunk_bind_group: Option<BindGroup>,
     pub indirect_args_buffer: Buffer,
 
     pub cull_bind_group: BindGroup,
@@ -56,6 +51,7 @@ pub fn prepare_grass(
     pipeline: Res<GrassComputePipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,
     query: Query<(Entity, &GrassChunks, &Grass, &GrassAabb)>,
+    grass_entities: Res<GrassEntities>,
     images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
     view_uniforms: Res<ViewUniforms>,
@@ -73,6 +69,20 @@ pub fn prepare_grass(
         let mut prefix_sum_bind_groups = Vec::new();
 
         for (_, chunk) in chunks.0.clone().into_iter() {
+            let mut chunk_bind_group = None;
+
+            if !grass_entities.0.contains_key(&entity) {
+                chunk_bind_group = Some(render_device.create_bind_group(
+                    Some("chunk_bind_group"),
+                    &chunk_layout,
+                    &BindGroupEntries::sequential((
+                        chunk.instance_buffer.as_entire_binding(),
+                        &images.get(grass.height_map.as_ref().unwrap().id()).unwrap().texture_view,
+                        chunk.aabb_buffer.as_entire_binding(),
+                        aabb.buffer.as_entire_binding(),
+                    )),
+                ));
+            }
 
             let vote_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("vote_buffer"),
@@ -80,17 +90,6 @@ pub fn prepare_grass(
                 usage: BufferUsages::STORAGE,
                 mapped_at_creation: false,
             });
-
-            let chunk_bind_group = render_device.create_bind_group(
-                Some("chunk_bind_group"),
-                &chunk_layout,
-                &BindGroupEntries::sequential((
-                    chunk.instance_buffer.as_entire_binding(),
-                    &images.get(grass.height_map.as_ref().unwrap().id()).unwrap().texture_view,
-                    chunk.aabb_buffer.as_entire_binding(),
-                    aabb.buffer.as_entire_binding(),
-                )),
-            );
 
             let compact_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("compact_buffer"),

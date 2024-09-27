@@ -48,6 +48,9 @@ pub(crate) fn create_chunks(
 
         let workgroup_count = (grass.density as f32 / (grass.chunk_count.x * grass.chunk_count.y) as f32).ceil() as usize;
         let instance_count = workgroup_count * 512;
+
+        dbg!(instance_count);
+
         let (scan_workgroup_count, scan_groups_workgroup_count) = calculate_workgroup_counts(instance_count as u32);
 
         for x in 0..grass.chunk_count.x { 
