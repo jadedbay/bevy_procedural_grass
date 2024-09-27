@@ -1,37 +1,21 @@
 use std::time::Instant;
 
-use bevy::{prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::Aabb, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, ShaderType}, renderer::RenderDevice}, utils::HashMap};
+use bevy::{math::bounding::Aabb2d, prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::Aabb, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, ShaderType}, renderer::RenderDevice}, utils::HashMap};
 use super::{Grass, GrassGround};
 use crate::{prefix_sum::calculate_workgroup_counts, util::aabb::triangle_intersects_aabb};
 
 #[derive(Component, Clone)]
-pub struct GrassChunks(pub HashMap<UVec3, GrassChunk>);
+pub struct GrassChunks(pub HashMap<UVec2, GrassChunk>);
 
 #[derive(Debug, Clone)]
 pub struct GrassChunk {
-    pub aabb: Aabb,
+    pub aabb: Aabb2d,
     pub aabb_buffer: Buffer,
-    pub indices_index_buffer: Option<Buffer>,
-    pub instances_buffer: Option<Buffer>,
 
-    pub indices_index: Vec<u32>,
     pub instance_count: usize,
     pub workgroup_count: u32,
     pub scan_workgroup_count: u32,
     pub scan_groups_workgroup_count: u32,
-}
-
-#[derive(Clone, Component)]
-pub struct GrassChunksP {
-    pub aabbs: Vec<Aabb>,
-    pub chunks: UVec3,
-    pub triangle_count: usize,
-}
-
-impl GrassChunksP {
-    pub fn chunk_count(&self) -> u32 {
-        self.chunks.x * self.chunks.y * self.chunks.z
-    }
 }
 
 pub(crate) fn create_chunks(
@@ -42,9 +26,7 @@ pub(crate) fn create_chunks(
     render_device: Res<RenderDevice>,
 ) {
     for (entity, grass) in grass_query.iter() {
-        let start = Instant::now();
         let mut grass_chunks = GrassChunks(HashMap::new());
-        let mut aabbs = Vec::new();
 
         let mesh = meshes.get(ground_query.get(grass.ground_entity.unwrap()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
@@ -52,83 +34,36 @@ pub(crate) fn create_chunks(
         let chunk_count = (mesh_size / grass.chunk_size).ceil().max(Vec3::splat(1.0).into());
 
         for x in 0..chunk_count.x as usize {
-            for y in 0..chunk_count.y as usize {
-                for z in 0..chunk_count.z as usize {
-                    let min = Vec3::from(mesh_aabb.min()) + Vec3::new(grass.chunk_size * x as f32, grass.chunk_size * y as f32, grass.chunk_size * z as f32);
-                    let max = min + Vec3::splat(grass.chunk_size);
-                    let aabb = Aabb::from_min_max(min, max);
+            for z in 0..chunk_count.z as usize {
+                let min = Vec2::new(
+                    mesh_aabb.min().x + grass.chunk_size * x as f32,
+                    mesh_aabb.min().z + grass.chunk_size * z as f32
+                );
+                let max = min + Vec2::splat(grass.chunk_size);
+                let aabb = Aabb2d::new(min, max);
 
-                    grass_chunks.0.insert(
-                        UVec3::new(x as u32, y as u32, z as u32), 
-                        GrassChunk {
-                            aabb,
-                            aabb_buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {
-                                label: Some("aabb_buffer"),
-                                contents: bytemuck::cast_slice(&[BoundingBox::from(aabb)]),
-                                usage: BufferUsages::UNIFORM,
-                            }),
-                            indices_index_buffer: None,
-                            instances_buffer: None,
-                            indices_index: Vec::new(),
-                            instance_count: 0,
-                            workgroup_count: 0,
-                            scan_groups_workgroup_count: 0,
-                            scan_workgroup_count: 0,
-                        }
-                    );
-
-                    aabbs.push(aabb);
-                }
-            }
-        }
-
-
-        let positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-            Some(VertexAttributeValues::Float32x3(positions)) => positions,
-            _ => {
-                warn!("Mesh does not contain positions");
-                return;
-            },
-        };
-
-        let indices = match mesh.indices() {
-            Some(Indices::U32(indices)) => indices,
-            _ => {
-                warn!("Mesh does not contain indices");
-                return;
-            }, 
-        };
-
-        commands.entity(entity).insert(GrassChunksP {
-            aabbs,
-            chunks: UVec3::new(chunk_count.x as u32, chunk_count.y as u32, chunk_count.z as u32),
-            triangle_count: (indices.len() / 3), // NOTE: triangle count for entire mesh (not just
-            // chunk)
-        });
-
-        // Add indices to chunk
-        for (i, triangle) in indices.chunks(3).enumerate() {
-            let v0 = Vec3::from(positions[triangle[0] as usize]);
-            let v1 = Vec3::from(positions[triangle[1] as usize]);
-            let v2 = Vec3::from(positions[triangle[2] as usize]);
-
-            let density = 6.0; // TODO
-            let area = ((v1 - v0).cross(v2 - v0)).length() / 2.0;
-            let blade_count = (density * area).ceil() as u32;
-
-            for (_, chunk) in grass_chunks.0.iter_mut() {
-                if triangle_intersects_aabb(v0, v1, v2, &chunk.aabb) {
-                    for _ in 0..(blade_count as f32 / 8.0).ceil() as u32 {
-                        chunk.indices_index.push(i as u32);
+                grass_chunks.0.insert(
+                    UVec2::new(x as u32, z as u32), 
+                    GrassChunk {
+                        aabb,
+                        aabb_buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {
+                            label: Some("aabb_buffer"),
+                            contents: bytemuck::cast_slice(&[Aabb2dGpu::from(aabb)]),
+                            usage: BufferUsages::UNIFORM,
+                        }),
+                        instance_count: 0,
+                        workgroup_count: 0,
+                        scan_groups_workgroup_count: 0,
+                        scan_workgroup_count: 0,
                     }
-                }
+                );
             }
         }
 
         // Calculate workgroup counts
         for (_, chunk) in grass_chunks.0.iter_mut() {
-            let workgroup_count = chunk.indices_index.len();
-            let instance_count = workgroup_count * 16;
+            let workgroup_count = grass.density as usize;
+            let instance_count = workgroup_count * 512;
 
             dbg!(instance_count);
 
@@ -141,27 +76,21 @@ pub(crate) fn create_chunks(
         }
 
         commands.entity(entity).insert(grass_chunks);
-
-        dbg!(start.elapsed());
     }
 }
 
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, ShaderType)]
 #[repr(C)]
-pub(crate) struct BoundingBox {
-    min: Vec3,
-    _padding: f32,
-    max: Vec3,
-    _padding2: f32,
+pub(crate) struct Aabb2dGpu {
+    min: Vec2,
+    max: Vec2,
 }
 
-impl From<Aabb> for BoundingBox {
-    fn from(aabb: Aabb) -> Self {
+impl From<Aabb2d> for Aabb2dGpu {
+    fn from(aabb: Aabb2d) -> Self {
         Self {
-            min: aabb.min().into(),
-            _padding: 0.0,
-            max: aabb.max().into(),
-            _padding2: 0.0,
+            min: aabb.min,
+            max: aabb.max,
         }
     }
 }

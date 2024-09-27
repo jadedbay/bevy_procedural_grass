@@ -1,43 +1,26 @@
 #import bevy_pbr::utils::rand_f
-#import bevy_render::view::View
-#import bevy_procedural_grass::grass_types::{GrassInstance, Aabb};
+#import bevy_procedural_grass::grass_types::GrassInstance;
 
+@group(0) @binding(0) var<storage, read_write> output: array<GrassInstance>;
+@group(0) @binding(1) var heightmap: texture_2d<f32>;
+//@group(0) @binding(2) var<uniform> chunk_pos: vec3<u32>;
 
-@group(0) @binding(0) var<storage, read> positions: array<vec3<f32>>;
-@group(0) @binding(1) var<storage, read> indices: array<u32>;
-
-@group(1) @binding(0) var<uniform> aabb: Aabb;
-@group(1) @binding(1) var<storage, read> indices_index: array<u32>;
-@group(1) @binding(2) var<storage, read_write> output: array<GrassInstance>;
-
-@compute @workgroup_size(16)
+@compute @workgroup_size(512)
 fn main(
     @builtin(global_invocation_id) global_id: vec3<u32>, 
     @builtin(local_invocation_id) local_id: vec3<u32>, 
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
-    let v0 = positions[indices[indices_index[workgroup_id.x] * 3]].xyz;
-    let v1 = positions[indices[indices_index[workgroup_id.x] * 3 + 1]].xyz;
-    let v2 = positions[indices[indices_index[workgroup_id.x] * 3 + 2]].xyz;
+    var state: u32 = global_id.x;
+    let u = rand_f(&state);
+    state = state * 747796405u + 2891336453u;
+    let v = rand_f(&state);
+    let uv = vec2<f32>(u, v);
 
-    let area = length(cross(v1 - v0, v2 - v0)) / 2.0;
-    let scaled_density = u32(ceil(6.0 * area));
-    if (scaled_density < local_id.x) { return; }
+    let position = (uv * 100.0) - 50.0;
 
-    let normal = normalize(cross(v1 - v0, v2 - v0));
+    let dimensions = textureDimensions(heightmap);
+    let height = textureLoad(heightmap, vec2<i32>(uv * vec2<f32>(dimensions)), 0).r;
 
-    var state: u32 = global_id.x; //TODO: use vertices position instead (maybe?)
-    let r1 = sqrt(rand_f(&state));
-    let r2 = rand_f(&state);
-    let r = vec3<f32>(1.0 - r1, r1 * (1.0 - r2), r1 * r2);
-
-    let position = (v0 * r.x + v1 * r.y + v2 * r.z);
-
-    if (!point_in_aabb(position)) { return; }
-
-    output[global_id.x] = GrassInstance(vec4<f32>(position, 1.0), vec4<f32>(normal, 0.0)); // using position.w to check if blade exists (does not exist because outside of aabb or scaled_density) (basically persistent vote buffer)
-}
-
-fn point_in_aabb(point: vec3<f32>) -> bool {
-    return all(point >= aabb.min && point <= aabb.max);
+    output[global_id.x] = GrassInstance(vec4<f32>(position.x, height * 6.0 - 0.1, position.y, 1.0));  
 }

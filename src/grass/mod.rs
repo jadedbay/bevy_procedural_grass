@@ -3,12 +3,9 @@ use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::Extrac
 pub mod chunk;
 pub mod mesh;
 pub mod clump;
-pub mod ground_mesh;
 pub mod config;
 
 use chunk::GrassChunks;
-
-use self::chunk::GrassChunksP;
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -23,6 +20,8 @@ pub struct GrassBundle {
 pub struct Grass {
     pub ground_entity: Option<Entity>, 
     pub chunk_size: f32,
+    pub density: u32,
+    pub height_map: Option<Handle<Image>>,
 }
 
 impl Default for Grass {
@@ -30,17 +29,19 @@ impl Default for Grass {
         Self {
             ground_entity: None,
             chunk_size: 30.0,
+            density: 5,
+            height_map: None,
         }
     }
 }
 
 impl ExtractComponent for Grass {
-    type QueryData = (&'static Grass, &'static GrassChunks, &'static GrassChunksP);
+    type QueryData = (&'static Grass, &'static GrassChunks);
     type QueryFilter = ();
-    type Out = (Grass, GrassChunks, GrassChunksP);
+    type Out = (Grass, GrassChunks);
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
-        Some((item.0.clone(), item.1.clone(), item.2.clone()))
+        Some((item.0.clone(), item.1.clone()))
     }
 }
 

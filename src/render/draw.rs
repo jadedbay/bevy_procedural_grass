@@ -50,7 +50,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                         pass.draw_indexed_indirect(&chunk.indirect_args_buffer, 0);
                     }
                 }
-                GpuBufferInfo::NonIndexed => {} // will always be indexed
+                GpuBufferInfo::NonIndexed => unreachable!()
             }
             
             RenderCommandResult::Success

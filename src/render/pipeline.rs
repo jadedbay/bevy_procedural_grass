@@ -1,12 +1,11 @@
-use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderDefVal, ShaderStages, SpecializedComputePipeline, SpecializedMeshPipeline, SpecializedMeshPipelineError, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
+use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, PushConstantRange, RenderPipelineDescriptor, ShaderDefVal, ShaderStages, SpecializedComputePipeline, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureSampleType, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
 
-use crate::grass::chunk::BoundingBox;
+use crate::grass::chunk::Aabb2dGpu;
 
 use super::instance::GrassInstanceData;
 
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
-    pub mesh_layout: BindGroupLayout,
     pub chunk_layout: BindGroupLayout,
     pub cull_layout: BindGroupLayout,
     pub compact_layout: BindGroupLayout,
@@ -21,25 +20,13 @@ impl FromWorld for GrassComputePipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        let mesh_layout = render_device.create_bind_group_layout(
-            "grass_compute_mesh_layout", 
-            &BindGroupLayoutEntries::sequential(
-                ShaderStages::COMPUTE,
-                (
-                    storage_buffer_read_only::<Vec<[f32; 4]>>(false),
-                    storage_buffer_read_only::<Vec<u32>>(false),
-                )
-            )
-        );
-
         let chunk_layout = render_device.create_bind_group_layout(
-            "grass_compute_indices_layout",
+            "grass_chunk_layout",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::COMPUTE,
                 (
-                    uniform_buffer::<BoundingBox>(false),
-                    storage_buffer_read_only::<Vec<u32>>(false),
                     storage_buffer::<Vec<GrassInstanceData>>(false),
+                    texture_2d(TextureSampleType::Float { filterable: true }),
                 )
             )
         );
@@ -49,7 +36,6 @@ impl FromWorld for GrassComputePipeline {
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::COMPUTE,
                 (
-                    uniform_buffer::<BoundingBox>(false),
                     storage_buffer_read_only_sized(false, None),
                     storage_buffer::<Vec<u32>>(false),
                     uniform_buffer::<ViewUniform>(true),
@@ -103,7 +89,7 @@ impl FromWorld for GrassComputePipeline {
         let compute_id = pipeline_cache
             .queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("grass_gen_compute_pipeline".into()),
-                layout: vec![mesh_layout.clone(), chunk_layout.clone()],
+                layout: vec![chunk_layout.clone()],
                 push_constant_ranges: Vec::new(),
                 shader,
                 shader_defs: vec![],
@@ -111,7 +97,6 @@ impl FromWorld for GrassComputePipeline {
             });
         
         Self {
-            mesh_layout,
             chunk_layout,
             cull_layout,
             compact_layout,
