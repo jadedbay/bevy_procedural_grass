@@ -11,7 +11,7 @@ use super::{
     pipeline::GrassComputePipeline,
 };
 use crate::{grass::{
-    chunk::{Aabb2dGpu, GrassChunks}, Grass},
+    chunk::{Aabb2dGpu, GrassAabb, GrassChunks}, Grass},
 prefix_sum::{create_prefix_sum_bind_group_buffers, PrefixSumBindGroup, PrefixSumPipeline}};
 
 #[derive(Resource, Default)]
@@ -55,7 +55,7 @@ pub fn prepare_grass(
     mut commands: Commands,
     pipeline: Res<GrassComputePipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,
-    query: Query<(Entity, &GrassChunks, &Grass)>,
+    query: Query<(Entity, &GrassChunks, &Grass, &GrassAabb)>,
     images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
     view_uniforms: Res<ViewUniforms>,
@@ -68,13 +68,11 @@ pub fn prepare_grass(
         return;
     };
 
-    for (entity, chunks, grass) in query.iter() { 
+    for (entity, chunks, grass, aabb) in query.iter() { 
         let mut chunk_bind_groups = Vec::new();
         let mut prefix_sum_bind_groups = Vec::new();
-        let mut instance_buffers = Vec::new();
 
-        for (i, (_, chunk)) in chunks.0.clone().into_iter().enumerate() {
-            let aabb_buffer = chunk.aabb_buffer;
+        for (_, chunk) in chunks.0.clone().into_iter() {
 
             let vote_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("vote_buffer"),
@@ -83,20 +81,14 @@ pub fn prepare_grass(
                 mapped_at_creation: false,
             });
 
-            instance_buffers.push(render_device.create_buffer(&BufferDescriptor {
-                label: Some("grass_data_buffer"),
-                size: (std::mem::size_of::<GrassInstanceData>() * chunk.instance_count) as u64,
-                usage: BufferUsages::VERTEX | BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            }));
-
-
             let chunk_bind_group = render_device.create_bind_group(
                 Some("chunk_bind_group"),
                 &chunk_layout,
                 &BindGroupEntries::sequential((
-                    instance_buffers[i].as_entire_binding(),
+                    chunk.instance_buffer.as_entire_binding(),
                     &images.get(grass.height_map.as_ref().unwrap().id()).unwrap().texture_view,
+                    chunk.aabb_buffer.as_entire_binding(),
+                    aabb.buffer.as_entire_binding(),
                 )),
             );
 
@@ -133,7 +125,7 @@ pub fn prepare_grass(
                 Some("cull_bind_group"),
                 &cull_layout,
                 &BindGroupEntries::sequential((
-                    instance_buffers[i].as_entire_binding(),
+                    chunk.instance_buffer.as_entire_binding(),
                     vote_buffer.as_entire_binding(),
                     view_uniform.clone(),
                 ))
@@ -143,7 +135,7 @@ pub fn prepare_grass(
                 Some("scan_bind_group"),
                 &compact_layout,
                 &BindGroupEntries::sequential((
-                    instance_buffers[i].as_entire_binding(),
+                    chunk.instance_buffer.as_entire_binding(),
                     vote_buffer.as_entire_binding(),
                     prefix_sum_bind_group.scan_buffer.as_entire_binding(),
                     prefix_sum_bind_group.scan_blocks_out_buffer.as_entire_binding(),

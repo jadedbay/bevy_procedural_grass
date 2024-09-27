@@ -27,6 +27,8 @@ impl FromWorld for GrassComputePipeline {
                 (
                     storage_buffer::<Vec<GrassInstanceData>>(false),
                     texture_2d(TextureSampleType::Float { filterable: true }),
+                    uniform_buffer::<Aabb2dGpu>(false), //TODO: dynamic offset
+                    uniform_buffer::<Aabb2dGpu>(false),
                 )
             )
         );
