@@ -45,6 +45,9 @@ pub struct GrassBufferBindGroup {
     pub prefix_sum_chunks: Vec<PrefixSumBindGroup>,
 }
 
+#[derive(Component)]
+pub struct ComputeGrassMarker;
+
 pub fn prepare_grass(
     mut commands: Commands,
     pipeline: Res<GrassComputePipeline>,
@@ -62,6 +65,8 @@ pub fn prepare_grass(
     let Some(view_uniform) = view_uniforms.uniforms.binding() else {
         return;
     };
+
+    let start = std::time::Instant::now();
     for (entity, chunk, grass, gpu_info) in chunk_query.iter() {
         let aabb_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("aabb_buffer"),
@@ -99,6 +104,7 @@ pub fn prepare_grass(
                     aabb_buffer.as_entire_binding(),
                 )),
             ));
+            commands.entity(entity).insert(ComputeGrassMarker);
         }
 
             let vote_buffer = render_device.create_buffer(&BufferDescriptor {
@@ -115,18 +121,6 @@ pub fn prepare_grass(
                 mapped_at_creation: false,
             });
 
-            let indirect_indexed_args_buffer =
-                render_device.create_buffer_with_data(&BufferInitDescriptor {
-                    label: Some("indirect_indexed_args"),
-                    contents: DrawIndexedIndirectArgs {
-                        index_count: 39, // TODO
-                        instance_count: 0,
-                        first_index: 0,
-                        base_vertex: 0,
-                        first_instance: 0,
-                    }.as_bytes(),
-                    usage: BufferUsages::STORAGE | BufferUsages::INDIRECT,
-                });
             
             let prefix_sum_bind_group = create_prefix_sum_bind_group_buffers(
                 &render_device,
@@ -146,6 +140,18 @@ pub fn prepare_grass(
                     view_uniform.clone(),
                 ))
             );
+            let indirect_indexed_args_buffer =
+                render_device.create_buffer_with_data(&BufferInitDescriptor {
+                    label: Some("indirect_indexed_args"),
+                    contents: DrawIndexedIndirectArgs {
+                    index_count: 39, // TODO
+                    instance_count: 0,
+                    first_index: 0,
+                    base_vertex: 0,
+                    first_instance: 0,
+                }.as_bytes(),
+                usage: BufferUsages::STORAGE | BufferUsages::INDIRECT,
+            });
 
             let compact_bind_group = render_device.create_bind_group(
                 Some("scan_bind_group"),
@@ -176,5 +182,7 @@ pub fn prepare_grass(
 
             commands.entity(entity).insert(buffer_bind_group);
             commands.entity(entity).insert(prefix_sum_bind_group);
+
         }
+            // dbg!(start.elapsed());
 }

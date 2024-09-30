@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{camera::ExtractedCamera, render_graph::{self, Re
 
 use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroup, PrefixSumPipeline};
 
-use super::{pipeline::GrassComputePipeline, prepare::{GrassBufferBindGroup, GrassChunkBufferBindGroup, GrassEntities, GrassStage}};
+use super::{pipeline::GrassComputePipeline, prepare::{ComputeGrassMarker, GrassBufferBindGroup, GrassChunkBufferBindGroup, GrassEntities, GrassStage}};
 
 enum ComputeGrassState {
     Loading,
@@ -89,28 +89,28 @@ impl FromWorld for ComputeGrassNode {
 // }
 
 pub fn compute_grass(
-    query: Query<(Entity, &GrassChunkBufferBindGroup)>,
+    query: Query<(Entity, &GrassChunkBufferBindGroup), With<ComputeGrassMarker>>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
     pipeline_id: Res<GrassComputePipeline>,
     pipeline_cache: Res<PipelineCache>,
     mut grass_entities: ResMut<GrassEntities>,
 ) {
+    if query.is_empty() { return; }
     let mut command_encoder = render_device.create_command_encoder(&CommandEncoderDescriptor::default());
     let Some(compute_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.compute_id) else { return; };
 
     for (entity, bind_groups) in query.iter() {
-        if !grass_entities.0.contains_key(&entity) {
             let mut pass = command_encoder.begin_compute_pass(&ComputePassDescriptor::default());
-
+            
             pass.set_pipeline(compute_pipeline);
+            
             pass.set_bind_group(0, &bind_groups.chunk_bind_group.as_ref().unwrap(), &[]);
             pass.dispatch_workgroups(bind_groups.workgroup_count, 1, 1);
-
+            
             grass_entities.0.insert(entity, GrassStage::Cull);
-        }
     }
-
+    
     render_queue.submit([command_encoder.finish()]);
 }
 
@@ -178,10 +178,10 @@ impl render_graph::Node for CullGrassNode {
             render_context: &mut RenderContext<'w>,
             world: &'w World,
     ) -> Result<(), render_graph::NodeRunError> {
+        let start = std::time::Instant::now();
         match self.state {
             CullGrassState::Loading => {}
             CullGrassState::Loaded => {
-                let start = std::time::Instant::now();
                 let Ok(view_offset) = self.view_offset_query.get_manual(world, graph.view_entity()) else { return Ok(()); };
                 
                 let pipeline_id = world.resource::<GrassComputePipeline>();
@@ -201,33 +201,31 @@ impl render_graph::Node for CullGrassNode {
                     return Ok(());
                 };
 
+                {
+                    let mut pass = render_context
+                    .command_encoder()
+                    .begin_compute_pass(&ComputePassDescriptor::default());
+                
+                pass.set_pipeline(cull_pipeline);
                 for (grass_bind_groups, _) in self.query.iter_manual(world) {
-                        {
-                        let mut pass = render_context
-                            .command_encoder()
-                            .begin_compute_pass(&ComputePassDescriptor::default());
-
-                        pass.set_pipeline(cull_pipeline);
                         pass.set_bind_group(0, &grass_bind_groups.cull_bind_group, &[view_offset.offset]);
                         pass.dispatch_workgroups(grass_bind_groups.cull_workgroup_count, 1, 1);
                         }
                 }
-                for (_, prefix_sum_bind_groups) in self.query.iter_manual(world) {
-                    prefix_sum_pass(render_context, &prefix_sum_bind_groups, prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
-                }
+                prefix_sum_pass(render_context, self.query.iter_manual(world), prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
+                let mut pass = render_context
+                .command_encoder()
+                .begin_compute_pass(&ComputePassDescriptor::default());
+            
+                pass.set_pipeline(compact_pipeline);
                 for (grass_bind_groups, _) in self.query.iter_manual(world) {
-                        let mut pass = render_context
-                            .command_encoder()
-                            .begin_compute_pass(&ComputePassDescriptor::default());
-
-                        pass.set_pipeline(compact_pipeline);
                         pass.set_bind_group(0, &grass_bind_groups.compact_bind_group, &[]);
                         pass.dispatch_workgroups(grass_bind_groups.compact_workgroup_count as u32, 1, 1); 
                 }    
-                dbg!(start.elapsed());
             }
         }
-
+        
+        // dbg!(start.elapsed());
         Ok(())
     }
 }
