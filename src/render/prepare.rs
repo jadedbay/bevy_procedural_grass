@@ -37,6 +37,8 @@ pub struct GrassChunkBufferBindGroup {
 
     pub compact_buffer: Buffer,
     pub compact_bind_group: BindGroup,
+
+    pub reset_args_bind_group: BindGroup,
 }
 
 #[derive(Component, Clone)]
@@ -61,33 +63,16 @@ pub fn prepare_grass(
     let chunk_layout = pipeline.chunk_layout.clone();
     let cull_layout = pipeline.cull_layout.clone();
     let compact_layout = pipeline.compact_layout.clone();
+    let reset_args_layout = pipeline.reset_args_layout.clone();
 
     let Some(view_uniform) = view_uniforms.uniforms.binding() else {
         return;
     };
 
-    let start = std::time::Instant::now();
     for (entity, chunk, grass, gpu_info) in chunk_query.iter() {
-        let aabb_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some("aabb_buffer"),
-            contents: bytemuck::cast_slice(&[Aabb2dGpu::from(gpu_info.aabb)]),
-            usage: BufferUsages::UNIFORM,
-        });
-
-        let height_scale_buffer = render_device.create_buffer_with_data(
-            &BufferInitDescriptor {
-                label: Some("height_scale_buffer"),
-                contents: bytemuck::cast_slice(&[grass.height_map.as_ref().unwrap().scale]),
-                usage: BufferUsages::UNIFORM,
-            }
-        );
-        let height_offset_buffer = render_device.create_buffer_with_data(
-            &BufferInitDescriptor {
-                label: Some("height_offset_buffer"),
-                contents: bytemuck::cast_slice(&[grass.y_offset]),
-                usage: BufferUsages::UNIFORM,
-            }
-        );
+        let aabb_buffer = &gpu_info.aabb_buffer; 
+        let height_scale_buffer = &gpu_info.height_scale_buffer;
+        let height_offset_buffer = &gpu_info.height_offset_buffer;
 
         let mut chunk_bind_group = None;
 
@@ -107,25 +92,14 @@ pub fn prepare_grass(
             commands.entity(entity).insert(ComputeGrassMarker);
         }
 
-            let vote_buffer = render_device.create_buffer(&BufferDescriptor {
-                label: Some("vote_buffer"),
-                size: (std::mem::size_of::<u32>() * gpu_info.instance_count) as u64,
-                usage: BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            });
+            let vote_buffer = &chunk.vote_buffer; 
 
-            let compact_buffer = render_device.create_buffer(&BufferDescriptor {
-                label: Some("compact_buffer"),
-                size: (std::mem::size_of::<GrassInstanceData>() * gpu_info.instance_count) as u64,
-                usage: BufferUsages::VERTEX | BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            });
-
+            let compact_buffer = &chunk.compact_buffer;
             
             let prefix_sum_bind_group = create_prefix_sum_bind_group_buffers(
                 &render_device,
                 &prefix_sum_pipeline,
-                &vote_buffer,
+                vote_buffer,
                 gpu_info.instance_count as u32,
                 gpu_info.scan_workgroup_count,
                 gpu_info.scan_groups_workgroup_count,
@@ -140,18 +114,7 @@ pub fn prepare_grass(
                     view_uniform.clone(),
                 ))
             );
-            let indirect_indexed_args_buffer =
-                render_device.create_buffer_with_data(&BufferInitDescriptor {
-                    label: Some("indirect_indexed_args"),
-                    contents: DrawIndexedIndirectArgs {
-                    index_count: 39, // TODO
-                    instance_count: 0,
-                    first_index: 0,
-                    base_vertex: 0,
-                    first_instance: 0,
-                }.as_bytes(),
-                usage: BufferUsages::STORAGE | BufferUsages::INDIRECT,
-            });
+            let indirect_indexed_args_buffer = &chunk.indirect_args_buffer; 
 
             let compact_bind_group = render_device.create_bind_group(
                 Some("scan_bind_group"),
@@ -166,9 +129,15 @@ pub fn prepare_grass(
                 )),
             );
 
+            let reset_args_bind_group = render_device.create_bind_group(
+                Some("reset_args_bind_group"),
+                &reset_args_layout,
+                &BindGroupEntries::single(indirect_indexed_args_buffer.as_entire_binding()),
+            );
+
             let buffer_bind_group = GrassChunkBufferBindGroup {
                 chunk_bind_group,
-                indirect_args_buffer: indirect_indexed_args_buffer,
+                indirect_args_buffer: indirect_indexed_args_buffer.clone(),
 
                 cull_bind_group,
 
@@ -176,8 +145,10 @@ pub fn prepare_grass(
                 workgroup_count: gpu_info.workgroup_count,
                 compact_workgroup_count: gpu_info.scan_workgroup_count,
 
-                compact_buffer,
+                compact_buffer: compact_buffer.clone(),
                 compact_bind_group,
+
+                reset_args_bind_group,
             };
 
             commands.entity(entity).insert(buffer_bind_group);

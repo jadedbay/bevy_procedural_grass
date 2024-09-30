@@ -1,5 +1,5 @@
 
-use bevy::{math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
+use bevy::{math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
 use super::{Grass, GrassGround};
 use crate::{grass::GrassGpuInfo, prefix_sum::calculate_workgroup_counts, render::instance::GrassInstanceData, util::aabb::triangle_intersects_aabb};
 
@@ -11,6 +11,9 @@ pub struct GrassChunk {
     pub aabb: Aabb2d,
     pub aabb_buffer: Buffer,
     pub instance_buffer: Buffer,
+    pub vote_buffer: Buffer,
+    pub compact_buffer: Buffer,
+    pub indirect_args_buffer: Buffer,
 }
 
 pub(crate) fn create_chunks(
@@ -46,27 +49,6 @@ pub(crate) fn create_chunks(
                     max: chunk_max,
                 };
 
-                // grass_chunks.0.insert(
-                //     UVec2::new(x as u32, z as u32), 
-                //     (
-                //         GrassChunk { 
-                //             aabb,
-                //             aabb_buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {
-                //                 label: Some("aabb_buffer"),
-                //                 contents: bytemuck::cast_slice(&[Aabb2dGpu::from(aabb)]),
-                //                 usage: BufferUsages::UNIFORM,
-                //             }),
-                //             instance_buffer: render_device.create_buffer(&BufferDescriptor {
-                //                 label: Some("instance_buffer"),
-                //                 size: (std::mem::size_of::<GrassInstanceData>() * instance_count) as u64,
-                //                 usage: BufferUsages::VERTEX | BufferUsages::STORAGE,
-                //                 mapped_at_creation: false, 
-                //             }),                 
-                //         },
-                //         false,
-                //     )
-                // );
-
                 let chunk = commands.spawn(
                     (
                         GrassChunk { 
@@ -79,12 +61,55 @@ pub(crate) fn create_chunks(
                             instance_buffer: render_device.create_buffer(&BufferDescriptor {
                                 label: Some("instance_buffer"),
                                 size: (std::mem::size_of::<GrassInstanceData>() * instance_count) as u64,
-                                usage: BufferUsages::VERTEX | BufferUsages::STORAGE,
+                                usage: BufferUsages::STORAGE,
                                 mapped_at_creation: false, 
-                            }),                 
+                            }),
+                            vote_buffer: render_device.create_buffer(&BufferDescriptor {
+                                label: Some("vote_buffer"),
+                                size: (std::mem::size_of::<u32>() * instance_count) as u64,
+                                usage: BufferUsages::STORAGE,
+                                mapped_at_creation: false,
+                            }),
+                            compact_buffer: render_device.create_buffer(&BufferDescriptor {
+                                label: Some("compact_buffer"),
+                                size: (std::mem::size_of::<GrassInstanceData>() * instance_count) as u64,
+                                usage: BufferUsages::VERTEX | BufferUsages::STORAGE,
+                                mapped_at_creation: false,
+                            }),
+                            indirect_args_buffer: render_device.create_buffer_with_data(
+                                &BufferInitDescriptor {
+                                    label: Some("indirect_indexed_args"),
+                                    contents: DrawIndexedIndirectArgs {
+                                    index_count: 39, // TODO
+                                    instance_count: 0,
+                                    first_index: 0,
+                                    base_vertex: 0,
+                                    first_instance: 0,
+                                }.as_bytes(),
+                                usage: BufferUsages::STORAGE | BufferUsages::INDIRECT,
+                            }),
                         },
                         GrassGpuInfo {
                             aabb: mesh_aabb2d,
+                            aabb_buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {
+                                label: Some("aabb_buffer"),
+                                contents: bytemuck::cast_slice(&[Aabb2dGpu::from(mesh_aabb2d)]),
+                                usage: BufferUsages::UNIFORM,
+                            }),
+                            height_scale_buffer: render_device.create_buffer_with_data(
+                                &BufferInitDescriptor {
+                                    label: Some("height_scale_buffer"),
+                                    contents: bytemuck::cast_slice(&[grass.height_map.as_ref().unwrap().scale]),
+                                    usage: BufferUsages::UNIFORM,
+                                }
+                            ),
+                            height_offset_buffer: render_device.create_buffer_with_data(
+                                &BufferInitDescriptor {
+                                    label: Some("height_offset_buffer"),
+                                    contents: bytemuck::cast_slice(&[grass.y_offset]),
+                                    usage: BufferUsages::UNIFORM,
+                                }
+                            ),
                             instance_count,
                             workgroup_count: workgroup_count as u32,
                             scan_groups_workgroup_count,

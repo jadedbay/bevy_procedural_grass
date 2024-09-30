@@ -1,12 +1,4 @@
-#import bevy_procedural_grass::grass_types::GrassInstance;
-
-struct DrawIndexedIndirectArgs {
-    index_count: u32,
-    instance_count: atomic<u32>,
-    first_index: u32,
-    vertex_offset: i32,
-    first_instance: u32,
-}
+#import bevy_procedural_grass::grass_types::{GrassInstance, DrawIndexedIndirectArgs};
 
 @group(0) @binding(0) var<storage, read> instance_data: array<GrassInstance>;
 @group(0) @binding(1) var<storage, read> vote_buffer: array<u32>;

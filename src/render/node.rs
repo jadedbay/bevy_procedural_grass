@@ -155,6 +155,7 @@ impl render_graph::Node for CullGrassNode {
                     pipeline_cache.get_compute_pipeline_state(compute_pipeline.cull_pipeline_id),
                     pipeline_cache.get_compute_pipeline_state(prefix_sum_pipeline.scan_pipeline),
                     pipeline_cache.get_compute_pipeline_state(prefix_sum_pipeline.scan_blocks_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(compute_pipeline.reset_args_pipeline_id),
                 ];
 
                 if pipeline_states.iter().all(|state| matches!(state, CachedPipelineState::Ok(_))) {
@@ -203,29 +204,107 @@ impl render_graph::Node for CullGrassNode {
 
                 {
                     let mut pass = render_context
-                    .command_encoder()
-                    .begin_compute_pass(&ComputePassDescriptor::default());
+                        .command_encoder()
+                        .begin_compute_pass(&ComputePassDescriptor::default());
                 
-                pass.set_pipeline(cull_pipeline);
-                for (grass_bind_groups, _) in self.query.iter_manual(world) {
+                    pass.set_pipeline(cull_pipeline);
+                    for (grass_bind_groups, _) in self.query.iter_manual(world) {
                         pass.set_bind_group(0, &grass_bind_groups.cull_bind_group, &[view_offset.offset]);
                         pass.dispatch_workgroups(grass_bind_groups.cull_workgroup_count, 1, 1);
-                        }
+                    }
                 }
+
                 prefix_sum_pass(render_context, self.query.iter_manual(world), prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
+
                 let mut pass = render_context
-                .command_encoder()
-                .begin_compute_pass(&ComputePassDescriptor::default());
+                    .command_encoder()
+                    .begin_compute_pass(&ComputePassDescriptor::default());
             
                 pass.set_pipeline(compact_pipeline);
                 for (grass_bind_groups, _) in self.query.iter_manual(world) {
-                        pass.set_bind_group(0, &grass_bind_groups.compact_bind_group, &[]);
-                        pass.dispatch_workgroups(grass_bind_groups.compact_workgroup_count as u32, 1, 1); 
-                }    
+                    pass.set_bind_group(0, &grass_bind_groups.compact_bind_group, &[]);
+                    pass.dispatch_workgroups(grass_bind_groups.compact_workgroup_count as u32, 1, 1); 
+                } 
             }
         }
         
         // dbg!(start.elapsed());
+        Ok(())
+    }
+}
+
+enum ResetArgsNodeState {
+    Loading,
+    Loaded,
+}
+
+#[derive(RenderLabel, Hash, Debug, Eq, PartialEq, Clone, Copy)]
+pub(crate) struct ResetArgsNodeLabel;
+
+pub struct ResetArgsNode {
+    state: ResetArgsNodeState,
+    query: QueryState<&'static GrassChunkBufferBindGroup>,
+}
+
+impl FromWorld for ResetArgsNode {
+    fn from_world(world: &mut World) -> Self {
+        Self {
+            state: ResetArgsNodeState::Loading,
+            query: QueryState::new(world),
+        }
+    }
+}
+
+impl render_graph::Node for ResetArgsNode {
+    fn update(&mut self, world: &mut World) {
+        self.query.update_archetypes(world);
+        
+        match self.state {
+            ResetArgsNodeState::Loading => {
+                let pipeline_cache = world.resource::<PipelineCache>();
+                let compute_pipeline = world.resource::<GrassComputePipeline>();
+
+                match pipeline_cache.get_compute_pipeline_state(compute_pipeline.reset_args_pipeline_id) {
+                    CachedPipelineState::Ok(_) => {
+                        self.state = ResetArgsNodeState::Loaded;
+                    }
+                    CachedPipelineState::Err(err) => {
+                        panic!("Failed initialising reset args pipeline {err}");
+                    }
+                    _ => {}
+                } 
+            }
+            ResetArgsNodeState::Loaded => {}
+        }
+    }
+
+    fn run<'w>(
+        &self,
+        _graph: &mut RenderGraphContext,
+        render_context: &mut RenderContext<'w>,
+        world: &'w World,
+    ) -> Result<(), render_graph::NodeRunError> {
+        match self.state {
+            ResetArgsNodeState::Loading => {}
+            ResetArgsNodeState::Loaded => {
+                let pipeline_id = world.resource::<GrassComputePipeline>();
+                let pipeline_cache = world.resource::<PipelineCache>();
+
+                let Some(reset_args_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.reset_args_pipeline_id) else {
+                    return Ok(());
+                };
+
+                let mut pass = render_context
+                    .command_encoder()
+                    .begin_compute_pass(&ComputePassDescriptor::default());
+ 
+                pass.set_pipeline(reset_args_pipeline);
+                for grass_bind_groups in self.query.iter_manual(world) {
+                    pass.set_bind_group(0, &grass_bind_groups.reset_args_bind_group, &[]);
+                    pass.dispatch_workgroups(1, 1, 1);
+                }
+            }
+        }
         Ok(())
     }
 }

@@ -9,9 +9,11 @@ pub(crate) struct GrassComputePipeline {
     pub chunk_layout: BindGroupLayout,
     pub cull_layout: BindGroupLayout,
     pub compact_layout: BindGroupLayout,
+    pub reset_args_layout: BindGroupLayout,
     pub compute_id: CachedComputePipelineId,
     pub cull_pipeline_id: CachedComputePipelineId,
     pub compact_pipeline_id: CachedComputePipelineId,
+    pub reset_args_pipeline_id: CachedComputePipelineId,
 
     _grass_types_shader: Handle<Shader>,
 }
@@ -62,10 +64,18 @@ impl FromWorld for GrassComputePipeline {
             )
         );
 
+        let reset_args_layout = render_device.create_bind_group_layout(
+            "reset_args_layout",
+            &BindGroupLayoutEntries::single(
+                ShaderStages::COMPUTE,
+                storage_buffer_sized(false, None),
+            )
+        );
+
         let shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compute_grass.wgsl");
         let cull_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_cull.wgsl");
         let compact_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compact.wgsl");
-
+        let reset_args_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/reset_args.wgsl");
         
         let pipeline_cache = world.resource_mut::<PipelineCache>();
 
@@ -99,14 +109,26 @@ impl FromWorld for GrassComputePipeline {
                 shader_defs: vec![],
                 entry_point: "main".into()
             });
+
+        let reset_args_pipeline_id = pipeline_cache
+            .queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some("reset_args_pipeline".into()),
+                layout: vec![reset_args_layout.clone()],
+                push_constant_ranges: Vec::new(),
+                shader: reset_args_shader,
+                shader_defs: vec![],
+                entry_point: "reset_args".into(),
+            });
         
         Self {
             chunk_layout,
             cull_layout,
             compact_layout,
+            reset_args_layout,
             compute_id,
             cull_pipeline_id,
             compact_pipeline_id,
+            reset_args_pipeline_id,
             _grass_types_shader: world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_types.wgsl")
         }
     }

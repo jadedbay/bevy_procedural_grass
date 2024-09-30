@@ -8,3 +8,11 @@ struct Aabb2d {
     min: vec2<f32>,
     max: vec2<f32>,
 }
+
+struct DrawIndexedIndirectArgs {
+    index_count: u32,
+    instance_count: atomic<u32>,
+    first_index: u32,
+    vertex_offset: i32,
+    first_instance: u32,
+}

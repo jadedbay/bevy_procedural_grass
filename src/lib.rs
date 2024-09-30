@@ -1,8 +1,8 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::Core3d, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp}, render_phase::AddRenderCommand, render_resource::{SpecializedComputePipelines, SpecializedMeshPipelines}, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp}, render_phase::AddRenderCommand, render_resource::{SpecializedComputePipelines, SpecializedMeshPipelines}, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::{create_chunks, distance_cull_chunks}, Grass, GrassGround};
 use prefix_sum::PrefixSumPipeline;
-use render::{node::{compute_grass, ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::GrassEntities};
+use render::{node::{compute_grass, ComputeGrassNode, ComputeGrassNodeLabel, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::GrassEntities};
 
 use crate::{render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, pipeline::GrassRenderPipeline, prepare::prepare_grass, queue::queue_grass}};
 
@@ -27,6 +27,7 @@ impl Plugin for ProceduralGrassPlugin {
         embedded_asset!(app, "shaders/compact.wgsl");
         embedded_asset!(app, "shaders/grass.wgsl");
         embedded_asset!(app, "shaders/grass_cull.wgsl");
+        embedded_asset!(app, "shaders/reset_args.wgsl");
 
         app
             .add_plugins((
@@ -50,14 +51,18 @@ impl Plugin for ProceduralGrassPlugin {
             );
         // render_app.add_render_graph_node::<ComputeGrassNode>(Core3d, ComputeGrassNodeLabel);
         render_app.add_render_graph_node::<CullGrassNode>(Core3d, CullGrassNodeLabel);
+        render_app.add_render_graph_node::<ResetArgsNode>(Core3d, ResetArgsNodeLabel);
 
         render_app.add_render_graph_edges(
-        Core3d, 
-        (
-            NodePbr::ShadowPass, 
-            // ComputeGrassNodeLabel,
-            CullGrassNodeLabel,
-        )
+            Core3d, 
+            (
+                NodePbr::ShadowPass,
+                CullGrassNodeLabel,
+            )
+        );
+
+        render_app.add_render_graph_edge(
+            Core3d, Node3d::EndMainPass, ResetArgsNodeLabel,
         );
     }
 

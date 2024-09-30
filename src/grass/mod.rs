@@ -46,6 +46,9 @@ impl Default for Grass {
 #[derive(Component, Clone)]
 pub struct GrassGpuInfo {
     pub aabb: Aabb2d,
+    pub aabb_buffer: Buffer,
+    pub height_scale_buffer: Buffer,
+    pub height_offset_buffer: Buffer,
 
     pub instance_count: usize,
     pub workgroup_count: u32,
