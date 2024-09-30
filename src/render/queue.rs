@@ -1,6 +1,6 @@
 use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{MeshPipelineKey, RenderMeshInstances}, prelude::*, render::{mesh::GpuMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, view::ExtractedView}};
 
-use crate::grass::Grass;
+use crate::{grass::Grass, prelude::GrassChunk};
 use super::{draw::DrawGrass, pipeline::GrassRenderPipeline};
 
 pub(crate) fn queue_grass(
@@ -11,7 +11,7 @@ pub(crate) fn queue_grass(
     pipeline_cache: Res<PipelineCache>,
     meshes: Res<RenderAssets<GpuMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
-    material_meshes: Query<Entity, With<Grass>>,
+    material_meshes: Query<Entity, With<GrassChunk>>,
     mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     mut views: Query<(Entity, &ExtractedView)>,
 ) {
@@ -35,7 +35,6 @@ pub(crate) fn queue_grass(
             };
             let key = view_key | MeshPipelineKey::from_primitive_topology(mesh.primitive_topology());
             let pipeline = pipelines.specialize(&pipeline_cache, &grass_pipeline, key, &mesh.layout).unwrap();
-            
             opaque_phase.add(
                 Opaque3dBinKey {
                     pipeline,

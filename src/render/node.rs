@@ -1,8 +1,8 @@
 use bevy::{prelude::*, render::{camera::ExtractedCamera, render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{CachedPipelineState, CommandEncoderDescriptor, ComputePass, ComputePassDescriptor, PipelineCache}, renderer::{RenderContext, RenderDevice, RenderQueue}, view::{ViewUniformOffset, ViewUniforms}}};
 
-use crate::prefix_sum::{prefix_sum_pass_vec, PrefixSumPipeline};
+use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroup, PrefixSumPipeline};
 
-use super::{pipeline::GrassComputePipeline, prepare::{GrassBufferBindGroup, GrassEntities, GrassStage}};
+use super::{pipeline::GrassComputePipeline, prepare::{GrassBufferBindGroup, GrassChunkBufferBindGroup, GrassEntities, GrassStage}};
 
 enum ComputeGrassState {
     Loading,
@@ -89,7 +89,7 @@ impl FromWorld for ComputeGrassNode {
 // }
 
 pub fn compute_grass(
-    query: Query<(Entity, &GrassBufferBindGroup)>,
+    query: Query<(Entity, &GrassChunkBufferBindGroup)>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
     pipeline_id: Res<GrassComputePipeline>,
@@ -99,15 +99,13 @@ pub fn compute_grass(
     let mut command_encoder = render_device.create_command_encoder(&CommandEncoderDescriptor::default());
     let Some(compute_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.compute_id) else { return; };
 
-    for (entity, grass_bind_groups) in query.iter() {
+    for (entity, bind_groups) in query.iter() {
         if !grass_entities.0.contains_key(&entity) {
             let mut pass = command_encoder.begin_compute_pass(&ComputePassDescriptor::default());
 
             pass.set_pipeline(compute_pipeline);
-            for chunk in &grass_bind_groups.chunks {
-                pass.set_bind_group(0, &chunk.chunk_bind_group.as_ref().unwrap(), &[]);
-                pass.dispatch_workgroups(chunk.workgroup_count as u32, 1, 1);
-            }
+            pass.set_bind_group(0, &bind_groups.chunk_bind_group.as_ref().unwrap(), &[]);
+            pass.dispatch_workgroups(bind_groups.workgroup_count, 1, 1);
 
             grass_entities.0.insert(entity, GrassStage::Cull);
         }
@@ -126,7 +124,7 @@ pub(crate) struct CullGrassNodeLabel;
 
 pub struct CullGrassNode {
     state: CullGrassState,
-    query: QueryState<&'static GrassBufferBindGroup>,
+    query: QueryState<(&'static GrassChunkBufferBindGroup, &'static PrefixSumBindGroup)>,
     view_offset_query: QueryState<&'static ViewUniformOffset>,
 }
 
@@ -183,6 +181,7 @@ impl render_graph::Node for CullGrassNode {
         match self.state {
             CullGrassState::Loading => {}
             CullGrassState::Loaded => {
+                let start = std::time::Instant::now();
                 let Ok(view_offset) = self.view_offset_query.get_manual(world, graph.view_entity()) else { return Ok(()); };
                 
                 let pipeline_id = world.resource::<GrassComputePipeline>();
@@ -202,32 +201,30 @@ impl render_graph::Node for CullGrassNode {
                     return Ok(());
                 };
 
-                for grass_bind_groups in self.query.iter_manual(world) {
-                    {
+                for (grass_bind_groups, _) in self.query.iter_manual(world) {
+                        {
                         let mut pass = render_context
                             .command_encoder()
                             .begin_compute_pass(&ComputePassDescriptor::default());
 
                         pass.set_pipeline(cull_pipeline);
-                        for chunk in &grass_bind_groups.chunks {
-                            pass.set_bind_group(0, &chunk.cull_bind_group, &[view_offset.offset]);
-                            pass.dispatch_workgroups(chunk.cull_workgroup_count, 1, 1);
+                        pass.set_bind_group(0, &grass_bind_groups.cull_bind_group, &[view_offset.offset]);
+                        pass.dispatch_workgroups(grass_bind_groups.cull_workgroup_count, 1, 1);
                         }
-                    }
-                    prefix_sum_pass_vec(render_context, &grass_bind_groups.prefix_sum_chunks, prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
-                    {
+                }
+                for (_, prefix_sum_bind_groups) in self.query.iter_manual(world) {
+                    prefix_sum_pass(render_context, &prefix_sum_bind_groups, prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
+                }
+                for (grass_bind_groups, _) in self.query.iter_manual(world) {
                         let mut pass = render_context
                             .command_encoder()
                             .begin_compute_pass(&ComputePassDescriptor::default());
 
                         pass.set_pipeline(compact_pipeline);
-
-                        for chunk in &grass_bind_groups.chunks {
-                            pass.set_bind_group(0, &chunk.compact_bind_group, &[]);
-                            pass.dispatch_workgroups(chunk.compact_workgroup_count as u32, 1, 1); 
-                        }
-                    }    
-                }
+                        pass.set_bind_group(0, &grass_bind_groups.compact_bind_group, &[]);
+                        pass.dispatch_workgroups(grass_bind_groups.compact_workgroup_count as u32, 1, 1); 
+                }    
+                dbg!(start.elapsed());
             }
         }
 

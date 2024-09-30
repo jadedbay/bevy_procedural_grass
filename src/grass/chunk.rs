@@ -1,12 +1,12 @@
 
-use bevy::{math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, ShaderType}, renderer::RenderDevice}, utils::HashMap};
+use bevy::{math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
 use super::{Grass, GrassGround};
 use crate::{grass::GrassGpuInfo, prefix_sum::calculate_workgroup_counts, render::instance::GrassInstanceData, util::aabb::triangle_intersects_aabb};
 
 #[derive(Component, Clone)]
 pub struct GrassChunks(pub HashMap<UVec2, (GrassChunk, bool)>);
 
-#[derive(Debug, Clone)]
+#[derive(Component, Debug, Clone)]
 pub struct GrassChunk {
     pub aabb: Aabb2d,
     pub aabb_buffer: Buffer,
@@ -16,12 +16,13 @@ pub struct GrassChunk {
 pub(crate) fn create_chunks(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    grass_query: Query<(Entity, &Grass)>,
+    grass_query: Query<(Entity, &Grass, &Handle<Mesh>)>,
     ground_query: Query<&Handle<Mesh>, With<GrassGround>>,
     render_device: Res<RenderDevice>,
 ) {
-    for (entity, grass) in grass_query.iter() {
+    for (entity, grass, mesh_handle) in grass_query.iter() {
         let mut grass_chunks = GrassChunks(HashMap::new());
+        let mut chunks = Vec::new();
 
         let mesh = meshes.get(ground_query.get(grass.ground_entity.unwrap()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
@@ -45,8 +46,28 @@ pub(crate) fn create_chunks(
                     max: chunk_max,
                 };
 
-                grass_chunks.0.insert(
-                    UVec2::new(x as u32, z as u32), 
+                // grass_chunks.0.insert(
+                //     UVec2::new(x as u32, z as u32), 
+                //     (
+                //         GrassChunk { 
+                //             aabb,
+                //             aabb_buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {
+                //                 label: Some("aabb_buffer"),
+                //                 contents: bytemuck::cast_slice(&[Aabb2dGpu::from(aabb)]),
+                //                 usage: BufferUsages::UNIFORM,
+                //             }),
+                //             instance_buffer: render_device.create_buffer(&BufferDescriptor {
+                //                 label: Some("instance_buffer"),
+                //                 size: (std::mem::size_of::<GrassInstanceData>() * instance_count) as u64,
+                //                 usage: BufferUsages::VERTEX | BufferUsages::STORAGE,
+                //                 mapped_at_creation: false, 
+                //             }),                 
+                //         },
+                //         false,
+                //     )
+                // );
+
+                let chunk = commands.spawn(
                     (
                         GrassChunk { 
                             aabb,
@@ -62,32 +83,38 @@ pub(crate) fn create_chunks(
                                 mapped_at_creation: false, 
                             }),                 
                         },
-                        true
+                        GrassGpuInfo {
+                            aabb: mesh_aabb2d,
+                            instance_count,
+                            workgroup_count: workgroup_count as u32,
+                            scan_groups_workgroup_count,
+                            scan_workgroup_count,
+                        },
+                        grass.clone(),
+                        mesh_handle.clone(),
+                        SpatialBundle::default(),
+                        NoFrustumCulling,
                     )
-                );
+                ).id();
+
+                chunks.push(chunk);
             }
         }
-
-        commands.entity(entity).insert(grass_chunks);
-        commands.entity(entity).insert(GrassGpuInfo {
-            aabb: mesh_aabb2d,
-            // aabb_buffer,
-            instance_count,
-            workgroup_count: workgroup_count as u32,
-            scan_groups_workgroup_count,
-            scan_workgroup_count,
-        });
+        commands.entity(entity).push_children(chunks.as_slice());
     }
 }
 
+
 pub(crate) fn distance_cull_chunks(
-    mut query: Query<&mut GrassChunks>,
+    mut query: Query<(&GrassChunk, &mut Visibility)>,
     camera_query: Query<&Transform>,
 ) {
-    for mut grass_chunks in query.iter_mut() {
-        for chunk in &mut grass_chunks.0 {
-            for transform in camera_query.iter() {
-                chunk.1.1 = (chunk.1.0.aabb.center() - transform.translation.xz()).length() < 100.0
+    for (chunk, mut visibility) in query.iter_mut() {
+        for transform in camera_query.iter() {
+            if (chunk.aabb.center() - transform.translation.xz()).length() < 100.0 {
+                *visibility = Visibility::Visible
+            } else {
+                *visibility = Visibility::Hidden
             }
         }
     }

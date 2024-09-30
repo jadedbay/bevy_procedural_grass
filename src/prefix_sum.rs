@@ -102,9 +102,9 @@ pub struct PrefixSumBindGroup {
     pub scan_blocks_workgroups: u32,
 }
 
-pub fn prefix_sum_pass_vec(
+pub fn prefix_sum_pass(
     render_context: &mut RenderContext,
-    bind_groups: &Vec<PrefixSumBindGroup>, 
+    bind_groups: &PrefixSumBindGroup, 
     scan_pipeline: &ComputePipeline,
     scan_blocks_pipeline: &ComputePipeline,
 ) {
@@ -114,10 +114,8 @@ pub fn prefix_sum_pass_vec(
             .begin_compute_pass(&ComputePassDescriptor::default());
 
         pass.set_pipeline(scan_pipeline);
-        for chunk in bind_groups {
-            pass.set_bind_group(0, &chunk.scan_bind_group, &[]);
-            pass.dispatch_workgroups(chunk.scan_workgroups, 1, 1);
-        }
+        pass.set_bind_group(0, &bind_groups.scan_bind_group, &[]);
+        pass.dispatch_workgroups(bind_groups.scan_workgroups, 1, 1);
     }
     {
         let mut pass = render_context
@@ -125,11 +123,9 @@ pub fn prefix_sum_pass_vec(
             .begin_compute_pass(&ComputePassDescriptor::default());
 
         pass.set_pipeline(scan_blocks_pipeline);
-        for chunk in bind_groups {
-            pass.set_push_constants(0, &(chunk.scan_workgroups as u32).to_le_bytes());
-            pass.set_bind_group(0, &chunk.scan_blocks_bind_group, &[]);
-            pass.dispatch_workgroups(chunk.scan_blocks_workgroups, 1, 1);
-        }
+        pass.set_push_constants(0, &(bind_groups.scan_workgroups as u32).to_le_bytes());
+        pass.set_bind_group(0, &bind_groups.scan_blocks_bind_group, &[]);
+        pass.dispatch_workgroups(bind_groups.scan_blocks_workgroups, 1, 1);
     }
 }
 

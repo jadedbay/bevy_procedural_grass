@@ -5,7 +5,7 @@ pub mod mesh;
 pub mod clump;
 pub mod config;
 
-use chunk::GrassChunks;
+use chunk::{GrassChunk, GrassChunks};
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -54,11 +54,12 @@ pub struct GrassGpuInfo {
 }
 
 impl ExtractComponent for Grass {
-    type QueryData = (&'static Grass, &'static GrassChunks, &'static GrassGpuInfo);
+    type QueryData = (&'static Grass, &'static GrassChunk, &'static GrassGpuInfo, &'static Visibility);
     type QueryFilter = ();
-    type Out = (Grass, GrassChunks, GrassGpuInfo);
+    type Out = (Grass, GrassChunk, GrassGpuInfo);
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
+        if item.3 == Visibility::Hidden { return None; }
         Some((item.0.clone(), item.1.clone(), item.2.clone()))
     }
 }

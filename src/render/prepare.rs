@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{grass::{
     chunk::{Aabb2dGpu, GrassChunks}, Grass, GrassGpuInfo},
-prefix_sum::{create_prefix_sum_bind_group_buffers, PrefixSumBindGroup, PrefixSumPipeline}};
+prefix_sum::{create_prefix_sum_bind_group_buffers, PrefixSumBindGroup, PrefixSumPipeline}, prelude::GrassChunk};
 
 #[derive(Resource, Default)]
 pub struct GrassEntities(pub HashMap<Entity, GrassStage>);
@@ -24,7 +24,7 @@ pub enum GrassStage {
     Cull,
 }
 
-#[derive(Clone)]
+#[derive(Component, Clone)]
 pub struct GrassChunkBufferBindGroup {
     pub chunk_bind_group: Option<BindGroup>,
     pub indirect_args_buffer: Buffer,
@@ -45,12 +45,11 @@ pub struct GrassBufferBindGroup {
     pub prefix_sum_chunks: Vec<PrefixSumBindGroup>,
 }
 
-
 pub fn prepare_grass(
     mut commands: Commands,
     pipeline: Res<GrassComputePipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,
-    query: Query<(Entity, &GrassChunks, &Grass, &GrassGpuInfo)>,
+    chunk_query: Query<(Entity, &GrassChunk, &Grass, &GrassGpuInfo)>,
     grass_entities: Res<GrassEntities>,
     images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
@@ -63,11 +62,7 @@ pub fn prepare_grass(
     let Some(view_uniform) = view_uniforms.uniforms.binding() else {
         return;
     };
-
-    for (entity, chunks, grass, gpu_info) in query.iter() { 
-        let mut chunk_bind_groups = Vec::new();
-        let mut prefix_sum_bind_groups = Vec::new();
-
+    for (entity, chunk, grass, gpu_info) in chunk_query.iter() {
         let aabb_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("aabb_buffer"),
             contents: bytemuck::cast_slice(&[Aabb2dGpu::from(gpu_info.aabb)]),
@@ -89,25 +84,22 @@ pub fn prepare_grass(
             }
         );
 
-        for (_, (chunk, in_frustum)) in chunks.0.clone().into_iter() {
-            if !in_frustum { continue; }
+        let mut chunk_bind_group = None;
 
-            let mut chunk_bind_group = None;
-
-            if !grass_entities.0.contains_key(&entity) {
-                chunk_bind_group = Some(render_device.create_bind_group(
-                    Some("chunk_bind_group"),
-                    &chunk_layout,
-                    &BindGroupEntries::sequential((
-                        chunk.instance_buffer.as_entire_binding(),
-                        &images.get(grass.height_map.as_ref().unwrap().map.id()).unwrap().texture_view,
-                        height_scale_buffer.as_entire_binding(),
-                        height_offset_buffer.as_entire_binding(),
-                        chunk.aabb_buffer.as_entire_binding(),
-                        aabb_buffer.as_entire_binding(),
-                    )),
-                ));
-            }
+        if !grass_entities.0.contains_key(&entity) {
+            chunk_bind_group = Some(render_device.create_bind_group(
+                Some("chunk_bind_group"),
+                &chunk_layout,
+                &BindGroupEntries::sequential((
+                    chunk.instance_buffer.as_entire_binding(),
+                    &images.get(grass.height_map.as_ref().unwrap().map.id()).unwrap().texture_view,
+                    height_scale_buffer.as_entire_binding(),
+                    height_offset_buffer.as_entire_binding(),
+                    chunk.aabb_buffer.as_entire_binding(),
+                    aabb_buffer.as_entire_binding(),
+                )),
+            ));
+        }
 
             let vote_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("vote_buffer"),
@@ -168,7 +160,7 @@ pub fn prepare_grass(
                 )),
             );
 
-            chunk_bind_groups.push(GrassChunkBufferBindGroup {
+            let buffer_bind_group = GrassChunkBufferBindGroup {
                 chunk_bind_group,
                 indirect_args_buffer: indirect_indexed_args_buffer,
 
@@ -180,16 +172,9 @@ pub fn prepare_grass(
 
                 compact_buffer,
                 compact_bind_group,
-            });
+            };
 
-            prefix_sum_bind_groups.push(prefix_sum_bind_group);
+            commands.entity(entity).insert(buffer_bind_group);
+            commands.entity(entity).insert(prefix_sum_bind_group);
         }
-
-        let buffer_bind_group = GrassBufferBindGroup {
-            chunks: chunk_bind_groups,
-            prefix_sum_chunks: prefix_sum_bind_groups,
-        };
-
-        commands.entity(entity).insert(buffer_bind_group.clone());
-    }
 }
