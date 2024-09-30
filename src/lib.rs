@@ -2,7 +2,7 @@ use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3
 
 use grass::{chunk::{create_chunks, distance_cull_chunks}, Grass, GrassGround};
 use prefix_sum::PrefixSumPipeline;
-use render::{node::{compute_grass, ComputeGrassNode, ComputeGrassNodeLabel, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::GrassEntities};
+use render::{node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::GrassEntities};
 
 use crate::{render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, pipeline::GrassRenderPipeline, prepare::prepare_grass, queue::queue_grass}};
 
@@ -49,7 +49,7 @@ impl Plugin for ProceduralGrassPlugin {
                     compute_grass.after(RenderSet::PrepareBindGroups).before(RenderSet::Render), // dont know if .after is required?
                 )   
             );
-        // render_app.add_render_graph_node::<ComputeGrassNode>(Core3d, ComputeGrassNodeLabel);
+
         render_app.add_render_graph_node::<CullGrassNode>(Core3d, CullGrassNodeLabel);
         render_app.add_render_graph_node::<ResetArgsNode>(Core3d, ResetArgsNodeLabel);
 

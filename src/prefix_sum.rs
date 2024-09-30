@@ -93,20 +93,11 @@ impl PrefixSumPipeline {
     }
 }
 
-#[derive(Component, Clone)]
-pub struct PrefixSumBindGroup {
-    pub scan_buffer: Buffer,
-    pub scan_blocks_out_buffer: Buffer,
-    pub scan_bind_group: BindGroup,
-    pub scan_blocks_bind_group: BindGroup,
 
-    pub scan_workgroups: u32,
-    pub scan_blocks_workgroups: u32,
-}
 
 pub fn prefix_sum_pass(
     render_context: &mut RenderContext,
-    query_iter: QueryIter<'_, '_, (&GrassChunkBufferBindGroup, &PrefixSumBindGroup), ()>,
+    query_iter: QueryIter<'_, '_, (&GrassChunkBufferBindGroup, &PrefixSumBindGroups), ()>,
     scan_pipeline: &ComputePipeline,
     scan_blocks_pipeline: &ComputePipeline,
 ) {
@@ -137,62 +128,91 @@ pub fn prefix_sum_pass(
     }
 }
 
-pub fn create_prefix_sum_bind_group_buffers(
-    render_device: &RenderDevice,
-    pipeline: &PrefixSumPipeline,
-    input_buffer: &Buffer,
-    input_length: u32,
-    scan_workgroups: u32,
-    scan_blocks_workgroups: u32,
-) -> PrefixSumBindGroup {
-    let scan_buffer = render_device.create_buffer(&BufferDescriptor {
-        label: Some("scan_buffer"),
-        size: (std::mem::size_of::<u32>() * input_length as usize) as u64,
-        usage: BufferUsages::STORAGE,
-        mapped_at_creation: false,
-    });
-    let scan_blocks_buffer = render_device.create_buffer(&BufferDescriptor {
-        label: Some("scan_blocks_buffer"),
-        size: (std::mem::size_of::<u32>() * scan_workgroups as usize) as u64,
-        usage: BufferUsages::STORAGE,
-        mapped_at_creation: false,
-    });
+#[derive(Clone)]
+pub(crate) struct PrefixSumBuffers {
+    pub scan_buffer: Buffer,
+    pub scan_blocks_buffer: Buffer,
+    pub scan_blocks_out_buffer: Buffer,
+}
 
-    let scan_blocks_out_buffer = render_device.create_buffer(&BufferDescriptor {
-        label: Some("scan_blocks_out_buffer"),
-        size: (std::mem::size_of::<u32>() * scan_workgroups as usize) as u64,
-        usage: BufferUsages::STORAGE,
-        mapped_at_creation: false,
-    });
+impl PrefixSumBuffers {
+    pub fn create_buffers(
+        render_device: &RenderDevice,
+        input_length: u32,
+        scan_workgroups: u32,
+    ) -> Self {
+        let scan_buffer = render_device.create_buffer(&BufferDescriptor {
+            label: Some("scan_buffer"),
+            size: (std::mem::size_of::<u32>() * input_length as usize) as u64,
+            usage: BufferUsages::STORAGE,
+            mapped_at_creation: false,
+        });
+        let scan_blocks_buffer = render_device.create_buffer(&BufferDescriptor {
+            label: Some("scan_blocks_buffer"),
+            size: (std::mem::size_of::<u32>() * scan_workgroups as usize) as u64,
+            usage: BufferUsages::STORAGE,
+            mapped_at_creation: false,
+        });
+    
+        let scan_blocks_out_buffer = render_device.create_buffer(&BufferDescriptor {
+            label: Some("scan_blocks_out_buffer"),
+            size: (std::mem::size_of::<u32>() * scan_workgroups as usize) as u64,
+            usage: BufferUsages::STORAGE,
+            mapped_at_creation: false,
+        });
+    
+        Self {
+            scan_buffer,
+            scan_blocks_buffer,
+            scan_blocks_out_buffer,
+        }
+    }
+}
 
-    let scan_bind_group = render_device.create_bind_group( 
-        Some("scan_bind_group"),
-        &pipeline.scan_layout,
-        &BindGroupEntries::sequential((
-            input_buffer.as_entire_binding(),
-            scan_buffer.as_entire_binding(),
-            scan_blocks_buffer.as_entire_binding(),
-        )),
-    );
+#[derive(Component, Clone)]
+pub struct PrefixSumBindGroups {
+    pub scan_bind_group: BindGroup,
+    pub scan_blocks_bind_group: BindGroup,
 
-    let scan_blocks_bind_group = render_device.create_bind_group(
-        Some("scan_blocks_bind_group"),
-        &pipeline.scan_blocks_layout,
-        &BindGroupEntries::sequential((
-            scan_blocks_buffer.as_entire_binding(),
-            scan_blocks_out_buffer.as_entire_binding(),
-        )),
-    );
+    pub scan_workgroups: u32,
+    pub scan_blocks_workgroups: u32,
+}
 
-
-    PrefixSumBindGroup {
-        scan_buffer,
-        scan_blocks_out_buffer,
-        scan_bind_group,
-        scan_blocks_bind_group,
-
-        scan_workgroups,
-        scan_blocks_workgroups,
+impl PrefixSumBindGroups {
+    pub fn create_bind_groups(
+        render_device: &RenderDevice,
+        pipeline: &PrefixSumPipeline,
+        input_buffer: &Buffer,
+        buffers: &PrefixSumBuffers,
+        scan_workgroups: u32,
+        scan_blocks_workgroups: u32,
+    ) -> Self {  
+        let scan_bind_group = render_device.create_bind_group( 
+            Some("scan_bind_group"),
+            &pipeline.scan_layout,
+            &BindGroupEntries::sequential((
+                input_buffer.as_entire_binding(),
+                buffers.scan_buffer.as_entire_binding(),
+                buffers.scan_blocks_buffer.as_entire_binding(),
+            )),
+        );
+    
+        let scan_blocks_bind_group = render_device.create_bind_group(
+            Some("scan_blocks_bind_group"),
+            &pipeline.scan_blocks_layout,
+            &BindGroupEntries::sequential((
+                buffers.scan_blocks_buffer.as_entire_binding(),
+                buffers.scan_blocks_out_buffer.as_entire_binding(),
+            )),
+        );
+     
+        Self {
+            scan_bind_group,
+            scan_blocks_bind_group,
+            
+            scan_workgroups,
+            scan_blocks_workgroups,
+        }
     }
 }
 

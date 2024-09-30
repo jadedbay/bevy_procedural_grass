@@ -1,6 +1,6 @@
 use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}}};
 
-use super::prepare::{GrassBufferBindGroup, GrassChunkBufferBindGroup};
+use super::prepare::GrassChunkBufferBindGroup;
 
 pub(crate) type DrawGrass = (
     SetItemPipeline,

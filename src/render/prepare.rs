@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{grass::{
     chunk::{Aabb2dGpu, GrassChunks}, Grass, GrassGpuInfo},
-prefix_sum::{create_prefix_sum_bind_group_buffers, PrefixSumBindGroup, PrefixSumPipeline}, prelude::GrassChunk};
+prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassChunk};
 
 #[derive(Resource, Default)]
 pub struct GrassEntities(pub HashMap<Entity, GrassStage>);
@@ -41,11 +41,6 @@ pub struct GrassChunkBufferBindGroup {
     pub reset_args_bind_group: BindGroup,
 }
 
-#[derive(Component, Clone)]
-pub struct GrassBufferBindGroup {
-    pub chunks: Vec<GrassChunkBufferBindGroup>,
-    pub prefix_sum_chunks: Vec<PrefixSumBindGroup>,
-}
 
 #[derive(Component)]
 pub struct ComputeGrassMarker;
@@ -96,11 +91,11 @@ pub fn prepare_grass(
 
             let compact_buffer = &chunk.compact_buffer;
             
-            let prefix_sum_bind_group = create_prefix_sum_bind_group_buffers(
+            let prefix_sum_bind_group = PrefixSumBindGroups::create_bind_groups(
                 &render_device,
                 &prefix_sum_pipeline,
                 vote_buffer,
-                gpu_info.instance_count as u32,
+                &chunk.prefix_sum_buffers,
                 gpu_info.scan_workgroup_count,
                 gpu_info.scan_groups_workgroup_count,
             );
@@ -122,8 +117,8 @@ pub fn prepare_grass(
                 &BindGroupEntries::sequential((
                     chunk.instance_buffer.as_entire_binding(),
                     vote_buffer.as_entire_binding(),
-                    prefix_sum_bind_group.scan_buffer.as_entire_binding(),
-                    prefix_sum_bind_group.scan_blocks_out_buffer.as_entire_binding(),
+                    chunk.prefix_sum_buffers.scan_buffer.as_entire_binding(),
+                    chunk.prefix_sum_buffers.scan_blocks_out_buffer.as_entire_binding(),
                     compact_buffer.as_entire_binding(),
                     indirect_indexed_args_buffer.as_entire_binding(),
                 )),

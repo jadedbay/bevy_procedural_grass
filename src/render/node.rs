@@ -1,92 +1,8 @@
 use bevy::{prelude::*, render::{camera::ExtractedCamera, render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{CachedPipelineState, CommandEncoderDescriptor, ComputePass, ComputePassDescriptor, PipelineCache}, renderer::{RenderContext, RenderDevice, RenderQueue}, view::{ViewUniformOffset, ViewUniforms}}};
 
-use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroup, PrefixSumPipeline};
+use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
 
-use super::{pipeline::GrassComputePipeline, prepare::{ComputeGrassMarker, GrassBufferBindGroup, GrassChunkBufferBindGroup, GrassEntities, GrassStage}};
-
-enum ComputeGrassState {
-    Loading,
-    Loaded
-}
-
-#[derive(RenderLabel, Hash, Debug, Eq, PartialEq, Clone, Copy)]
-pub(crate) struct ComputeGrassNodeLabel;
-
-pub struct ComputeGrassNode {
-    state: ComputeGrassState,
-    query: QueryState<&'static GrassBufferBindGroup>,
-}
-
-impl FromWorld for ComputeGrassNode {
-    fn from_world(world: &mut World) -> Self {
-        Self {
-            state: ComputeGrassState::Loading,
-            query: QueryState::new(world),
-        }
-    }
-}
-
-
-// impl render_graph::Node for ComputeGrassNode {
-//     fn update(&mut self, world: &mut World) {
-//         self.query.update_archetypes(world);
-
-//         match self.state {
-//             ComputeGrassState::Loading => {
-//                 let pipeline_cache = world.resource::<PipelineCache>();
-//                 let compute_pipeline = world.resource::<GrassComputePipeline>();
-
-//                 match pipeline_cache.get_compute_pipeline_state(compute_pipeline.cull_pipeline_id) {
-//                     CachedPipelineState::Ok(_) => {
-//                         self.state = ComputeGrassState::Loaded;
-//                     }
-//                     CachedPipelineState::Err(err) => {
-//                         panic!("Error initializing cull grass pipeline: {err}");
-//                     }
-//                     _ => {}
-//                 }
-//             }
-//             ComputeGrassState::Loaded => {}
-//         }
-//     }
-    
-//     fn run<'w>(
-//         &self,
-//         _graph: &mut RenderGraphContext,
-//         render_context: &mut RenderContext<'w>,
-//         world: &'w World,
-//     ) -> Result<(), render_graph::NodeRunError> {
-//         match self.state {
-//             ComputeGrassState::Loading => {}
-//             ComputeGrassState::Loaded => {
-//                 let pipeline_id = world.resource::<GrassComputePipeline>();
-//                 let pipeline_cache = world.resource::<PipelineCache>();
-                
-//                 let Some(compute_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.compute_id) else {
-//                     return Ok(());
-//                 };
-
-//                 for grass_bind_groups in self.query.iter_manual(world) {
-//                     {
-//                         let mut pass = render_context
-//                         .command_encoder()
-//                         .begin_compute_pass(&ComputePassDescriptor::default());
-        
-//                         pass.set_pipeline(compute_pipeline);
-//                         pass.set_bind_group(0, &grass_bind_groups.mesh_bind_group, &[]);
-        
-//                         for chunk in &grass_bind_groups.chunks {
-//                             pass.set_bind_group(1, &chunk.chunk_bind_group, &[]);
-//                             pass.dispatch_workgroups(chunk.workgroup_count as u32, 1, 1);
-//                         }
-//                     }      
-//                 }
-//             }
-//         }
-
-//         Ok(())
-//     }
-// }
+use super::{pipeline::GrassComputePipeline, prepare::{ComputeGrassMarker, GrassChunkBufferBindGroup, GrassEntities, GrassStage}};
 
 pub fn compute_grass(
     query: Query<(Entity, &GrassChunkBufferBindGroup), With<ComputeGrassMarker>>,
@@ -124,7 +40,7 @@ pub(crate) struct CullGrassNodeLabel;
 
 pub struct CullGrassNode {
     state: CullGrassState,
-    query: QueryState<(&'static GrassChunkBufferBindGroup, &'static PrefixSumBindGroup)>,
+    query: QueryState<(&'static GrassChunkBufferBindGroup, &'static PrefixSumBindGroups)>,
     view_offset_query: QueryState<&'static ViewUniformOffset>,
 }
 

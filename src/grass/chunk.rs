@@ -1,12 +1,12 @@
 
 use bevy::{math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{mesh::{Indices, VertexAttributeValues}, primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
 use super::{Grass, GrassGround};
-use crate::{grass::GrassGpuInfo, prefix_sum::calculate_workgroup_counts, render::instance::GrassInstanceData, util::aabb::triangle_intersects_aabb};
+use crate::{grass::GrassGpuInfo, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData, util::aabb::triangle_intersects_aabb};
 
 #[derive(Component, Clone)]
 pub struct GrassChunks(pub HashMap<UVec2, (GrassChunk, bool)>);
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Clone)]
 pub struct GrassChunk {
     pub aabb: Aabb2d,
     pub aabb_buffer: Buffer,
@@ -14,6 +14,7 @@ pub struct GrassChunk {
     pub vote_buffer: Buffer,
     pub compact_buffer: Buffer,
     pub indirect_args_buffer: Buffer,
+    pub prefix_sum_buffers: PrefixSumBuffers,
 }
 
 pub(crate) fn create_chunks(
@@ -88,6 +89,11 @@ pub(crate) fn create_chunks(
                                 }.as_bytes(),
                                 usage: BufferUsages::STORAGE | BufferUsages::INDIRECT,
                             }),
+                            prefix_sum_buffers: PrefixSumBuffers::create_buffers(
+                                &render_device, 
+                                instance_count as u32, 
+                                scan_workgroup_count,
+                            )
                         },
                         GrassGpuInfo {
                             aabb: mesh_aabb2d,
