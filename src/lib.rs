@@ -1,10 +1,10 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp}, render_phase::AddRenderCommand, render_resource::{SpecializedComputePipelines, SpecializedMeshPipelines}, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::{create_chunks, distance_cull_chunks}, Grass, GrassGround};
+use grass::{chunk::{create_chunks, distance_cull_chunks}, Grass};
 use prefix_sum::PrefixSumPipeline;
 use render::{node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::GrassEntities};
 
-use crate::{render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, pipeline::GrassRenderPipeline, prepare::prepare_grass, queue::queue_grass}};
+use crate::render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, pipeline::GrassRenderPipeline, prepare::prepare_grass, queue::queue_grass};
 
 mod render;
 mod prefix_sum;
@@ -13,7 +13,7 @@ pub mod util;
 
 pub mod prelude {
     pub use crate::ProceduralGrassPlugin;
-    pub use crate::grass::{Grass, GrassBundle, GrassGround, GrassHeightMap, chunk::GrassChunk, mesh::GrassMesh};
+    pub use crate::grass::{Grass, GrassBundle, GrassGround, GrassHeightMap, mesh::GrassMesh};
 }
 
 pub struct ProceduralGrassPlugin;

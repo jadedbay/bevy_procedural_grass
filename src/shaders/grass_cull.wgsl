@@ -10,7 +10,10 @@ fn main(
     @builtin(global_invocation_id) global_id: vec3<u32>,
 ) {
     let instance = instances[global_id.x];
-    if (instance.position.w != 1.0 || !point_in_frustum(instance.position.xyz)) { return; }
+    if (instance.position.w != 1.0 || !point_in_frustum(instance.position.xyz)) {
+        vote[global_id.x] = 0u;
+        return; 
+    }
 
     vote[global_id.x] = 1u;
 }

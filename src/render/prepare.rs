@@ -1,18 +1,15 @@
 use bevy::{
-    ecs::world, gizmos::aabb, prelude::*, render::{
+    prelude::*, render::{
         render_asset::RenderAssets, render_resource::{
-            BindGroup, BindGroupEntries, BindGroupLayout, BindingResource, Buffer, BufferBinding, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, PipelineCache, SpecializedComputePipelines
+            BindGroup, BindGroupEntries, Buffer
         }, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms
     }, utils::HashMap
 };
 
-use super::{
-    instance::GrassInstanceData,
-    pipeline::GrassComputePipeline,
-};
+use super::pipeline::GrassComputePipeline;
 use crate::{grass::{
-    chunk::{Aabb2dGpu, GrassChunks}, Grass, GrassGpuInfo},
-prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassChunk};
+    chunk::GrassChunk, Grass, GrassGpuInfo},
+prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}};
 
 #[derive(Resource, Default)]
 pub struct GrassEntities(pub HashMap<Entity, GrassStage>);

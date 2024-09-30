@@ -1,6 +1,7 @@
 use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{MeshPipelineKey, RenderMeshInstances}, prelude::*, render::{mesh::GpuMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, view::ExtractedView}};
 
-use crate::{grass::Grass, prelude::GrassChunk};
+use crate::grass::chunk::GrassChunk;
+
 use super::{draw::DrawGrass, pipeline::GrassRenderPipeline};
 
 pub(crate) fn queue_grass(

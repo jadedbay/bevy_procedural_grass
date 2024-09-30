@@ -5,7 +5,7 @@ pub mod mesh;
 pub mod clump;
 pub mod config;
 
-use chunk::{GrassChunk, GrassChunks};
+use chunk::GrassChunk;
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {

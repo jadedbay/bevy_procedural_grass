@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{camera::ExtractedCamera, render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{CachedPipelineState, CommandEncoderDescriptor, ComputePass, ComputePassDescriptor, PipelineCache}, renderer::{RenderContext, RenderDevice, RenderQueue}, view::{ViewUniformOffset, ViewUniforms}}};
+use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{CachedPipelineState, CommandEncoderDescriptor, ComputePassDescriptor, PipelineCache}, renderer::{RenderContext, RenderDevice, RenderQueue}, view::ViewUniformOffset}};
 
 use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
 
@@ -95,7 +95,6 @@ impl render_graph::Node for CullGrassNode {
             render_context: &mut RenderContext<'w>,
             world: &'w World,
     ) -> Result<(), render_graph::NodeRunError> {
-        let start = std::time::Instant::now();
         match self.state {
             CullGrassState::Loading => {}
             CullGrassState::Loaded => {
@@ -144,7 +143,6 @@ impl render_graph::Node for CullGrassNode {
             }
         }
         
-        // dbg!(start.elapsed());
         Ok(())
     }
 }

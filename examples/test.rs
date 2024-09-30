@@ -1,4 +1,4 @@
-use bevy::{pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::{mesh::{SphereKind, VertexAttributeValues}, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat}, texture}, window::PresentMode};
+use bevy::{pbr::wireframe::{WireframePlugin}, prelude::*, render::{mesh::{VertexAttributeValues}, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat}}, window::PresentMode};
 use bevy_procedural_grass::prelude::*;
 use bevy_flycam::prelude::*;
 
@@ -34,7 +34,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(50).build();
+    let mut plane = Plane3d::default().mesh().size(400., 400.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
 
     {
@@ -75,8 +75,8 @@ fn setup(
             mesh: meshes.add(GrassMesh::mesh(7)),
             grass: Grass {
                 ground_entity: Some(ground),
-                chunk_count: UVec2::splat(12),
-                density: 100,
+                chunk_count: UVec2::splat(4),
+                density: 10000,
                 height_map: Some(GrassHeightMap {
                     map: images.add(noise_image),
                     scale: 6.0,
