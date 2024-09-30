@@ -11,7 +11,7 @@ use super::{
     pipeline::GrassComputePipeline,
 };
 use crate::{grass::{
-    chunk::{GrassAabb, GrassChunks}, Grass},
+    chunk::{Aabb2dGpu, GrassChunks}, Grass, GrassGpuInfo},
 prefix_sum::{create_prefix_sum_bind_group_buffers, PrefixSumBindGroup, PrefixSumPipeline}};
 
 #[derive(Resource, Default)]
@@ -50,7 +50,7 @@ pub fn prepare_grass(
     mut commands: Commands,
     pipeline: Res<GrassComputePipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,
-    query: Query<(Entity, &GrassChunks, &Grass, &GrassAabb)>,
+    query: Query<(Entity, &GrassChunks, &Grass, &GrassGpuInfo)>,
     grass_entities: Res<GrassEntities>,
     images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
@@ -64,11 +64,34 @@ pub fn prepare_grass(
         return;
     };
 
-    for (entity, chunks, grass, aabb) in query.iter() { 
+    for (entity, chunks, grass, gpu_info) in query.iter() { 
         let mut chunk_bind_groups = Vec::new();
         let mut prefix_sum_bind_groups = Vec::new();
 
-        for (_, chunk) in chunks.0.clone().into_iter() {
+        let aabb_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            label: Some("aabb_buffer"),
+            contents: bytemuck::cast_slice(&[Aabb2dGpu::from(gpu_info.aabb)]),
+            usage: BufferUsages::UNIFORM,
+        });
+
+        let height_scale_buffer = render_device.create_buffer_with_data(
+            &BufferInitDescriptor {
+                label: Some("height_scale_buffer"),
+                contents: bytemuck::cast_slice(&[grass.height_map.as_ref().unwrap().scale]),
+                usage: BufferUsages::UNIFORM,
+            }
+        );
+        let height_offset_buffer = render_device.create_buffer_with_data(
+            &BufferInitDescriptor {
+                label: Some("height_offset_buffer"),
+                contents: bytemuck::cast_slice(&[grass.y_offset]),
+                usage: BufferUsages::UNIFORM,
+            }
+        );
+
+        for (_, (chunk, in_frustum)) in chunks.0.clone().into_iter() {
+            if !in_frustum { continue; }
+
             let mut chunk_bind_group = None;
 
             if !grass_entities.0.contains_key(&entity) {
@@ -77,23 +100,25 @@ pub fn prepare_grass(
                     &chunk_layout,
                     &BindGroupEntries::sequential((
                         chunk.instance_buffer.as_entire_binding(),
-                        &images.get(grass.height_map.as_ref().unwrap().id()).unwrap().texture_view,
+                        &images.get(grass.height_map.as_ref().unwrap().map.id()).unwrap().texture_view,
+                        height_scale_buffer.as_entire_binding(),
+                        height_offset_buffer.as_entire_binding(),
                         chunk.aabb_buffer.as_entire_binding(),
-                        aabb.buffer.as_entire_binding(),
+                        aabb_buffer.as_entire_binding(),
                     )),
                 ));
             }
 
             let vote_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("vote_buffer"),
-                size: (std::mem::size_of::<u32>() * chunk.instance_count) as u64,
+                size: (std::mem::size_of::<u32>() * gpu_info.instance_count) as u64,
                 usage: BufferUsages::STORAGE,
                 mapped_at_creation: false,
             });
 
             let compact_buffer = render_device.create_buffer(&BufferDescriptor {
                 label: Some("compact_buffer"),
-                size: (std::mem::size_of::<GrassInstanceData>() * chunk.instance_count) as u64,
+                size: (std::mem::size_of::<GrassInstanceData>() * gpu_info.instance_count) as u64,
                 usage: BufferUsages::VERTEX | BufferUsages::STORAGE,
                 mapped_at_creation: false,
             });
@@ -115,9 +140,9 @@ pub fn prepare_grass(
                 &render_device,
                 &prefix_sum_pipeline,
                 &vote_buffer,
-                chunk.instance_count as u32,
-                chunk.scan_workgroup_count,
-                chunk.scan_groups_workgroup_count,
+                gpu_info.instance_count as u32,
+                gpu_info.scan_workgroup_count,
+                gpu_info.scan_groups_workgroup_count,
             );
 
             let cull_bind_group = render_device.create_bind_group(
@@ -149,9 +174,9 @@ pub fn prepare_grass(
 
                 cull_bind_group,
 
-                cull_workgroup_count: (chunk.instance_count as f32 / 256.).ceil() as u32,
-                workgroup_count: chunk.workgroup_count,
-                compact_workgroup_count: chunk.scan_workgroup_count,
+                cull_workgroup_count: (gpu_info.instance_count as f32 / 256.).ceil() as u32,
+                workgroup_count: gpu_info.workgroup_count,
+                compact_workgroup_count: gpu_info.scan_workgroup_count,
 
                 compact_buffer,
                 compact_bind_group,

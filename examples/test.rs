@@ -67,8 +67,7 @@ fn setup(
             mesh: meshes.add(plane),
             ..default()
         },
-       Wireframe,
-       GrassGround,
+        GrassGround,
     )).id();
 
     commands.spawn(
@@ -76,9 +75,13 @@ fn setup(
             mesh: meshes.add(GrassMesh::mesh(7)),
             grass: Grass {
                 ground_entity: Some(ground),
-                chunk_count: UVec2::splat(8),
-                height_map: Some(images.add(noise_image)),
-                density: 10000,
+                chunk_count: UVec2::splat(12),
+                density: 100,
+                height_map: Some(GrassHeightMap {
+                    map: images.add(noise_image),
+                    scale: 6.0,
+                }),
+                y_offset: 0.01,
                 ..default()
             },
             ..default()

@@ -1,6 +1,6 @@
 use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::Core3d, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, graph::CameraDriverLabel, render_graph::{RenderGraph, RenderGraphApp}, render_phase::AddRenderCommand, render_resource::{SpecializedComputePipelines, SpecializedMeshPipelines}, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::create_chunks, Grass, GrassGround};
+use grass::{chunk::{create_chunks, distance_cull_chunks}, Grass, GrassGround};
 use prefix_sum::PrefixSumPipeline;
 use render::{node::{compute_grass, ComputeGrassNode, ComputeGrassNodeLabel}, pipeline::GrassComputePipeline, prepare::GrassEntities};
 
@@ -13,7 +13,7 @@ pub mod util;
 
 pub mod prelude {
     pub use crate::ProceduralGrassPlugin;
-    pub use crate::grass::{Grass, GrassBundle, GrassGround, chunk::GrassChunk, mesh::GrassMesh};
+    pub use crate::grass::{Grass, GrassBundle, GrassGround, GrassHeightMap, chunk::GrassChunk, mesh::GrassMesh};
 }
 
 pub struct ProceduralGrassPlugin;
@@ -32,7 +32,8 @@ impl Plugin for ProceduralGrassPlugin {
             .add_plugins((
                 ExtractComponentPlugin::<Grass>::default(),
             ))
-            .add_systems(PostStartup, create_chunks);
+            .add_systems(PostStartup, create_chunks)
+            .add_systems(Update, distance_cull_chunks);
 
         let render_app = app.sub_app_mut(RenderApp);
 

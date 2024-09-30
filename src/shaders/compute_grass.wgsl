@@ -3,8 +3,10 @@
 
 @group(0) @binding(0) var<storage, read_write> output: array<GrassInstance>;
 @group(0) @binding(1) var heightmap: texture_2d<f32>;
-@group(0) @binding(2) var<uniform> chunk_aabb: Aabb2d;
-@group(0) @binding(3) var<uniform> aabb: Aabb2d;
+@group(0) @binding(2) var<uniform> height_scale: f32;
+@group(0) @binding(3) var<uniform> height_offset: f32;
+@group(0) @binding(4) var<uniform> chunk_aabb: Aabb2d;
+@group(0) @binding(5) var<uniform> aabb: Aabb2d;
 
 @compute @workgroup_size(512)
 fn main(
@@ -29,5 +31,5 @@ fn main(
 
     let height = textureLoad(heightmap, texture_coords, 0).r;
 
-    output[global_id.x] = GrassInstance(vec4<f32>(chunk_position.x, height * 6.0 - 0.01, chunk_position.y, 1.0));  
+    output[global_id.x] = GrassInstance(vec4<f32>(chunk_position.x, height * height_scale + height_offset, chunk_position.y, 1.0));  
 }

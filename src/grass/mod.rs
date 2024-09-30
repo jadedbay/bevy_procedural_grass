@@ -1,11 +1,11 @@
-use bevy::{ecs::query::QueryItem, prelude::*, render::{extract_component::ExtractComponent, view::NoFrustumCulling}};
+use bevy::{ecs::query::QueryItem, math::bounding::Aabb2d, prelude::*, render::{extract_component::ExtractComponent, render_resource::Buffer, view::NoFrustumCulling}};
 
 pub mod chunk;
 pub mod mesh;
 pub mod clump;
 pub mod config;
 
-use chunk::{GrassAabb, GrassChunks};
+use chunk::GrassChunks;
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
@@ -21,7 +21,14 @@ pub struct Grass {
     pub ground_entity: Option<Entity>, 
     pub chunk_count: UVec2,
     pub density: u32,
-    pub height_map: Option<Handle<Image>>,
+    pub height_map: Option<GrassHeightMap>,
+    pub y_offset: f32,
+}
+
+#[derive(Clone)]
+pub struct GrassHeightMap {
+    pub map: Handle<Image>,
+    pub scale: f32,
 }
 
 impl Default for Grass {
@@ -31,14 +38,25 @@ impl Default for Grass {
             chunk_count: UVec2::splat(0),
             density: 5,
             height_map: None,
+            y_offset: 0.0,
         }
     }
 }
 
+#[derive(Component, Clone)]
+pub struct GrassGpuInfo {
+    pub aabb: Aabb2d,
+
+    pub instance_count: usize,
+    pub workgroup_count: u32,
+    pub scan_workgroup_count: u32,
+    pub scan_groups_workgroup_count: u32,
+}
+
 impl ExtractComponent for Grass {
-    type QueryData = (&'static Grass, &'static GrassChunks, &'static GrassAabb);
+    type QueryData = (&'static Grass, &'static GrassChunks, &'static GrassGpuInfo);
     type QueryFilter = ();
-    type Out = (Grass, GrassChunks, GrassAabb);
+    type Out = (Grass, GrassChunks, GrassGpuInfo);
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
         Some((item.0.clone(), item.1.clone(), item.2.clone()))
