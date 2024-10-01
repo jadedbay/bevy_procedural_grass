@@ -1,6 +1,6 @@
 
 use bevy::{math::{bounding::{Aabb2d, BoundingVolume}, Affine3A}, prelude::*, render::{primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}};
-use super::{config::GrassConfig, Grass, GrassGround};
+use super::{config::GrassConfig, Grass};
 use crate::{grass::GrassGpuInfo, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData};
 
 #[derive(Component, Clone)]
@@ -17,14 +17,14 @@ pub struct GrassChunk {
 pub(crate) fn create_chunks(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    grass_query: Query<(Entity, &Grass, &Handle<Mesh>)>,
-    ground_query: Query<&Handle<Mesh>, With<GrassGround>>,
+    grass_query: Query<(Entity, &Grass, &Handle<Mesh>, &Parent)>,
+    ground_query: Query<&Handle<Mesh>>,
     render_device: Res<RenderDevice>,
 ) {
-    for (entity, grass, mesh_handle) in grass_query.iter() {
+    for (entity, grass, mesh_handle, parent) in grass_query.iter() {
         let mut chunks = Vec::new();
 
-        let mesh = meshes.get(ground_query.get(grass.ground_entity.unwrap()).unwrap()).unwrap();
+        let mesh = meshes.get(ground_query.get(parent.get()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
         let mesh_aabb2d = Aabb2d::new(mesh_aabb.center.xz(), mesh_aabb.half_extents.xz());
 

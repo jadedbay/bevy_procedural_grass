@@ -18,7 +18,6 @@ pub struct GrassBundle {
 
 #[derive(Component, Clone)]
 pub struct Grass {
-    pub ground_entity: Option<Entity>, 
     pub chunk_count: UVec2,
     pub density: f32,
     pub height_map: Option<GrassHeightMap>,
@@ -34,7 +33,6 @@ pub struct GrassHeightMap {
 impl Default for Grass {
     fn default() -> Self {
         Self {
-            ground_entity: None,
             chunk_count: UVec2::splat(0),
             density: 10.0,
             height_map: None,
@@ -66,6 +64,3 @@ impl ExtractComponent for Grass {
         Some((item.0.clone(), item.1.clone(), item.2.clone()))
     }
 }
-
-#[derive(Component, Clone)]
-pub struct GrassGround;

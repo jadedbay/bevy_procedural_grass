@@ -13,7 +13,7 @@ pub mod util;
 
 pub mod prelude {
     pub use crate::ProceduralGrassPlugin;
-    pub use crate::grass::{Grass, GrassBundle, GrassGround, GrassHeightMap, mesh::GrassMesh, config::GrassConfig};
+    pub use crate::grass::{Grass, GrassBundle, GrassHeightMap, mesh::GrassMesh, config::GrassConfig};
 }
 
 #[derive(Default)]

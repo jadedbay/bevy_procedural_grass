@@ -1,4 +1,4 @@
-use bevy::{pbr::wireframe::{WireframePlugin}, prelude::*, render::{mesh::{VertexAttributeValues}, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy::{pbr::wireframe::WireframePlugin, prelude::*, render::{mesh::{VertexAttributeValues}, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat}}, window::PresentMode};
 use bevy_procedural_grass::prelude::*;
 use bevy_flycam::prelude::*;
 
@@ -62,31 +62,30 @@ fn setup(
         }
     }
 
-    let ground = commands.spawn((
+    commands.spawn((
         PbrBundle {
             mesh: meshes.add(plane),
             ..default()
         },
-        GrassGround,
-    )).id();
-
-    commands.spawn(
-        GrassBundle {
-            mesh: meshes.add(GrassMesh::mesh(7)),
-            grass: Grass {
-                ground_entity: Some(ground),
-                chunk_count: UVec2::splat(10),
-                density: 20.0,
-                height_map: Some(GrassHeightMap {
-                    map: images.add(noise_image),
-                    scale: 6.0,
-                }),
-                y_offset: 0.01,
+    )).with_children(|parent| {
+        parent.spawn(
+            GrassBundle {
+                mesh: meshes.add(GrassMesh::mesh(7)),
+                grass: Grass {
+                    chunk_count: UVec2::splat(10),
+                    density: 20.0,
+                    height_map: Some(GrassHeightMap {
+                        map: images.add(noise_image),
+                        scale: 6.0,
+                    }),
+                    y_offset: 0.01,
+                    ..default()
+                },
                 ..default()
-            },
-            ..default()
-        }
-    );
+            }
+        );
+    });
+
 
     commands.spawn(PerfUiBundle::default());
 }
