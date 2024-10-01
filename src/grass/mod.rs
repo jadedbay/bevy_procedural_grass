@@ -20,7 +20,7 @@ pub struct GrassBundle {
 pub struct Grass {
     pub ground_entity: Option<Entity>, 
     pub chunk_count: UVec2,
-    pub density: u32,
+    pub density: f32,
     pub height_map: Option<GrassHeightMap>,
     pub y_offset: f32,
 }
@@ -36,7 +36,7 @@ impl Default for Grass {
         Self {
             ground_entity: None,
             chunk_count: UVec2::splat(0),
-            density: 5,
+            density: 10.0,
             height_map: None,
             y_offset: 0.0,
         }

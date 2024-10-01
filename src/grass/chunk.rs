@@ -30,12 +30,13 @@ pub(crate) fn create_chunks(
 
         let chunk_size = (mesh_aabb2d.max - mesh_aabb2d.min) / (grass.chunk_count.as_vec2());
 
-        let workgroup_count = (grass.density as f32 / (grass.chunk_count.x * grass.chunk_count.y) as f32).ceil() as usize;
+        let workgroup_count = (((mesh_aabb2d.visible_area() * 0.001) * grass.density) / (grass.chunk_count.x * grass.chunk_count.y) as f32).ceil() as usize;
+        
         let instance_count = workgroup_count * 512;
 
         dbg!(instance_count);
         if instance_count > 256_000 {
-            warn!("Instance count: {instance_count}. \nYou may see grass flickering when instance count for a chunk is over 256,000 either increase no. of chunks or decrease density.");
+            warn!("Instance count: {instance_count}. \nFlickering may occur when instance count is over 256,000.");
         }
 
         let (scan_workgroup_count, scan_groups_workgroup_count) = calculate_workgroup_counts(instance_count as u32);
