@@ -14,7 +14,7 @@ fn main(
     @builtin(local_invocation_id) local_id: vec3<u32>, 
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
-    var state: u32 = global_id.x;
+    var state: u32 = global_id.x + u32(chunk_aabb.min.x) * 1000u + u32(chunk_aabb.min.y) * 2000u;
     let u = rand_f(&state);
     state = state * 747796405u + 2891336453u;
     let v = rand_f(&state);

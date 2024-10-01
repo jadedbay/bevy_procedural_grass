@@ -2,15 +2,15 @@ use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderL
 
 use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
 
-use super::{pipeline::GrassComputePipeline, prepare::{ComputeGrassMarker, GrassChunkBufferBindGroup, GrassEntities, GrassStage}};
+use super::{pipeline::GrassComputePipeline, prepare::{ComputeGrassMarker, GrassChunkBindGroups, ComputedGrassEntities}};
 
 pub fn compute_grass(
-    query: Query<(Entity, &GrassChunkBufferBindGroup), With<ComputeGrassMarker>>,
+    query: Query<(Entity, &GrassChunkBindGroups), With<ComputeGrassMarker>>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
     pipeline_id: Res<GrassComputePipeline>,
     pipeline_cache: Res<PipelineCache>,
-    mut grass_entities: ResMut<GrassEntities>,
+    mut grass_entities: ResMut<ComputedGrassEntities>,
 ) {
     if query.is_empty() { return; }
     let mut command_encoder = render_device.create_command_encoder(&CommandEncoderDescriptor::default());
@@ -24,7 +24,7 @@ pub fn compute_grass(
             pass.set_bind_group(0, &bind_groups.chunk_bind_group.as_ref().unwrap(), &[]);
             pass.dispatch_workgroups(bind_groups.workgroup_count, 1, 1);
             
-            grass_entities.0.insert(entity, GrassStage::Cull);
+            grass_entities.0.push(entity);
     }
     
     render_queue.submit([command_encoder.finish()]);
@@ -40,7 +40,7 @@ pub(crate) struct CullGrassNodeLabel;
 
 pub struct CullGrassNode {
     state: CullGrassState,
-    query: QueryState<(&'static GrassChunkBufferBindGroup, &'static PrefixSumBindGroups)>,
+    query: QueryState<(&'static GrassChunkBindGroups, &'static PrefixSumBindGroups)>,
     view_offset_query: QueryState<&'static ViewUniformOffset>,
 }
 
@@ -158,7 +158,7 @@ pub(crate) struct ResetArgsNodeLabel;
 
 pub struct ResetArgsNode {
     state: ResetArgsNodeState,
-    query: QueryState<&'static GrassChunkBufferBindGroup>,
+    query: QueryState<&'static GrassChunkBindGroups>,
 }
 
 impl FromWorld for ResetArgsNode {

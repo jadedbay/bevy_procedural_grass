@@ -1,6 +1,6 @@
 use bevy::{ecs::query::QueryIter, prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only}, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutEntries, Buffer, BufferDescriptor, BufferUsages, CachedComputePipelineId, ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor, PipelineCache, PushConstantRange, ShaderStages}, renderer::{RenderContext, RenderDevice}}};
 
-use crate::render::prepare::GrassChunkBufferBindGroup;
+use crate::render::prepare::GrassChunkBindGroups;
 
 #[derive(Resource)]
 pub struct PrefixSumPipeline {
@@ -97,7 +97,7 @@ impl PrefixSumPipeline {
 
 pub fn prefix_sum_pass(
     render_context: &mut RenderContext,
-    query_iter: QueryIter<'_, '_, (&GrassChunkBufferBindGroup, &PrefixSumBindGroups), ()>,
+    query_iter: QueryIter<'_, '_, (&GrassChunkBindGroups, &PrefixSumBindGroups), ()>,
     scan_pipeline: &ComputePipeline,
     scan_blocks_pipeline: &ComputePipeline,
 ) {

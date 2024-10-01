@@ -34,7 +34,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(1000., 1000.).subdivisions(50).build();
+    let mut plane = Plane3d::default().mesh().size(5000., 5000.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
 
     {
@@ -65,6 +65,7 @@ fn setup(
     commands.spawn((
         PbrBundle {
             mesh: meshes.add(plane),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..default()
         },
     )).with_children(|parent| {
@@ -72,7 +73,7 @@ fn setup(
             GrassBundle {
                 mesh: meshes.add(GrassMesh::mesh(7)),
                 grass: Grass {
-                    chunk_count: UVec2::splat(10),
+                    chunk_count: UVec2::splat(32),
                     density: 20.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),

@@ -1,6 +1,6 @@
 use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup}, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}}};
 
-use super::prepare::GrassChunkBufferBindGroup;
+use super::prepare::GrassChunkBindGroups;
 
 pub(crate) type DrawGrass = (
     SetItemPipeline,
@@ -14,7 +14,7 @@ pub(crate) struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
     type ViewQuery = ();
-    type ItemQuery = Read<GrassChunkBufferBindGroup>;
+    type ItemQuery = Read<GrassChunkBindGroups>;
 
     #[inline]
     fn render<'w>(

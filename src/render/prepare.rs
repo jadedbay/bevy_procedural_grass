@@ -1,28 +1,21 @@
-use bevy::{
-    prelude::*, render::{
-        render_asset::RenderAssets, render_resource::{
-            BindGroup, BindGroupEntries, Buffer
-        }, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms
-    }, utils::HashMap
-};
-
+use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}, utils::HashMap};
 use super::pipeline::GrassComputePipeline;
-use crate::{grass::{
-    chunk::GrassChunk, Grass, GrassGpuInfo},
-prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}};
+use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers}, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}};
 
+
+// TODO: test whether this is actually improves performance or if its faster to recompute everyframe
 #[derive(Resource, Default)]
-pub struct GrassEntities(pub HashMap<Entity, GrassStage>);
+pub struct ComputedGrassEntities(pub Vec<Entity>);
 
-#[derive(Clone, Copy, Default, PartialEq)]
-pub enum GrassStage {
-    #[default]
-    Compute,
-    Cull,
+pub(crate) fn update_computed_grass(
+    mut computed_grass: ResMut<ComputedGrassEntities>,
+    q_chunks: Query<Entity, With<GrassChunk>>,
+) {
+    computed_grass.0.retain(|&entity| q_chunks.contains(entity));
 }
 
 #[derive(Component, Clone)]
-pub struct GrassChunkBufferBindGroup {
+pub struct GrassChunkBindGroups {
     pub chunk_bind_group: Option<BindGroup>,
     pub indirect_args_buffer: Buffer,
 
@@ -46,8 +39,9 @@ pub fn prepare_grass(
     mut commands: Commands,
     pipeline: Res<GrassComputePipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,
-    chunk_query: Query<(Entity, &GrassChunk, &Grass, &GrassGpuInfo)>,
-    grass_entities: Res<GrassEntities>,
+    chunk_query: Query<(Entity, &GrassChunk, &GrassChunkBuffers)>,
+    grass_query: Query<(&Grass, &GrassGpuInfo)>,
+    computed_grass: Res<ComputedGrassEntities>,
     images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
     view_uniforms: Res<ViewUniforms>,
@@ -61,19 +55,21 @@ pub fn prepare_grass(
         return;
     };
 
-    for (entity, chunk, grass, gpu_info) in chunk_query.iter() {
+    for (entity, chunk, buffers) in chunk_query.iter() {
         let mut chunk_bind_group = None;
 
-        if !grass_entities.0.contains_key(&entity) {
+        let (grass, gpu_info) = grass_query.get(chunk.grass_entity).unwrap();
+
+        if !computed_grass.0.contains(&entity) {
             chunk_bind_group = Some(render_device.create_bind_group(
-                Some("chunk_bind_group"),
+                Some("buffers_bind_group"),
                 &chunk_layout,
                 &BindGroupEntries::sequential((
-                    chunk.instance_buffer.as_entire_binding(),
+                    buffers.instance_buffer.as_entire_binding(),
                     &images.get(grass.height_map.as_ref().unwrap().map.id()).unwrap().texture_view,
                     gpu_info.height_scale_buffer.as_entire_binding(),
                     gpu_info.height_offset_buffer.as_entire_binding(),
-                    chunk.aabb_buffer.as_entire_binding(),
+                    buffers.aabb_buffer.as_entire_binding(),
                     gpu_info.aabb_buffer.as_entire_binding(),
                 )),
             ));
@@ -83,8 +79,8 @@ pub fn prepare_grass(
         let prefix_sum_bind_group = PrefixSumBindGroups::create_bind_groups(
             &render_device,
             &prefix_sum_pipeline,
-            &chunk.vote_buffer,
-            &chunk.prefix_sum_buffers,
+            &buffers.vote_buffer,
+            &buffers.prefix_sum_buffers,
             gpu_info.scan_workgroup_count,
             gpu_info.scan_groups_workgroup_count,
         );
@@ -93,22 +89,22 @@ pub fn prepare_grass(
             Some("cull_bind_group"),
             &cull_layout,
             &BindGroupEntries::sequential((
-                chunk.instance_buffer.as_entire_binding(),
-                chunk.vote_buffer.as_entire_binding(),
+                buffers.instance_buffer.as_entire_binding(),
+                buffers.vote_buffer.as_entire_binding(),
                 view_uniform.clone(),
             ))
         );
-        let indirect_indexed_args_buffer = &chunk.indirect_args_buffer; 
+        let indirect_indexed_args_buffer = &buffers.indirect_args_buffer; 
 
         let compact_bind_group = render_device.create_bind_group(
             Some("scan_bind_group"),
             &compact_layout,
             &BindGroupEntries::sequential((
-                chunk.instance_buffer.as_entire_binding(),
-                chunk.vote_buffer.as_entire_binding(),
-                chunk.prefix_sum_buffers.scan_buffer.as_entire_binding(),
-                chunk.prefix_sum_buffers.scan_blocks_out_buffer.as_entire_binding(),
-                chunk.compact_buffer.as_entire_binding(),
+                buffers.instance_buffer.as_entire_binding(),
+                buffers.vote_buffer.as_entire_binding(),
+                buffers.prefix_sum_buffers.scan_buffer.as_entire_binding(),
+                buffers.prefix_sum_buffers.scan_blocks_out_buffer.as_entire_binding(),
+                buffers.compact_buffer.as_entire_binding(),
                 indirect_indexed_args_buffer.as_entire_binding(),
             )),
         );
@@ -119,7 +115,7 @@ pub fn prepare_grass(
             &BindGroupEntries::single(indirect_indexed_args_buffer.as_entire_binding()),
         );
 
-        let buffer_bind_group = GrassChunkBufferBindGroup {
+        let buffer_bind_group = GrassChunkBindGroups {
             chunk_bind_group,
             indirect_args_buffer: indirect_indexed_args_buffer.clone(),
 
@@ -129,7 +125,7 @@ pub fn prepare_grass(
             workgroup_count: gpu_info.workgroup_count,
             compact_workgroup_count: gpu_info.scan_workgroup_count,
 
-            compact_buffer: chunk.compact_buffer.clone(),
+            compact_buffer: buffers.compact_buffer.clone(),
             compact_bind_group,
 
             reset_args_bind_group,
@@ -137,6 +133,5 @@ pub fn prepare_grass(
 
         commands.entity(entity).insert(buffer_bind_group);
         commands.entity(entity).insert(prefix_sum_bind_group);
-
-        }
+    }
 }

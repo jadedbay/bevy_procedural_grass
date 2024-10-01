@@ -1,8 +1,8 @@
 use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::{create_chunks, cull_chunks}, config::GrassConfig, Grass};
+use grass::{chunk::{create_chunks, cull_chunks, GrassChunk}, config::GrassConfig, Grass};
 use prefix_sum::PrefixSumPipeline;
-use render::{node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::GrassEntities};
+use render::{node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}};
 
 use crate::render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, pipeline::GrassRenderPipeline, prepare::prepare_grass, queue::queue_grass};
 
@@ -36,6 +36,7 @@ impl Plugin for ProceduralGrassPlugin {
             .insert_resource(self.config.clone())
             .add_plugins((
                 ExtractComponentPlugin::<Grass>::default(),
+                ExtractComponentPlugin::<GrassChunk>::default(),
             ))
             .add_systems(PostStartup, create_chunks)
             .add_systems(Update, cull_chunks);
@@ -48,6 +49,7 @@ impl Plugin for ProceduralGrassPlugin {
             .add_systems(
                 Render, 
                 (
+                    update_computed_grass.before(RenderSet::PrepareResources),
                     queue_grass.in_set(RenderSet::QueueMeshes),
                     prepare_grass.in_set(RenderSet::PrepareBindGroups),
                     compute_grass.after(RenderSet::PrepareBindGroups).before(RenderSet::Render), // dont know if .after is required?
@@ -72,7 +74,7 @@ impl Plugin for ProceduralGrassPlugin {
 
     fn finish(&self, app: &mut App) {
         app.sub_app_mut(RenderApp)
-            .init_resource::<GrassEntities>()
+            .init_resource::<ComputedGrassEntities>()
             .init_resource::<PrefixSumPipeline>()
             .init_resource::<GrassComputePipeline>()
             .init_resource::<GrassRenderPipeline>();
