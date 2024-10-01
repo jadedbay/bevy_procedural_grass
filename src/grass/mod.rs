@@ -57,12 +57,11 @@ pub struct GrassGpuInfo {
 }
 
 impl ExtractComponent for GrassChunk {
-    type QueryData = (&'static GrassChunk, &'static GrassChunkBuffers, &'static Visibility);
+    type QueryData = (&'static GrassChunk, &'static GrassChunkBuffers);
     type QueryFilter = ();
     type Out = (GrassChunk, GrassChunkBuffers);
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
-        if item.2 == Visibility::Hidden { return None; }
         Some((item.0.clone(), item.1.clone()))
     }
 }

@@ -162,13 +162,13 @@ pub(crate) fn create_chunks(
 pub(crate) fn cull_chunks(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
-    mut query: Query<(Entity, &GrassChunk, &mut Visibility, &Parent)>,
+    mut query: Query<(Entity, &GrassChunk, &Parent)>,
     q_chunk_buffers: Query<&GrassChunkBuffers>, 
     grass_query: Query<&Grass>,
     camera_query: Query<(&Transform, &Frustum)>,
     grass_config: Res<GrassConfig>,
 ) {
-    'chunk: for (entity, chunk, mut visibility, parent) in query.iter_mut() {
+    'chunk: for (entity, chunk, parent) in query.iter_mut() {
         let grass = grass_query.get(parent.get()).unwrap();
 
         let aabb = Aabb::from_min_max(
@@ -178,8 +178,7 @@ pub(crate) fn cull_chunks(
 
         for (transform, frustum) in camera_query.iter() {
             if (chunk.aabb.center() - transform.translation.xz()).length() < grass_config.cull_distance 
-                && frustum.intersects_obb(&aabb, &Affine3A::IDENTITY, false, false){
-                *visibility = Visibility::Visible;
+            && frustum.intersects_obb(&aabb, &Affine3A::IDENTITY, false, false) {
                 match q_chunk_buffers.get(entity) {
                     Ok(_) => {}
                     Err(_) => {
@@ -193,7 +192,6 @@ pub(crate) fn cull_chunks(
                 }
                 continue 'chunk;
             } else {
-                *visibility = Visibility::Hidden; 
                 match q_chunk_buffers.get(entity) {
                     Ok(_) => {
                         commands.entity(entity).remove::<GrassChunkBuffers>();

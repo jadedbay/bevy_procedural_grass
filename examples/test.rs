@@ -1,4 +1,5 @@
-use bevy::{pbr::wireframe::WireframePlugin, prelude::*, render::{mesh::{VertexAttributeValues}, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy::{pbr::wireframe::WireframePlugin, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::prelude::*;
 use bevy_flycam::prelude::*;
 
@@ -24,7 +25,9 @@ fn main() {
             bevy::diagnostic::EntityCountDiagnosticsPlugin,
             bevy::diagnostic::SystemInformationDiagnosticsPlugin,
         ))
-        .add_plugins(PerfUiPlugin)
+        .add_plugins((
+            PerfUiPlugin,
+        ))
         .add_systems(Startup, setup)
         .run();
 }
@@ -34,33 +37,10 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(5000., 5000.).subdivisions(50).build();
+    let mut plane = Plane3d::default().mesh().size(500., 500.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
 
-    {
-        let (positions, uvs) = plane.attributes_mut().fold(
-            (None, None),
-            |(positions, uvs), (id, values)| match (id, values) {
-                (id, VertexAttributeValues::Float32x3(pos)) if id == Mesh::ATTRIBUTE_POSITION.id => {
-                    (Some(pos), uvs)
-                }
-                (id, VertexAttributeValues::Float32x2(uv)) if id == Mesh::ATTRIBUTE_UV_0.id => {
-                    (positions, Some(uv))
-                }
-                _ => (positions, uvs),
-            },
-        );
-
-        if let (Some(positions), Some(uvs)) = (positions, uvs) {
-            positions
-                .iter_mut()
-                .zip(uvs.iter())
-                .for_each(|(position, uv)| {
-                    let noise_value = sample_noise(&noise_image, uv[0], uv[1]);
-                    position[1] += noise_value * 6.0;
-                });
-        }
-    }
+    apply_height_map(&mut plane, &noise_image, 35.0);
 
     commands.spawn((
         PbrBundle {
@@ -73,13 +53,13 @@ fn setup(
             GrassBundle {
                 mesh: meshes.add(GrassMesh::mesh(7)),
                 grass: Grass {
-                    chunk_count: UVec2::splat(32),
+                    chunk_count: UVec2::splat(10),
                     density: 20.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
-                        scale: 6.0,
+                        scale: 35.0,
                     }),
-                    y_offset: 0.01,
+                    y_offset: 0.00,
                     ..default()
                 },
                 ..default()
@@ -123,4 +103,29 @@ fn sample_noise(noise_image: &Image, u: f32, v: f32) -> f32 {
     let y = (v * (noise_image.height() - 1) as f32) as u32;
     let index = (y * noise_image.width() + x) as usize;
     bytemuck::cast_slice(&noise_image.data[index * 4..(index + 1) * 4])[0]
+}
+
+fn apply_height_map(plane: &mut Mesh, height_map: &Image, height_scale: f32) {
+        let (positions, uvs) = plane.attributes_mut().fold(
+            (None, None),
+            |(positions, uvs), (id, values)| match (id, values) {
+                (id, VertexAttributeValues::Float32x3(pos)) if id == Mesh::ATTRIBUTE_POSITION.id => {
+                    (Some(pos), uvs)
+                }
+                (id, VertexAttributeValues::Float32x2(uv)) if id == Mesh::ATTRIBUTE_UV_0.id => {
+                    (positions, Some(uv))
+                }
+                _ => (positions, uvs),
+            },
+        );
+
+        if let (Some(positions), Some(uvs)) = (positions, uvs) {
+            positions
+                .iter_mut()
+                .zip(uvs.iter())
+                .for_each(|(position, uv)| {
+                    let noise_value = sample_noise(height_map, uv[0], uv[1]);
+                    position[1] += noise_value * height_scale;
+                });
+        }
 }
