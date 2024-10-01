@@ -62,10 +62,6 @@ pub fn prepare_grass(
     };
 
     for (entity, chunk, grass, gpu_info) in chunk_query.iter() {
-        let aabb_buffer = &gpu_info.aabb_buffer; 
-        let height_scale_buffer = &gpu_info.height_scale_buffer;
-        let height_offset_buffer = &gpu_info.height_offset_buffer;
-
         let mut chunk_bind_group = None;
 
         if !grass_entities.0.contains_key(&entity) {
@@ -75,77 +71,72 @@ pub fn prepare_grass(
                 &BindGroupEntries::sequential((
                     chunk.instance_buffer.as_entire_binding(),
                     &images.get(grass.height_map.as_ref().unwrap().map.id()).unwrap().texture_view,
-                    height_scale_buffer.as_entire_binding(),
-                    height_offset_buffer.as_entire_binding(),
+                    gpu_info.height_scale_buffer.as_entire_binding(),
+                    gpu_info.height_offset_buffer.as_entire_binding(),
                     chunk.aabb_buffer.as_entire_binding(),
-                    aabb_buffer.as_entire_binding(),
+                    gpu_info.aabb_buffer.as_entire_binding(),
                 )),
             ));
             commands.entity(entity).insert(ComputeGrassMarker);
         }
+ 
+        let prefix_sum_bind_group = PrefixSumBindGroups::create_bind_groups(
+            &render_device,
+            &prefix_sum_pipeline,
+            &chunk.vote_buffer,
+            &chunk.prefix_sum_buffers,
+            gpu_info.scan_workgroup_count,
+            gpu_info.scan_groups_workgroup_count,
+        );
 
-            let vote_buffer = &chunk.vote_buffer; 
+        let cull_bind_group = render_device.create_bind_group(
+            Some("cull_bind_group"),
+            &cull_layout,
+            &BindGroupEntries::sequential((
+                chunk.instance_buffer.as_entire_binding(),
+                chunk.vote_buffer.as_entire_binding(),
+                view_uniform.clone(),
+            ))
+        );
+        let indirect_indexed_args_buffer = &chunk.indirect_args_buffer; 
 
-            let compact_buffer = &chunk.compact_buffer;
-            
-            let prefix_sum_bind_group = PrefixSumBindGroups::create_bind_groups(
-                &render_device,
-                &prefix_sum_pipeline,
-                vote_buffer,
-                &chunk.prefix_sum_buffers,
-                gpu_info.scan_workgroup_count,
-                gpu_info.scan_groups_workgroup_count,
-            );
+        let compact_bind_group = render_device.create_bind_group(
+            Some("scan_bind_group"),
+            &compact_layout,
+            &BindGroupEntries::sequential((
+                chunk.instance_buffer.as_entire_binding(),
+                chunk.vote_buffer.as_entire_binding(),
+                chunk.prefix_sum_buffers.scan_buffer.as_entire_binding(),
+                chunk.prefix_sum_buffers.scan_blocks_out_buffer.as_entire_binding(),
+                chunk.compact_buffer.as_entire_binding(),
+                indirect_indexed_args_buffer.as_entire_binding(),
+            )),
+        );
 
-            let cull_bind_group = render_device.create_bind_group(
-                Some("cull_bind_group"),
-                &cull_layout,
-                &BindGroupEntries::sequential((
-                    chunk.instance_buffer.as_entire_binding(),
-                    vote_buffer.as_entire_binding(),
-                    view_uniform.clone(),
-                ))
-            );
-            let indirect_indexed_args_buffer = &chunk.indirect_args_buffer; 
+        let reset_args_bind_group = render_device.create_bind_group(
+            Some("reset_args_bind_group"),
+            &reset_args_layout,
+            &BindGroupEntries::single(indirect_indexed_args_buffer.as_entire_binding()),
+        );
 
-            let compact_bind_group = render_device.create_bind_group(
-                Some("scan_bind_group"),
-                &compact_layout,
-                &BindGroupEntries::sequential((
-                    chunk.instance_buffer.as_entire_binding(),
-                    vote_buffer.as_entire_binding(),
-                    chunk.prefix_sum_buffers.scan_buffer.as_entire_binding(),
-                    chunk.prefix_sum_buffers.scan_blocks_out_buffer.as_entire_binding(),
-                    compact_buffer.as_entire_binding(),
-                    indirect_indexed_args_buffer.as_entire_binding(),
-                )),
-            );
+        let buffer_bind_group = GrassChunkBufferBindGroup {
+            chunk_bind_group,
+            indirect_args_buffer: indirect_indexed_args_buffer.clone(),
 
-            let reset_args_bind_group = render_device.create_bind_group(
-                Some("reset_args_bind_group"),
-                &reset_args_layout,
-                &BindGroupEntries::single(indirect_indexed_args_buffer.as_entire_binding()),
-            );
+            cull_bind_group,
 
-            let buffer_bind_group = GrassChunkBufferBindGroup {
-                chunk_bind_group,
-                indirect_args_buffer: indirect_indexed_args_buffer.clone(),
+            cull_workgroup_count: (gpu_info.instance_count as f32 / 256.).ceil() as u32,
+            workgroup_count: gpu_info.workgroup_count,
+            compact_workgroup_count: gpu_info.scan_workgroup_count,
 
-                cull_bind_group,
+            compact_buffer: chunk.compact_buffer.clone(),
+            compact_bind_group,
 
-                cull_workgroup_count: (gpu_info.instance_count as f32 / 256.).ceil() as u32,
-                workgroup_count: gpu_info.workgroup_count,
-                compact_workgroup_count: gpu_info.scan_workgroup_count,
+            reset_args_bind_group,
+        };
 
-                compact_buffer: compact_buffer.clone(),
-                compact_bind_group,
-
-                reset_args_bind_group,
-            };
-
-            commands.entity(entity).insert(buffer_bind_group);
-            commands.entity(entity).insert(prefix_sum_bind_group);
+        commands.entity(entity).insert(buffer_bind_group);
+        commands.entity(entity).insert(prefix_sum_bind_group);
 
         }
-            // dbg!(start.elapsed());
 }

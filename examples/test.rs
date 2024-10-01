@@ -16,7 +16,7 @@ fn main() {
                 ..default()
             }),
             PlayerPlugin,
-            ProceduralGrassPlugin,
+            ProceduralGrassPlugin::default(),
             WireframePlugin,
         ))
         .add_plugins((
@@ -34,7 +34,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(400., 400.).subdivisions(50).build();
+    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
 
     {
@@ -76,7 +76,7 @@ fn setup(
             grass: Grass {
                 ground_entity: Some(ground),
                 chunk_count: UVec2::splat(1),
-                density: 1000,
+                density: 500,
                 height_map: Some(GrassHeightMap {
                     map: images.add(noise_image),
                     scale: 6.0,

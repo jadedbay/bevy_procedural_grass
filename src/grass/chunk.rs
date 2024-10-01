@@ -1,6 +1,6 @@
 
 use bevy::{math::{bounding::{Aabb2d, BoundingVolume}, Affine3A}, prelude::*, render::{primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}};
-use super::{Grass, GrassGround};
+use super::{config::GrassConfig, Grass, GrassGround};
 use crate::{grass::GrassGpuInfo, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData};
 
 #[derive(Component, Clone)]
@@ -34,6 +34,9 @@ pub(crate) fn create_chunks(
         let instance_count = workgroup_count * 512;
 
         dbg!(instance_count);
+        if instance_count > 256_000 {
+            warn!("Instance count: {instance_count}. \nYou may see grass flickering when instance count for a chunk is over 256,000 either increase no. of chunks or decrease density.");
+        }
 
         let (scan_workgroup_count, scan_groups_workgroup_count) = calculate_workgroup_counts(instance_count as u32);
 
@@ -58,7 +61,7 @@ pub(crate) fn create_chunks(
                             instance_buffer: render_device.create_buffer(&BufferDescriptor {
                                 label: Some("instance_buffer"),
                                 size: (std::mem::size_of::<GrassInstanceData>() * instance_count) as u64,
-                                usage: BufferUsages::STORAGE,
+                                usage: BufferUsages::STORAGE | BufferUsages::VERTEX,
                                 mapped_at_creation: false, 
                             }),
                             vote_buffer: render_device.create_buffer(&BufferDescriptor {
@@ -139,6 +142,7 @@ pub(crate) fn create_chunks(
 pub(crate) fn cull_chunks(
     mut query: Query<(&Grass, &GrassChunk, &mut Visibility)>,
     camera_query: Query<(&Transform, &Frustum)>,
+    grass_config: Res<GrassConfig>,
 ) {
     for (grass, chunk, mut visibility) in query.iter_mut() {
         let aabb = Aabb::from_min_max(
@@ -147,7 +151,7 @@ pub(crate) fn cull_chunks(
         );
 
         for (transform, frustum) in camera_query.iter() {
-            if (chunk.aabb.center() - transform.translation.xz()).length() < 500.0 
+            if (chunk.aabb.center() - transform.translation.xz()).length() < grass_config.cull_distance 
                 && frustum.intersects_obb(&aabb, &Affine3A::IDENTITY, false, false){
                 *visibility = Visibility::Visible
             } else {
