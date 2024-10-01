@@ -43,6 +43,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                 } => {
                     pass.set_index_buffer(buffer.slice(..), 0, *index_format);
                     pass.set_vertex_buffer(1, grass_bind_groups.compact_buffer.slice(..));
+                    
                     pass.draw_indexed_indirect(&grass_bind_groups.indirect_args_buffer, 0);
                 }
                 GpuBufferInfo::NonIndexed => unreachable!()

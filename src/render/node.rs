@@ -136,10 +136,11 @@ impl render_graph::Node for CullGrassNode {
                     .begin_compute_pass(&ComputePassDescriptor::default());
             
                 pass.set_pipeline(compact_pipeline);
+                
                 for (grass_bind_groups, _) in self.query.iter_manual(world) {
                     pass.set_bind_group(0, &grass_bind_groups.compact_bind_group, &[]);
                     pass.dispatch_workgroups(grass_bind_groups.compact_workgroup_count as u32, 1, 1); 
-                } 
+                }
             }
         }
         

@@ -1,5 +1,5 @@
 
-use bevy::{math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}};
+use bevy::{math::{bounding::{Aabb2d, BoundingVolume}, Affine3A}, prelude::*, render::{primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}};
 use super::{Grass, GrassGround};
 use crate::{grass::GrassGpuInfo, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData};
 
@@ -126,19 +126,29 @@ pub(crate) fn create_chunks(
 
                 chunks.push(chunk);
             }
-        }
+     
+
+
+
+         }
         commands.entity(entity).push_children(chunks.as_slice());
     }
 }
 
 
-pub(crate) fn distance_cull_chunks(
-    mut query: Query<(&GrassChunk, &mut Visibility)>,
-    camera_query: Query<&Transform>,
+pub(crate) fn cull_chunks(
+    mut query: Query<(&Grass, &GrassChunk, &mut Visibility)>,
+    camera_query: Query<(&Transform, &Frustum)>,
 ) {
-    for (chunk, mut visibility) in query.iter_mut() {
-        for transform in camera_query.iter() {
-            if (chunk.aabb.center() - transform.translation.xz()).length() < 100.0 {
+    for (grass, chunk, mut visibility) in query.iter_mut() {
+        let aabb = Aabb::from_min_max(
+            Vec3::new(chunk.aabb.min.x, -grass.height_map.as_ref().unwrap().scale, chunk.aabb.min.y),
+            Vec3::new(chunk.aabb.max.x, grass.height_map.as_ref().unwrap().scale, chunk.aabb.max.y),
+        );
+
+        for (transform, frustum) in camera_query.iter() {
+            if (chunk.aabb.center() - transform.translation.xz()).length() < 500.0 
+                && frustum.intersects_obb(&aabb, &Affine3A::IDENTITY, false, false){
                 *visibility = Visibility::Visible
             } else {
                 *visibility = Visibility::Hidden
