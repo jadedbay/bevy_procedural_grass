@@ -1,4 +1,4 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::{create_chunks, cull_chunks, GrassChunk}, config::GrassConfig, Grass};
 use prefix_sum::PrefixSumPipeline;
@@ -33,6 +33,7 @@ impl Plugin for ProceduralGrassPlugin {
         embedded_asset!(app, "shaders/reset_args.wgsl");
 
         app
+            .register_type::<Grass>()
             .insert_resource(self.config.clone())
             .add_plugins((
                 ExtractComponentPlugin::<Grass>::default(),

@@ -11,12 +11,13 @@ use chunk::{GrassChunk, GrassChunkBuffers};
 pub struct GrassBundle {
     pub grass: Grass,
     pub mesh: Handle<Mesh>,
+    pub material: Handle<StandardMaterial>,
     #[bundle()]
     pub spatial_bundle: SpatialBundle,
     pub frustum_culling: NoFrustumCulling,
 }
 
-#[derive(Component, Clone)]
+#[derive(Reflect, Component, Clone)]
 pub struct Grass {
     pub tile_count: UVec2,
     pub chunk_count: UVec2, // TODO: calculate this maybe?
@@ -25,7 +26,7 @@ pub struct Grass {
     pub y_offset: f32,
 }
 
-#[derive(Clone)]
+#[derive(Reflect, Clone)]
 pub struct GrassHeightMap {
     pub map: Handle<Image>,
     pub scale: f32,

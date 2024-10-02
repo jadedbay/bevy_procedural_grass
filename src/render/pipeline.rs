@@ -1,4 +1,4 @@
-use bevy::{pbr::{MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureSampleType, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
+use bevy::{pbr::{MaterialExtension, MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, AsBindGroup, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureSampleType, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
 
 use crate::grass::chunk::Aabb2dGpu;
 
@@ -137,6 +137,7 @@ impl FromWorld for GrassComputePipeline {
 #[derive(Resource)]
 pub(crate) struct GrassRenderPipeline {
     shader: Handle<Shader>,
+    material_layout: BindGroupLayout,
     pub mesh_pipeline: MeshPipeline,
 }
 
@@ -144,8 +145,12 @@ impl FromWorld for GrassRenderPipeline {
     fn from_world(world: &mut World) -> Self {
         let mesh_pipeline = world.resource::<MeshPipeline>();
 
+        let render_device = world.resource::<RenderDevice>();
+        let material_layout = StandardMaterial::bind_group_layout(render_device);
+
         GrassRenderPipeline {
             shader: world.load_asset("embedded://bevy_procedural_grass/shaders/grass.wgsl"),
+            material_layout,
             mesh_pipeline: mesh_pipeline.clone(),
         }
     }
@@ -167,18 +172,15 @@ impl SpecializedMeshPipeline for GrassRenderPipeline {
                 step_mode: VertexStepMode::Instance,
                 attributes: vec![
                     VertexAttribute {
-                        format: VertexFormat::Float32x3,
+                        format: VertexFormat::Float32x4,
                         offset: 0,
                         shader_location: 3,
-                    },
-                    VertexAttribute {
-                        format: VertexFormat::Float32x4,
-                        offset: std::mem::size_of::<[f32; 4]>() as u64,
-                        shader_location: 4,
                     },
                 ],
             });
             descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
+            
+            descriptor.layout.insert(2, self.material_layout.clone());
             descriptor.primitive.cull_mode = None;
             Ok(descriptor)
     }

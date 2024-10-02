@@ -1,4 +1,4 @@
-use bevy::{pbr::wireframe::WireframePlugin, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy::{pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{Extent3d, Face, TextureDimension, TextureFormat}}, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::prelude::*;
 use bevy_flycam::prelude::*;
@@ -25,9 +25,7 @@ fn main() {
             bevy::diagnostic::EntityCountDiagnosticsPlugin,
             bevy::diagnostic::SystemInformationDiagnosticsPlugin,
         ))
-        .add_plugins((
-            PerfUiPlugin,
-        ))
+        .add_plugins((PerfUiPlugin, WorldInspectorPlugin::default()))
         .add_systems(Startup, setup)
         .run();
 }
@@ -36,30 +34,45 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(500., 500.).subdivisions(50).build();
+    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
 
-    apply_height_map(&mut plane, &noise_image, 35.0);
+    apply_height_map(&mut plane, &noise_image, 6.0);
+    plane.compute_normals();
 
     commands.spawn((
         PbrBundle {
             mesh: meshes.add(plane),
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            material: materials.add(StandardMaterial {
+                base_color: Srgba::rgb(0.5, 0.2, 0.05).into(),
+                reflectance: 0.0,
+                cull_mode: None,
+                
+                ..default()
+            }),
             ..default()
         },
     )).with_children(|parent| {
         parent.spawn(
             GrassBundle {
                 mesh: meshes.add(GrassMesh::mesh(7)),
+                material: materials.add(
+                    StandardMaterial {
+                        base_color: Srgba::rgb(0.2, 0.8, 0.2).into(),
+                        ..default()
+                    },
+                ),
                 grass: Grass {
-                    chunk_count: UVec2::splat(10),
+                    chunk_count: UVec2::splat(1),
                     density: 20.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
-                        scale: 35.0,
+                        scale: 5.95,
                     }),
-                    y_offset: 0.00,
+                    y_offset: -0.04,
                     ..default()
                 },
                 ..default()
@@ -67,6 +80,19 @@ fn setup(
         );
     });
 
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_rotation(Quat::from_xyzw(
+            -0.4207355,
+            -0.4207355,
+            0.22984886,
+            0.77015114,
+        )),
+        ..default()
+    });
 
     commands.spawn(PerfUiBundle::default());
 }

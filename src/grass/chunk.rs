@@ -77,11 +77,11 @@ impl GrassChunkBuffers {
 pub(crate) fn create_chunks(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    grass_query: Query<(Entity, &Grass, &Handle<Mesh>, &Parent)>,
+    grass_query: Query<(Entity, &Grass, &Handle<Mesh>, &Handle<StandardMaterial>, &Parent)>,
     ground_query: Query<&Handle<Mesh>>,
     render_device: Res<RenderDevice>,
 ) {
-    for (entity, grass, mesh_handle, parent) in grass_query.iter() {
+    for (entity, grass, mesh_handle, material_handle, parent) in grass_query.iter() {
         let mut chunks = Vec::new();
 
         let mesh = meshes.get(ground_query.get(parent.get()).unwrap()).unwrap();
@@ -119,6 +119,7 @@ pub(crate) fn create_chunks(
                             scan_workgroup_count,
                         },
                         mesh_handle.clone(),
+                        material_handle.clone(),
                         SpatialBundle::default(),
                         NoFrustumCulling,
                     )

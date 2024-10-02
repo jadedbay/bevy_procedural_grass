@@ -1,4 +1,4 @@
-use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{MeshPipelineKey, RenderMeshInstances}, prelude::*, render::{mesh::GpuMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, view::ExtractedView}};
+use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{MaterialBindGroupId, MeshPipelineKey, PreparedMaterial, RenderMaterialInstances, RenderMeshInstances}, prelude::*, render::{mesh::GpuMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, view::ExtractedView}};
 
 use crate::grass::chunk::GrassChunk;
 
@@ -12,6 +12,8 @@ pub(crate) fn queue_grass(
     pipeline_cache: Res<PipelineCache>,
     meshes: Res<RenderAssets<GpuMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
+    render_material_instances: Res<RenderMaterialInstances<StandardMaterial>>,
+    render_materials: Res<RenderAssets<PreparedMaterial<StandardMaterial>>>,
     material_meshes: Query<Entity, With<GrassChunk>>,
     mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     mut views: Query<(Entity, &ExtractedView)>,
@@ -34,6 +36,12 @@ pub(crate) fn queue_grass(
             let Some(mesh) = meshes.get(mesh_instance.mesh_asset_id) else {
                 continue;
             };
+            let Some(material_asset_id) = render_material_instances.get(&entity) else {
+                continue;
+            };
+            let Some(material) = render_materials.get(*material_asset_id) else {
+                continue;
+            };
             let key = view_key | MeshPipelineKey::from_primitive_topology(mesh.primitive_topology());
             let pipeline = pipelines.specialize(&pipeline_cache, &grass_pipeline, key, &mesh.layout).unwrap();
             opaque_phase.add(
@@ -41,7 +49,7 @@ pub(crate) fn queue_grass(
                     pipeline,
                     draw_function: draw_grass,
                     asset_id: mesh_instance.mesh_asset_id.into(),
-                    material_bind_group_id: None,
+                    material_bind_group_id: material.get_bind_group_id().0,
                     lightmap_image: None,
                 },
                 entity,

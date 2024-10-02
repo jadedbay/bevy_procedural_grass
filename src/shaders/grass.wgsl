@@ -1,4 +1,9 @@
 #import bevy_pbr::{
+    forward_io::VertexOutput,
+    pbr_types::StandardMaterial,
+    pbr_bindings::material,
+    pbr_fragment::pbr_input_from_standard_material,
+    pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},
     mesh_functions::{get_world_from_local, mesh_position_local_to_clip},
     utils::rand_f,
 }
@@ -11,18 +16,17 @@ struct Vertex {
     @location(3) i_pos: vec4<f32>,
 };
 
-struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    @location(0) color: vec4<f32>,
-};
+// struct VertexOutput {
+//     @builtin(position) clip_position: vec4<f32>,
+//     @location(0) color: vec4<f32>,
+// };
 
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     var position = vertex.position;
 
-    var out: VertexOutput;
     var ipos = vertex.i_pos.xyz;
-    out.color = vec4<f32>(0.0, 1.0, 0.0, 1.0);
+    // out.color = vec4<f32>(0.0, 1.0, 0.0, 1.0);
 
     let width = 0.05 * (1.0 - pow(vertex.uv.y, 2.0));
     position.x *= width;
@@ -34,16 +38,26 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     position += ipos;
     
-    out.clip_position = mesh_position_local_to_clip(
+    var out: VertexOutput;
+    out.position = mesh_position_local_to_clip(
         identity_matrix,
         vec4<f32>(position, 1.0)
     );
-    
+    out.world_position = vec4<f32>(position, 1.0);
+    out.world_normal = normalize(vec3<f32>(facing.x, 0.0, facing.y));
+
     return out;
 }
 
-@fragment fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    return in.color;
+@fragment fn fragment(
+    in: VertexOutput,
+    @builtin(front_facing) is_front: bool,
+) -> @location(0) vec4<f32> {
+    let pbr_input = pbr_input_from_standard_material(in, is_front);
+    var color = apply_pbr_lighting(pbr_input);
+    color = main_pass_post_lighting_processing(pbr_input, color);
+    return color;
+    // return vec4<f32>(0.0, 1.0, 0.0, 1.0);
 }
 
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(
