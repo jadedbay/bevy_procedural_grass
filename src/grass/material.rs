@@ -6,9 +6,21 @@ pub type GrassMaterial = ExtendedMaterial<StandardMaterial, GrassMaterialExtensi
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone, Default)]
 pub struct GrassMaterialExtension {
     #[uniform(100)]
-    pub facing_angle: f32,
+    pub width: f32,
     #[uniform(100)]
     pub curve: f32,
+    #[uniform(100)]
+    pub roughness_variance: f32,
+    #[uniform(100)]
+    pub reflectance_variance: f32,
+    #[uniform(100)]
+    pub midrib_softness: f32,
+    #[uniform(100)]
+    pub rim_position: f32,
+    #[uniform(100)]
+    pub rim_softness: f32,
+    #[uniform(100)]
+    pub width_normal_strength: f32,
     #[texture(101)]
     pub texture: Option<Handle<Image>>, // Create texture binding in material extension instead of using base_color_texture in StandardMaterial to customize how its applied. 
                                         // Could just use StandardMaterial texture if I can work out how to disable StandardMaterialFlags::BASE_COLOR_TEXTURE

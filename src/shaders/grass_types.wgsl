@@ -18,6 +18,12 @@ struct DrawIndexedIndirectArgs {
 }
 
 struct GrassMaterial {
-    facing_angle: f32,
+    width: f32,
     curve: f32,
+    roughness_variance: f32,
+    reflectance_variance: f32,
+    midrib_softness: f32,
+    rim_position: f32,
+    rim_softness: f32,
+    width_normal_strength: f32,
 }

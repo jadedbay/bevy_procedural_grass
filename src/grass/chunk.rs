@@ -110,6 +110,7 @@ pub(crate) fn create_chunks(
                     max: chunk_max,
                 };
 
+                // TODO: Instead of spawning all the chunks as entities in culling calculate aabb from from chunk pos and then spawn in
                 let chunk = commands.spawn(
                     (
                         GrassChunk {

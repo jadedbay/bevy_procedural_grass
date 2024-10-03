@@ -13,7 +13,7 @@
 #import bevy_procedural_grass::grass_types::GrassMaterial;
 
 @group(2) @binding(100)
-var<uniform> grass_material: GrassMaterial;
+var<uniform> grass: GrassMaterial;
 @group(2) @binding(101)
 var texture: texture_2d<f32>;
 
@@ -39,12 +39,12 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
 
     var ipos = vertex.i_pos.xyz;
 
-    let width = 0.05 * (1.0 - pow(vertex.uv.y, 2.0)) * (0.7 + (1.0 - 0.7) * vertex.uv.y);
+    let width = grass.width * (1.0 - pow(vertex.uv.y, 2.0)) * (0.7 + (1.0 - 0.7) * vertex.uv.y); // TODO: change this
     position.x *= width;
 
     let p0 = vec2<f32>(0.0);
     let p2 = vec2<f32>(1.0, 1.0);
-    var curve = grass_material.curve;
+    var curve = grass.curve;
     var midpoint = 0.5;
 
     let p1 = vec2<f32>(midpoint, curve);
@@ -82,16 +82,11 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
     in: GrassVertexOutput,
     @builtin(front_facing) is_front: bool,
 ) -> @location(0) vec4<f32> {
-    let midrib_softness = 0.08;
-    let rim_position = 0.5;
-    let rim_softness = 0.08;
-    let normal_strength = 0.3;
-
     let uv_mid = in.uv.x - 0.5;
-    let midrib = smoothstep(-midrib_softness, midrib_softness, uv_mid);
-    let rim = smoothstep(rim_position, rim_position - rim_softness, abs(uv_mid));
+    let midrib = smoothstep(-grass.midrib_softness, grass.midrib_softness, uv_mid);
+    let rim = smoothstep(grass.rim_position, grass.rim_position - grass.rim_softness, abs(uv_mid));
     let blend = mix(1.0 - midrib, midrib, rim);
-    let normal_x = normal_strength * mix(1.0, -1.0, blend);
+    let normal_x = grass.width_normal_strength * mix(1.0, -1.0, blend);
 
     var vo: VertexOutput;
     vo.position = in.position;
@@ -106,12 +101,16 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
 
     let sampled_texture = textureSampleBias(texture, pbr_bindings::base_color_sampler, in.uv, view.mip_bias);
     pbr_input.material.base_color = mix(pbr_input.material.base_color * 0.65, pbr_input.material.base_color, sampled_texture);
-    let roughness = 0.6;
-    let roughness_variance = 0.15;
-    pbr_input.material.perceptual_roughness = mix(roughness - roughness_variance, roughness, sampled_texture.r);
-    let reflectance = 0.1;
-    let reflectance_variance = 0.1;
-    pbr_input.material.reflectance = mix(reflectance - reflectance_variance, reflectance, sampled_texture.r);
+    pbr_input.material.perceptual_roughness = mix(
+        material.perceptual_roughness - grass.roughness_variance, 
+        material.perceptual_roughness, 
+        sampled_texture.r
+    );
+    pbr_input.material.reflectance = mix(
+        material.reflectance - grass.reflectance_variance, 
+        material.reflectance, 
+        sampled_texture.r
+    );
 
     var color = apply_pbr_lighting(pbr_input);
     color = main_pass_post_lighting_processing(pbr_input, color);
