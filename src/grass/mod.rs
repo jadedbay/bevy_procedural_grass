@@ -4,6 +4,7 @@ pub mod chunk;
 pub mod mesh;
 pub mod clump;
 pub mod config;
+pub mod material;
 
 use chunk::{GrassChunk, GrassChunkBuffers};
 
@@ -78,7 +79,3 @@ impl ExtractComponent for Grass {
         Some((item.0.clone(), item.1.clone()))
     }
 }
-
-#[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
-pub struct GrassMaterialExtension {}
-impl MaterialExtension for GrassMaterialExtension {}

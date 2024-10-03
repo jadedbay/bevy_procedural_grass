@@ -16,3 +16,8 @@ struct DrawIndexedIndirectArgs {
     vertex_offset: i32,
     first_instance: u32,
 }
+
+struct GrassMaterial {
+    facing_angle: f32,
+    curve: f32,
+}

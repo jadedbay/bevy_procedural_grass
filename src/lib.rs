@@ -1,8 +1,7 @@
 use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::{create_chunks, cull_chunks, GrassChunk}, config::GrassConfig, Grass};
+use grass::{chunk::{create_chunks, cull_chunks, GrassChunk}, config::GrassConfig, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
-use prelude::GrassMaterial;
 use render::{node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}};
 
 use crate::render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, pipeline::GrassRenderPipeline, prepare::prepare_grass, queue::queue_grass};
@@ -13,12 +12,8 @@ pub mod grass;
 pub mod util;
 
 pub mod prelude {
-    use bevy::pbr::{ExtendedMaterial, StandardMaterial};
-    use crate::grass::GrassMaterialExtension;
-
     pub use crate::ProceduralGrassPlugin;
-    pub use crate::grass::{Grass, GrassBundle, GrassHeightMap, mesh::GrassMesh, config::GrassConfig};
-    pub type GrassMaterial = ExtendedMaterial<StandardMaterial, GrassMaterialExtension>;
+    pub use crate::grass::{Grass, GrassBundle, GrassHeightMap, mesh::GrassMesh, config::GrassConfig, material::GrassMaterial, material::GrassMaterialExtension};
 }
 
 #[derive(Default)]
@@ -39,6 +34,8 @@ impl Plugin for ProceduralGrassPlugin {
 
         app
             .register_type::<Grass>()
+            .register_type::<Image>()
+            .register_asset_reflect::<GrassMaterial>()
             .insert_resource(self.config.clone())
             .add_plugins((
                 ExtractComponentPlugin::<Grass>::default(),

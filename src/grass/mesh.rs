@@ -12,8 +12,8 @@ impl GrassMesh {
             let y = (i as f32 / segments as f32).powf(0.7);
             positions.push([-1.0, 0.0, y]);
             positions.push([1.0, 0.0, y]);
-            uvs.push([0.0, y]);
             uvs.push([1.0, y]);
+            uvs.push([0.0, y]);
 
             if i > 0 {
                 indices.push(2 * i);

@@ -21,7 +21,7 @@ fn main(
 fn point_in_frustum(point: vec3<f32>) -> bool {
     for (var i = 0u; i < 6u; i++) {
         let plane = view.frustum[i];
-        if (dot(vec4<f32>(point, 1.0), vec4<f32>(plane.xyz, plane.w + 1.0)) < 0.0) {
+        if (dot(vec4<f32>(point, 1.0), vec4<f32>(plane.xyz, plane.w + 1.5)) < 0.0) {
             return false;
         }
     }

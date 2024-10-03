@@ -1,6 +1,6 @@
-use bevy::{pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_procedural_grass::{grass::GrassMaterialExtension, prelude::*};
+use bevy::{color::palettes::css::WHITE, pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy_inspector_egui::{quick::WorldInspectorPlugin, DefaultInspectorConfigPlugin};
+use bevy_procedural_grass::{grass::material::create_grass_texture, prelude::*};
 use bevy_flycam::prelude::*;
 
 use iyes_perf_ui::{entries::PerfUiBundle, prelude::*};
@@ -28,7 +28,10 @@ fn main() {
             bevy::diagnostic::EntityCountDiagnosticsPlugin,
             bevy::diagnostic::SystemInformationDiagnosticsPlugin,
         ))
-        .add_plugins((PerfUiPlugin, WorldInspectorPlugin::default()))
+        .add_plugins((
+            PerfUiPlugin, 
+            WorldInspectorPlugin::default(),
+        ))
         .add_systems(Startup, setup)
         .run();
 }
@@ -47,12 +50,15 @@ fn setup(
     apply_height_map(&mut plane, &noise_image, 0.0);
     plane.compute_normals();
 
+    let n = images.add(create_grass_texture(256, 256));
+
     commands.spawn((
         PbrBundle {
             mesh: meshes.add(plane),
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             material: materials.add(StandardMaterial {
                 base_color: Srgba::rgb(0.5, 0.2, 0.05).into(),
+                base_color_texture: Some(n),
                 reflectance: 0.0, 
                 ..default()
             }),
@@ -65,13 +71,17 @@ fn setup(
                 material: grass_materials.add(
                     GrassMaterial {
                         base: StandardMaterial { 
-                            base_color: Srgba::rgb(0.2, 0.8, 0.2).into(),
+                            base_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
+                            base_color_texture: Some(images.add(create_grass_texture(256, 256))),
                             perceptual_roughness: 0.8,
                             reflectance: 0.25,
                             double_sided: true,
                             ..default()
                         },
-                        extension: GrassMaterialExtension {}
+                        extension: GrassMaterialExtension {
+                            facing_angle: 0.0,
+                            curve: 0.5,
+                        }
                     }
                 ),
                 grass: Grass {
@@ -98,17 +108,22 @@ fn setup(
         },
     ));
 
+    commands.insert_resource(AmbientLight {
+        color: WHITE.into(),
+        brightness: 300.0,
+    });
+
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
+            illuminance: light_consts::lux::AMBIENT_DAYLIGHT,
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_rotation(Quat::from_xyzw(
-            -0.4207355,
-            -0.4207355,
-            0.22984886,
-            0.77015114,
-        )),
+        transform: Transform {
+            translation: Vec3::new(0.0, 2.0, 0.0),
+            rotation: Quat::from_rotation_x(-std::f32::consts::PI / 4.),
+            ..default()
+        },
         ..default()
     });
 

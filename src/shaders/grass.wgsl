@@ -8,6 +8,10 @@
     utils::rand_f,
 }
 #import bevy_render::maths::PI_2
+#import bevy_procedural_grass::grass_types::GrassMaterial;
+
+@group(2) @binding(100)
+var<uniform> grass_material: GrassMaterial;
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -17,13 +21,21 @@ struct Vertex {
     @location(3) i_pos: vec4<f32>,
 };
 
+struct GrassVertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) world_position: vec4<f32>,
+    @location(1) world_normal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
+    @location(3) facing: vec2<f32>,
+}
+
 // struct GrassVertexOutput {
 //     @builtin(position) clip_position: vec4<f32>,
 //     @location(0) color: vec4<f32>,
 // };
 
 @vertex
-fn vertex(vertex: Vertex) -> VertexOutput {
+fn vertex(vertex: Vertex) -> GrassVertexOutput {
     var position = vertex.position;
 
     var ipos = vertex.i_pos.xyz;
@@ -31,43 +43,37 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let width = 0.05 * (1.0 - pow(vertex.uv.y, 2.0)) * (0.7 + (1.0 - 0.7) * vertex.uv.y);
     position.x *= width;
 
-    let p0 = vec3<f32>(0.0);
-    let p2 = vec3<f32>(0.0, 0.6, 1.0);
-    var curve = 0.5;
+    let p0 = vec2<f32>(0.0);
+    let p2 = vec2<f32>(1.0, 0.0);
+    var curve = grass_material.curve;
     var midpoint = 0.5;
 
-    let p1 = vec3<f32>(0.0, curve, midpoint);
-    position = quadratic_bezier(vertex.uv.y, p0, p1, p2);
-    position.x += vertex.position.x * width;
-
+    let p1 = vec2<f32>(midpoint, curve);
+    let bezier = quadratic_bezier(vertex.uv.y, p0, p1, p2);
     let tangent = normalize(bezier_tangent(vertex.uv.y, p0, p1, p2));
-    let binormal = normalize(cross(vertex.normal, tangent));
-    var normal = normalize(cross(tangent, binormal));
 
-    let normal_curve_factor = (vertex.uv.x - 0.5) * 0.7; 
-    normal = normalize(normal + binormal * normal_curve_factor);
+    var normal = normalize(vec3<f32>(0.0, tangent.x, -tangent.y));
 
-    // Calculate facing angle and direction
+    position.y = bezier.y;
+    position.z = bezier.x;
+
     var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
     let facing_angle: f32 = rand_f(&state) * PI_2;
-    // let facing_angle = material.diffuse_transmission;
     let facing = vec2<f32>(cos(facing_angle), sin(facing_angle));
 
     position = rotate(position, facing);
-
-    normal = rotate(normal, facing);
-
+    // normal = rotate(normal, facing);
     position += ipos;
     
-    var out: VertexOutput;
+    var out: GrassVertexOutput;
     out.position = mesh_position_local_to_clip(
         identity_matrix,
         vec4<f32>(position, 1.0)
     );
     out.world_position = vec4<f32>(position, 1.0);
-
     
     out.world_normal = normal;
+    out.facing = facing;
 
     out.uv = vertex.uv;
 
@@ -75,16 +81,35 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 }
 
 @fragment fn fragment(
-    in: VertexOutput,
+    in: GrassVertexOutput,
     @builtin(front_facing) is_front: bool,
 ) -> @location(0) vec4<f32> {
-    let pbr_input = pbr_input_from_standard_material(in, is_front);
+    let uv_mid = in.uv.x - 0.5;
+    let midrib_softness = 0.08;
+    let a = smoothstep(0.0 - midrib_softness, midrib_softness, uv_mid);
+    let rim_position = 0.5;
+    let rim_softness = 0.08;
+    let b = smoothstep(rim_position, rim_position - rim_softness, abs(uv_mid));
+    let c = mix(1.0 - a, a, b);
+    let d = mix(1.0, -1.0, c);
+    let normal_strength = 0.1;
+    let normal_x = normal_strength * d;
+
+    var vo: VertexOutput;
+    vo.position = in.position;
+    vo.world_position = in.world_position;
+    vo.world_normal = in.world_normal;
+    vo.world_normal.x = normal_x;
+    vo.uv = in.uv;
+
+    vo.world_normal = rotate(vo.world_normal, in.facing);
+
+    let pbr_input = pbr_input_from_standard_material(vo, is_front);
     var color = apply_pbr_lighting(pbr_input);
     color = main_pass_post_lighting_processing(pbr_input, color);
     return color;
 
-    // var normal = pbr_input.world_normal;
-    // return vec4<f32>(normal, 1.0);
+    // return vec4<f32>(pbr_input.world_normal, 1.0);
 }
 
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(
@@ -105,7 +130,7 @@ fn rotate(v: vec3<f32>, direction: vec2<f32>) -> vec3<f32> {
     return rotation_matrix * v;
 }
 
-fn quadratic_bezier(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>) -> vec3<f32> {
+fn quadratic_bezier(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>) -> vec2<f32> {
     let u = 1.0 - t;
     let tt = t * t;
     let uu = u * u;
@@ -117,7 +142,7 @@ fn quadratic_bezier(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>) -> vec3
     return p;
 }
 
-fn bezier_tangent(t: f32, p0: vec3<f32>, p1: vec3<f32>, p2: vec3<f32>) -> vec3<f32> {
+fn bezier_tangent(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>) -> vec2<f32> {
     let u = 1.0 - t;
     
     let tangent = 2.0 * u * (p1 - p0) + 2.0 * t * (p2 - p1);
