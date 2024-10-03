@@ -120,7 +120,10 @@ pub(crate) fn create_chunks(
                         },
                         mesh_handle.clone(),
                         material_handle.clone(),
-                        SpatialBundle::default(),
+                        SpatialBundle { // TODO: use parent
+                            visibility: Visibility::Visible,
+                            ..default()
+                        },
                         NoFrustumCulling,
                     )
                 ).id();

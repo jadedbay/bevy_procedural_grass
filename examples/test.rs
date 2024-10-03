@@ -1,5 +1,5 @@
 use bevy::{color::palettes::css::WHITE, pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
-use bevy_inspector_egui::{quick::WorldInspectorPlugin, DefaultInspectorConfigPlugin};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::{grass::material::create_grass_texture, prelude::*};
 use bevy_flycam::prelude::*;
 
@@ -50,18 +50,16 @@ fn setup(
     apply_height_map(&mut plane, &noise_image, 0.0);
     plane.compute_normals();
 
-    let n = images.add(create_grass_texture(256, 256));
-
     commands.spawn((
         PbrBundle {
             mesh: meshes.add(plane),
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             material: materials.add(StandardMaterial {
                 base_color: Srgba::rgb(0.5, 0.2, 0.05).into(),
-                base_color_texture: Some(n),
                 reflectance: 0.0, 
                 ..default()
             }),
+            visibility: Visibility::Hidden,
             ..default()
         },
     )).with_children(|parent| {
@@ -72,7 +70,6 @@ fn setup(
                     GrassMaterial {
                         base: StandardMaterial { 
                             base_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
-                            base_color_texture: Some(images.add(create_grass_texture(256, 256))),
                             perceptual_roughness: 0.8,
                             reflectance: 0.25,
                             double_sided: true,
@@ -80,7 +77,8 @@ fn setup(
                         },
                         extension: GrassMaterialExtension {
                             facing_angle: 0.0,
-                            curve: 0.5,
+                            curve: 1.0,
+                            texture: Some(images.add(create_grass_texture(256, 256, [12.0, 6.0]))),
                         }
                     }
                 ),
@@ -92,6 +90,10 @@ fn setup(
                         scale: 0.0,
                     }),
                     y_offset: 0.0001,
+                    ..default()
+                },
+                spatial_bundle: SpatialBundle {
+                    visibility: Visibility::Visible,
                     ..default()
                 },
                 ..default()
@@ -110,12 +112,12 @@ fn setup(
 
     commands.insert_resource(AmbientLight {
         color: WHITE.into(),
-        brightness: 300.0,
+        brightness: 5000.0,
     });
 
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            illuminance: light_consts::lux::AMBIENT_DAYLIGHT,
+            illuminance: light_consts::lux::AMBIENT_DAYLIGHT * 5.0,
             shadows_enabled: true,
             ..default()
         },

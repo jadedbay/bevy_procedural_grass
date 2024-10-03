@@ -9,12 +9,16 @@ pub struct GrassMaterialExtension {
     pub facing_angle: f32,
     #[uniform(100)]
     pub curve: f32,
+    #[texture(101)]
+    pub texture: Option<Handle<Image>>, // Create texture binding in material extension instead of using base_color_texture in StandardMaterial to customize how its applied. 
+                                        // Could just use StandardMaterial texture if I can work out how to disable StandardMaterialFlags::BASE_COLOR_TEXTURE
 }
 impl MaterialExtension for GrassMaterialExtension {}
 
 pub fn create_grass_texture(
     width: u32,
     height: u32,
+    frequency: [f64; 2],
 ) -> Image {
     let simplex = Simplex::new(0);
     let mut texture_data = vec![0; (width * height * 4) as usize];
@@ -23,7 +27,7 @@ pub fn create_grass_texture(
         for x in 0..width {
             let nx = x as f64 / width as f64;
             let ny = (y as f64 / height as f64) / 1.0;
-            let noise_value = (simplex.get([nx * 16.0, ny * 4.0]) + 1.0) / 2.0;
+            let noise_value = (simplex.get([nx * frequency[0], ny * frequency[1]]) + 1.0) / 2.0;
             let index = ((y * width + x) * 4) as usize;
 
             texture_data[index] = (noise_value * 255.0) as u8;     // R

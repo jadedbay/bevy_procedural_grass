@@ -1,10 +1,12 @@
 #import bevy_pbr::{
     forward_io::VertexOutput,
     pbr_types::StandardMaterial,
+    pbr_bindings,
     pbr_bindings::material,
     pbr_fragment::pbr_input_from_standard_material,
     pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},
     mesh_functions::{get_world_from_local, mesh_position_local_to_clip},
+    mesh_view_bindings::view,
     utils::rand_f,
 }
 #import bevy_render::maths::PI_2
@@ -12,6 +14,8 @@
 
 @group(2) @binding(100)
 var<uniform> grass_material: GrassMaterial;
+@group(2) @binding(101)
+var texture: texture_2d<f32>;
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -29,11 +33,6 @@ struct GrassVertexOutput {
     @location(3) facing: vec2<f32>,
 }
 
-// struct GrassVertexOutput {
-//     @builtin(position) clip_position: vec4<f32>,
-//     @location(0) color: vec4<f32>,
-// };
-
 @vertex
 fn vertex(vertex: Vertex) -> GrassVertexOutput {
     var position = vertex.position;
@@ -44,7 +43,7 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
     position.x *= width;
 
     let p0 = vec2<f32>(0.0);
-    let p2 = vec2<f32>(1.0, 0.0);
+    let p2 = vec2<f32>(1.0, 1.0);
     var curve = grass_material.curve;
     var midpoint = 0.5;
 
@@ -62,7 +61,6 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
     let facing = vec2<f32>(cos(facing_angle), sin(facing_angle));
 
     position = rotate(position, facing);
-    // normal = rotate(normal, facing);
     position += ipos;
     
     var out: GrassVertexOutput;
@@ -84,16 +82,16 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
     in: GrassVertexOutput,
     @builtin(front_facing) is_front: bool,
 ) -> @location(0) vec4<f32> {
-    let uv_mid = in.uv.x - 0.5;
     let midrib_softness = 0.08;
-    let a = smoothstep(0.0 - midrib_softness, midrib_softness, uv_mid);
     let rim_position = 0.5;
     let rim_softness = 0.08;
-    let b = smoothstep(rim_position, rim_position - rim_softness, abs(uv_mid));
-    let c = mix(1.0 - a, a, b);
-    let d = mix(1.0, -1.0, c);
-    let normal_strength = 0.1;
-    let normal_x = normal_strength * d;
+    let normal_strength = 0.3;
+
+    let uv_mid = in.uv.x - 0.5;
+    let midrib = smoothstep(-midrib_softness, midrib_softness, uv_mid);
+    let rim = smoothstep(rim_position, rim_position - rim_softness, abs(uv_mid));
+    let blend = mix(1.0 - midrib, midrib, rim);
+    let normal_x = normal_strength * mix(1.0, -1.0, blend);
 
     var vo: VertexOutput;
     vo.position = in.position;
@@ -104,7 +102,17 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
 
     vo.world_normal = rotate(vo.world_normal, in.facing);
 
-    let pbr_input = pbr_input_from_standard_material(vo, is_front);
+    var pbr_input = pbr_input_from_standard_material(vo, is_front);
+
+    let sampled_texture = textureSampleBias(texture, pbr_bindings::base_color_sampler, in.uv, view.mip_bias);
+    pbr_input.material.base_color = mix(pbr_input.material.base_color * 0.65, pbr_input.material.base_color, sampled_texture);
+    let roughness = 0.6;
+    let roughness_variance = 0.15;
+    pbr_input.material.perceptual_roughness = mix(roughness - roughness_variance, roughness, sampled_texture.r);
+    let reflectance = 0.1;
+    let reflectance_variance = 0.1;
+    pbr_input.material.reflectance = mix(reflectance - reflectance_variance, reflectance, sampled_texture.r);
+
     var color = apply_pbr_lighting(pbr_input);
     color = main_pass_post_lighting_processing(pbr_input, color);
     return color;
