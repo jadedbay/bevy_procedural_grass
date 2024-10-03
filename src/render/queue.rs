@@ -1,6 +1,6 @@
 use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{MaterialBindGroupId, MeshPipelineKey, PreparedMaterial, RenderMaterialInstances, RenderMeshInstances}, prelude::*, render::{mesh::GpuMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, view::ExtractedView}};
 
-use crate::grass::chunk::GrassChunk;
+use crate::{grass::chunk::GrassChunk, prelude::GrassMaterial};
 
 use super::{draw::DrawGrass, pipeline::GrassRenderPipeline};
 
@@ -12,8 +12,8 @@ pub(crate) fn queue_grass(
     pipeline_cache: Res<PipelineCache>,
     meshes: Res<RenderAssets<GpuMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
-    render_material_instances: Res<RenderMaterialInstances<StandardMaterial>>,
-    render_materials: Res<RenderAssets<PreparedMaterial<StandardMaterial>>>,
+    render_material_instances: Res<RenderMaterialInstances<GrassMaterial>>,
+    render_materials: Res<RenderAssets<PreparedMaterial<GrassMaterial>>>,
     material_meshes: Query<Entity, With<GrassChunk>>,
     mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     mut views: Query<(Entity, &ExtractedView)>,

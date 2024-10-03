@@ -1,6 +1,6 @@
-use bevy::{pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{Extent3d, Face, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy::{pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_procedural_grass::prelude::*;
+use bevy_procedural_grass::{grass::GrassMaterialExtension, prelude::*};
 use bevy_flycam::prelude::*;
 
 use iyes_perf_ui::{entries::PerfUiBundle, prelude::*};
@@ -9,16 +9,19 @@ use noise::NoiseFn;
 fn main() {
     App::new()  
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    present_mode: PresentMode::Immediate,
+            DefaultPlugins.set(
+                WindowPlugin {
+                    primary_window: Some(Window {
+                        present_mode: PresentMode::Immediate,
+                        ..default()
+                    }),
                     ..default()
-                }),
-                ..default()
-            }),
+                },
+            ),
             PlayerPlugin,
             ProceduralGrassPlugin::default(),
             WireframePlugin,
+            MaterialPlugin::<NormalMaterial>::default(),
         ))
         .add_plugins((
             bevy::diagnostic::FrameTimeDiagnosticsPlugin,
@@ -35,11 +38,13 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut normal_materials: ResMut<Assets<NormalMaterial>>,
+    mut grass_materials: ResMut<Assets<GrassMaterial>>,
 ) {
     let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
 
-    apply_height_map(&mut plane, &noise_image, 6.0);
+    apply_height_map(&mut plane, &noise_image, 0.0);
     plane.compute_normals();
 
     commands.spawn((
@@ -48,9 +53,7 @@ fn setup(
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             material: materials.add(StandardMaterial {
                 base_color: Srgba::rgb(0.5, 0.2, 0.05).into(),
-                reflectance: 0.0,
-                cull_mode: None,
-                
+                reflectance: 0.0, 
                 ..default()
             }),
             ..default()
@@ -59,26 +62,41 @@ fn setup(
         parent.spawn(
             GrassBundle {
                 mesh: meshes.add(GrassMesh::mesh(7)),
-                material: materials.add(
-                    StandardMaterial {
-                        base_color: Srgba::rgb(0.2, 0.8, 0.2).into(),
-                        ..default()
-                    },
+                material: grass_materials.add(
+                    GrassMaterial {
+                        base: StandardMaterial { 
+                            base_color: Srgba::rgb(0.2, 0.8, 0.2).into(),
+                            perceptual_roughness: 0.8,
+                            reflectance: 0.25,
+                            double_sided: true,
+                            ..default()
+                        },
+                        extension: GrassMaterialExtension {}
+                    }
                 ),
                 grass: Grass {
                     chunk_count: UVec2::splat(1),
                     density: 20.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
-                        scale: 5.95,
+                        scale: 0.0,
                     }),
-                    y_offset: -0.04,
+                    y_offset: 0.0001,
                     ..default()
                 },
                 ..default()
             }
         );
     });
+
+    commands.spawn((
+        MaterialMeshBundle {
+            mesh: meshes.add(Sphere::new(1.0)),
+            material: normal_materials.add(NormalMaterial {}),
+            transform: Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)),
+            ..default()
+        },
+    ));
 
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
@@ -154,4 +172,13 @@ fn apply_height_map(plane: &mut Mesh, height_map: &Image, height_scale: f32) {
                     position[1] += noise_value * height_scale;
                 });
         }
+}
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+struct NormalMaterial {}
+
+impl Material for NormalMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "normal.wgsl".into()
+    }
 }

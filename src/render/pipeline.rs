@@ -1,6 +1,6 @@
 use bevy::{pbr::{MaterialExtension, MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, AsBindGroup, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureSampleType, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
 
-use crate::grass::chunk::Aabb2dGpu;
+use crate::{grass::chunk::Aabb2dGpu, GrassMaterial};
 
 use super::instance::GrassInstanceData;
 
@@ -146,7 +146,7 @@ impl FromWorld for GrassRenderPipeline {
         let mesh_pipeline = world.resource::<MeshPipeline>();
 
         let render_device = world.resource::<RenderDevice>();
-        let material_layout = StandardMaterial::bind_group_layout(render_device);
+        let material_layout = GrassMaterial::bind_group_layout(render_device);
 
         GrassRenderPipeline {
             shader: world.load_asset("embedded://bevy_procedural_grass/shaders/grass.wgsl"),

@@ -30,7 +30,7 @@ features = ["png", "jpeg"]
 iyes_perf_ui = "0.3.0"
 bevy-inspector-egui = "0.25.1"
 bevy_flycam = "0.14.0"
-bevy = { version = "0.14.0", default-features = false, features = ["bevy_winit", "x11", "tonemapping_luts", "default_font", "trace"] }
+bevy = { version = "0.14.0", default-features = false, features = ["bevy_winit", "x11", "tonemapping_luts", "default_font", "trace", "embedded_watcher"] }
 
 [profile.dev]
 opt-level = 1

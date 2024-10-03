@@ -9,9 +9,9 @@ impl GrassMesh {
         let mut indices = Vec::new();
 
         for i in 0..segments {
-            let y = (i as f32 / segments as f32).sqrt();
-            positions.push([1.0, y, 0.0]);
-            positions.push([-1.0, y, 0.0]);
+            let y = (i as f32 / segments as f32).powf(0.7);
+            positions.push([-1.0, 0.0, y]);
+            positions.push([1.0, 0.0, y]);
             uvs.push([0.0, y]);
             uvs.push([1.0, y]);
 
@@ -26,7 +26,7 @@ impl GrassMesh {
             }
         }
 
-        positions.push([0.0, 1.0, 0.0]);
+        positions.push([0.0, 0.0, 1.0]);
         uvs.push([0.5, 1.0]);
 
         let tip = 2 * segments - 1;
@@ -39,6 +39,7 @@ impl GrassMesh {
         grass_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
         grass_mesh.insert_indices(Indices::U32(indices));
 
+        grass_mesh.compute_normals();
 
         grass_mesh
     }

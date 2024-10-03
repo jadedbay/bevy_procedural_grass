@@ -1,4 +1,4 @@
-use bevy::{ecs::query::QueryItem, math::bounding::Aabb2d, prelude::*, render::{extract_component::ExtractComponent, render_resource::Buffer, view::NoFrustumCulling}};
+use bevy::{ecs::query::QueryItem, math::bounding::Aabb2d, pbr::MaterialExtension, prelude::*, render::{extract_component::ExtractComponent, render_resource::{AsBindGroup, Buffer}, view::NoFrustumCulling}};
 
 pub mod chunk;
 pub mod mesh;
@@ -7,11 +7,13 @@ pub mod config;
 
 use chunk::{GrassChunk, GrassChunkBuffers};
 
+use crate::GrassMaterial;
+
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
     pub grass: Grass,
     pub mesh: Handle<Mesh>,
-    pub material: Handle<StandardMaterial>,
+    pub material: Handle<GrassMaterial>,
     #[bundle()]
     pub spatial_bundle: SpatialBundle,
     pub frustum_culling: NoFrustumCulling,
@@ -76,3 +78,7 @@ impl ExtractComponent for Grass {
         Some((item.0.clone(), item.1.clone()))
     }
 }
+
+#[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
+pub struct GrassMaterialExtension {}
+impl MaterialExtension for GrassMaterialExtension {}

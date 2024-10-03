@@ -1,7 +1,7 @@
 
 use bevy::{math::{bounding::{Aabb2d, BoundingVolume}, Affine3A}, prelude::*, render::{primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}};
 use super::{config::GrassConfig, Grass};
-use crate::{grass::GrassGpuInfo, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData};
+use crate::{grass::GrassGpuInfo, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData, GrassMaterial};
 
 #[derive(Component, Clone)]
 pub struct GrassChunk {
@@ -77,7 +77,7 @@ impl GrassChunkBuffers {
 pub(crate) fn create_chunks(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    grass_query: Query<(Entity, &Grass, &Handle<Mesh>, &Handle<StandardMaterial>, &Parent)>,
+    grass_query: Query<(Entity, &Grass, &Handle<Mesh>, &Handle<GrassMaterial>, &Parent)>,
     ground_query: Query<&Handle<Mesh>>,
     render_device: Res<RenderDevice>,
 ) {
