@@ -1,15 +1,15 @@
 
-use bevy::{math::{bounding::{Aabb2d, BoundingVolume}, Affine3A}, prelude::*, render::{primitives::{Aabb, Frustum}, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}};
-use super::{config::GrassConfig, Grass};
-use crate::{grass::GrassGpuInfo, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData, GrassMaterial};
+use bevy::{math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
+use super::Grass;
+use crate::{grass::{cull::GrassCullChunks, GrassGpuInfo}, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData, GrassMaterial};
 
 #[derive(Component, Clone)]
 pub struct GrassChunk {
     pub grass_entity: Entity,
     pub aabb: Aabb2d,
 
-    instance_count: usize,
-    scan_workgroup_count: u32,
+    pub instance_count: usize,
+    pub scan_workgroup_count: u32,
 }
 
 #[derive(Component, Clone)]
@@ -23,7 +23,7 @@ pub struct GrassChunkBuffers {
 }
 
 impl GrassChunkBuffers {
-    fn create_buffers(
+    pub(crate) fn create_buffers(
         render_device: &RenderDevice,
         aabb: Aabb2d,
         instance_count: usize,
@@ -74,16 +74,14 @@ impl GrassChunkBuffers {
     }
 }
 
-pub(crate) fn create_chunks(
+pub(crate) fn grass_setup(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    grass_query: Query<(Entity, &Grass, &Handle<Mesh>, &Handle<GrassMaterial>, &Parent)>,
+    grass_query: Query<(Entity, &Grass, &Parent)>,
     ground_query: Query<&Handle<Mesh>>,
     render_device: Res<RenderDevice>,
 ) {
-    for (entity, grass, mesh_handle, material_handle, parent) in grass_query.iter() {
-        let mut chunks = Vec::new();
-
+    for (entity, grass, parent) in grass_query.iter() {
         let mesh = meshes.get(ground_query.get(parent.get()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
         let mesh_aabb2d = Aabb2d::new(mesh_aabb.center.xz(), mesh_aabb.half_extents.xz());
@@ -101,41 +99,10 @@ pub(crate) fn create_chunks(
 
         let (scan_workgroup_count, scan_groups_workgroup_count) = calculate_workgroup_counts(instance_count as u32);
 
-        for x in 0..grass.chunk_count.x { 
-            for z in 0..grass.chunk_count.y {
-                let chunk_min = mesh_aabb2d.min + Vec2::new(x as f32, z as f32) * chunk_size;
-                let chunk_max = chunk_min + chunk_size; 
-                let aabb = Aabb2d {
-                    min: chunk_min,
-                    max: chunk_max,
-                };
-
-                // TODO: Instead of spawning all the chunks as entities in culling calculate aabb from from chunk pos and then spawn in
-                let chunk = commands.spawn(
-                    (
-                        GrassChunk {
-                            grass_entity: entity,
-                            aabb,
-                            instance_count,
-                            scan_workgroup_count,
-                        },
-                        mesh_handle.clone(),
-                        material_handle.clone(),
-                        SpatialBundle { // TODO: use parent
-                            visibility: Visibility::Visible,
-                            ..default()
-                        },
-                        NoFrustumCulling,
-                    )
-                ).id();
-
-                chunks.push(chunk);
-            }
-         }
-        commands.entity(entity).push_children(chunks.as_slice());
-        commands.entity(entity).insert(
+        commands.entity(entity).insert((
             GrassGpuInfo {
                 aabb: mesh_aabb2d,
+                chunk_size,
                 aabb_buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {
                     label: Some("aabb_buffer"),
                     contents: bytemuck::cast_slice(&[Aabb2dGpu::from(mesh_aabb2d)]),
@@ -160,51 +127,8 @@ pub(crate) fn create_chunks(
                 scan_groups_workgroup_count,
                 scan_workgroup_count,
             },
-        );
-    }
-}
-
-pub(crate) fn cull_chunks(
-    mut commands: Commands,
-    render_device: Res<RenderDevice>,
-    mut query: Query<(Entity, &GrassChunk, &Parent)>,
-    q_chunk_buffers: Query<&GrassChunkBuffers>, 
-    grass_query: Query<&Grass>,
-    camera_query: Query<(&Transform, &Frustum)>,
-    grass_config: Res<GrassConfig>,
-) {
-    'chunk: for (entity, chunk, parent) in query.iter_mut() {
-        let grass = grass_query.get(parent.get()).unwrap();
-
-        let aabb = Aabb::from_min_max(
-            Vec3::new(chunk.aabb.min.x, -grass.height_map.as_ref().unwrap().scale, chunk.aabb.min.y),
-            Vec3::new(chunk.aabb.max.x, grass.height_map.as_ref().unwrap().scale, chunk.aabb.max.y),
-        );
-
-        for (transform, frustum) in camera_query.iter() {
-            if (chunk.aabb.center() - transform.translation.xz()).length() < grass_config.cull_distance 
-            && frustum.intersects_obb(&aabb, &Affine3A::IDENTITY, false, false) {
-                match q_chunk_buffers.get(entity) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        commands.entity(entity).insert(GrassChunkBuffers::create_buffers(
-                            &render_device,
-                            chunk.aabb,
-                            chunk.instance_count,
-                            chunk.scan_workgroup_count,
-                        )); 
-                    }
-                }
-                continue 'chunk;
-            } else {
-                match q_chunk_buffers.get(entity) {
-                    Ok(_) => {
-                        commands.entity(entity).remove::<GrassChunkBuffers>();
-                    }
-                    Err(_) => {}
-                }
-            }
-        }
+            GrassCullChunks(HashMap::new()),
+        ));
     }
 }
 

@@ -1,6 +1,7 @@
 use bevy::{ecs::query::QueryItem, math::bounding::Aabb2d, pbr::MaterialExtension, prelude::*, render::{extract_component::ExtractComponent, render_resource::{AsBindGroup, Buffer}, view::NoFrustumCulling}};
 
 pub mod chunk;
+pub mod cull;
 pub mod mesh;
 pub mod clump;
 pub mod config;
@@ -47,9 +48,11 @@ impl Default for Grass {
     }
 }
 
+// TODO: rename this i dont like it
 #[derive(Component, Clone)]
 pub struct GrassGpuInfo {
     pub aabb: Aabb2d,
+    pub chunk_size: Vec2,
     pub aabb_buffer: Buffer,
     pub height_scale_buffer: Buffer,
     pub height_offset_buffer: Buffer,

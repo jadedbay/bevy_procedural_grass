@@ -80,12 +80,12 @@ fn setup(
                             width: 0.05,
                             curve: 1.0,
                             roughness_variance: 0.15,
-                            reflectance_variance: 0.1,
+                            reflectance_variance: 0.2,
                             midrib_softness: 0.08,
                             rim_position: 0.5,
                             rim_softness: 0.08,
                             width_normal_strength: 0.3,
-                            texture: Some(images.add(create_grass_texture(256, 256, [12.0, 6.0]))),
+                            texture: Some(images.add(create_grass_texture(1024, 1024, [12.0, 6.0]))),
                         }
                     }
                 ),

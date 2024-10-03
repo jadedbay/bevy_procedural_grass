@@ -1,6 +1,6 @@
 use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::{create_chunks, cull_chunks, GrassChunk}, config::GrassConfig, material::GrassMaterial, Grass};
+use grass::{chunk::{grass_setup, GrassChunk}, config::GrassConfig, cull::cull_chunks, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
 use render::{node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}};
 
@@ -42,7 +42,7 @@ impl Plugin for ProceduralGrassPlugin {
                 ExtractComponentPlugin::<GrassChunk>::default(),
                 MaterialPlugin::<GrassMaterial>::default(),
             ))
-            .add_systems(PostStartup, create_chunks)
+            .add_systems(PostStartup, grass_setup)
             .add_systems(Update, cull_chunks);
 
         let render_app = app.sub_app_mut(RenderApp);
