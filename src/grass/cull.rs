@@ -56,7 +56,7 @@ pub(crate) fn cull_chunks(
                                 ),
                                 mesh.clone(),
                                 material.clone(),
-                                SpatialBundle { // TODO: use parent
+                                SpatialBundle {
                                     visibility: *visibility,
                                     ..default()
                                 },

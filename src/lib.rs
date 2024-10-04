@@ -1,10 +1,10 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::{graph::NodePbr, MaterialPipeline, PreparedMaterial}, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, render_asset::RenderAssetPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::{graph::NodePbr, MaterialPipeline, PreparedMaterial, PrepassPipelinePlugin, Shadow}, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, render_asset::{prepare_assets, RenderAssetPlugin}, render_graph::RenderGraphApp, render_phase::{AddRenderCommand, DrawFunctions}, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::{grass_setup, GrassChunk}, config::GrassConfig, cull::cull_chunks, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
-use render::{node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}};
+use render::{draw::DrawGrassPrepass, node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
 
-use crate::render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, pipeline::GrassRenderPipeline, prepare::prepare_grass, queue::queue_grass};
+use crate::render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, prepare::prepare_grass, queue::queue_grass};
 
 mod render;
 mod prefix_sum;
@@ -31,6 +31,7 @@ impl Plugin for ProceduralGrassPlugin {
         embedded_asset!(app, "shaders/grass.wgsl");
         embedded_asset!(app, "shaders/grass_cull.wgsl");
         embedded_asset!(app, "shaders/reset_args.wgsl");
+        embedded_asset!(app, "shaders/grass_prepass.wgsl");
 
         app
             .register_type::<Grass>()
@@ -47,13 +48,12 @@ impl Plugin for ProceduralGrassPlugin {
         let render_app = app.sub_app_mut(RenderApp);
         
         render_app
-        .add_render_command::<Opaque3d, DrawGrass>()
-        .init_resource::<SpecializedMeshPipelines<GrassRenderPipeline>>()
+        // .init_resource::<SpecializedMeshPipelines<GrassRenderPipeline>>()
             .add_systems(
                 Render, 
                 (
                     update_computed_grass.before(RenderSet::PrepareResources),
-                    queue_grass.in_set(RenderSet::QueueMeshes),
+                    // queue_grass.in_set(RenderSet::QueueMeshes),
                     prepare_grass.in_set(RenderSet::PrepareBindGroups),
                     compute_grass.after(RenderSet::PrepareBindGroups).before(RenderSet::Render), // dont know if .after is required?
                 )   
@@ -65,8 +65,8 @@ impl Plugin for ProceduralGrassPlugin {
         render_app.add_render_graph_edges(
             Core3d, 
             (
-                NodePbr::ShadowPass,
                 CullGrassNodeLabel,
+                NodePbr::ShadowPass,
             )
         );
 
@@ -79,12 +79,12 @@ impl Plugin for ProceduralGrassPlugin {
         app.sub_app_mut(RenderApp)
             .init_resource::<ComputedGrassEntities>()
             .init_resource::<PrefixSumPipeline>()
-            .init_resource::<GrassComputePipeline>()
-            .init_resource::<GrassRenderPipeline>();
+            .init_resource::<GrassComputePipeline>();
     }
 }
 
 
+// This is essentially MaterialPlugin but using a custom Draw Function
 struct GrassMaterialPlugin;
 impl Plugin for GrassMaterialPlugin {
     fn build(&self, app: &mut App) {
@@ -94,7 +94,25 @@ impl Plugin for GrassMaterialPlugin {
             .add_plugins((
                 ExtractInstancesPlugin::<AssetId<GrassMaterial>>::extract_visible(),
                 RenderAssetPlugin::<PreparedMaterial<GrassMaterial>>::default(),
+                PrepassPipelinePlugin::<GrassMaterial>::default(),
             ));
+        
+        if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
+            render_app
+                .init_resource::<DrawFunctions<Shadow>>()
+                .add_render_command::<Shadow, DrawGrassPrepass>()
+                .add_render_command::<Opaque3d, DrawGrass>()
+                .init_resource::<SpecializedMeshPipelines<MaterialPipeline<GrassMaterial>>>()
+                .add_systems(
+                    Render,
+                    (
+                        queue_grass.in_set(RenderSet::QueueMeshes)
+                            .after(prepare_assets::<PreparedMaterial<GrassMaterial>>),
+                        queue_grass_shadows.in_set(RenderSet::QueueMeshes)
+                            .after(prepare_assets::<PreparedMaterial<GrassMaterial>>),
+                    )
+                );
+        }
     }
 
     fn finish(&self, app: &mut App) {

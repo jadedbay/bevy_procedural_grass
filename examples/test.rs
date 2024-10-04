@@ -1,4 +1,4 @@
-use bevy::{color::palettes::css::{RED, WHITE}, pbr::wireframe::{Wireframe, WireframePlugin}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy::{color::palettes::css::{RED, WHITE}, pbr::{wireframe::{Wireframe, WireframePlugin}, DirectionalLightShadowMap}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::{grass::material::create_grass_texture, prelude::*};
 use bevy_flycam::prelude::*;
@@ -32,6 +32,7 @@ fn main() {
             PerfUiPlugin, 
             WorldInspectorPlugin::default(),
         ))
+        .insert_resource(DirectionalLightShadowMap { size: 4096 })
         .add_systems(Startup, setup)
         .run();
 }
@@ -44,7 +45,7 @@ fn setup(
     mut normal_materials: ResMut<Assets<NormalMaterial>>,
     mut grass_materials: ResMut<Assets<GrassMaterial>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(1000., 1000.).subdivisions(50).build();
+    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
 
     apply_height_map(&mut plane, &noise_image, 0.0);
@@ -60,12 +61,22 @@ fn setup(
                 double_sided: true,
                 ..default()
             }),
-            visibility: Visibility::Hidden,
+            visibility: Visibility::Visible,
             ..default()
         },
     )).with_children(|parent| {
         parent.spawn(
             GrassBundle {
+                grass: Grass {
+                    chunk_count: UVec2::splat(1),
+                    density: 50.0,
+                    height_map: Some(GrassHeightMap {
+                        map: images.add(noise_image),
+                        scale: 0.0,
+                    }),
+                    y_offset: 0.0001,
+                    ..default()
+                },
                 mesh: meshes.add(GrassMesh::mesh(7)),
                 material: grass_materials.add(
                     GrassMaterial {
@@ -89,16 +100,6 @@ fn setup(
                         }
                     }
                 ),
-                grass: Grass {
-                    chunk_count: UVec2::splat(10),
-                    density: 1.0,
-                    height_map: Some(GrassHeightMap {
-                        map: images.add(noise_image),
-                        scale: 0.0,
-                    }),
-                    y_offset: 0.0001,
-                    ..default()
-                },
                 spatial_bundle: SpatialBundle {
                     visibility: Visibility::Visible,
                     ..default()
@@ -107,31 +108,6 @@ fn setup(
             }
         );
     });
-
-    commands
-        .spawn(PointLightBundle {
-            // transform: Transform::from_xyz(5.0, 8.0, 2.0),
-            transform: Transform::from_xyz(1.0, 2.0, 0.0),
-            point_light: PointLight {
-                intensity: 10_000_000.0,
-                color: RED.into(),
-                // shadows_enabled: true,
-                ..default()
-            },
-            ..default()
-        })
-        .with_children(|builder| {
-            builder.spawn(PbrBundle {
-                mesh: meshes.add(Sphere::new(0.1).mesh().uv(32, 18)),
-                material: materials.add(StandardMaterial {
-                    base_color: RED.into(),
-                    emissive: LinearRgba::new(4.0, 0.0, 0.0, 0.0),
-                    ..default()
-                }),
-                ..default()
-            });
-        });
-
 
     commands.spawn((
         MaterialMeshBundle {
@@ -150,7 +126,7 @@ fn setup(
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             illuminance: light_consts::lux::AMBIENT_DAYLIGHT * 5.0,
-            // shadows_enabled: true,
+            shadows_enabled: true,
             ..default()
         },
         transform: Transform {

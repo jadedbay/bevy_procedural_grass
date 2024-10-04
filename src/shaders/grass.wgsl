@@ -78,10 +78,13 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
     return out;
 }
 
-@fragment fn fragment(
+@fragment 
+fn fragment(
     in: GrassVertexOutput,
     @builtin(front_facing) is_front: bool,
 ) -> @location(0) vec4<f32> {
+
+    // TODO: move this to a compute shader and use 1d texture
     let uv_mid = in.uv.x - 0.5;
     let midrib = smoothstep(-grass.midrib_softness, grass.midrib_softness, uv_mid);
     let rim = smoothstep(grass.rim_position, grass.rim_position - grass.rim_softness, abs(uv_mid));
@@ -155,10 +158,4 @@ fn bezier_tangent(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>) -> vec2<f
     let tangent = 2.0 * u * (p1 - p0) + 2.0 * t * (p2 - p1);
     
     return tangent;
-}
-
-fn rotate_around_axis(v: vec3<f32>, axis: vec3<f32>, angle: f32) -> vec3<f32> {
-    let cos_angle = cos(angle);
-    let sin_angle = sin(angle);
-    return v * cos_angle + cross(axis, v) * sin_angle + axis * dot(axis, v) * (1.0 - cos_angle);
 }
