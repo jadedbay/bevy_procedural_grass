@@ -31,6 +31,8 @@ pub(crate) fn cull_chunks(
                 let world_pos = Vec3::new(x as f32 * gpu_info.chunk_size.x, 0.0, z as f32 * gpu_info.chunk_size.y);
 
                 for (transform, frustum) in camera_query.iter() {
+
+                    // TODO: Seperate distance/frustum culling and keep chunks in distance loaded but tell prepare to not create bind groups
                     if ((Vec3::from(aabb.center) + world_pos).xz() - transform.translation.xz()).length() < grass_config.cull_distance 
                     && frustum.intersects_obb(&aabb, &Affine3A::from_translation(world_pos), false, false) {
                         if !cull_chunks.0.contains_key(&chunk_pos) {

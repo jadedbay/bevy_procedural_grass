@@ -81,17 +81,17 @@ fn setup(
                             curve: 1.0,
                             roughness_variance: 0.15,
                             reflectance_variance: 0.2,
-                            midrib_softness: 0.08,
+                            midrib_softness: 0.03,
                             rim_position: 0.5,
                             rim_softness: 0.08,
                             width_normal_strength: 0.3,
-                            texture: Some(images.add(create_grass_texture(1024, 1024, [12.0, 6.0]))),
+                            texture: Some(images.add(create_grass_texture(1024, 1024, [12.0, 4.0]))),
                         }
                     }
                 ),
                 grass: Grass {
                     chunk_count: UVec2::splat(10),
-                    density: 20.0,
+                    density: 1.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
                         scale: 0.0,
@@ -115,7 +115,7 @@ fn setup(
             point_light: PointLight {
                 intensity: 10_000_000.0,
                 color: RED.into(),
-                shadows_enabled: true,
+                // shadows_enabled: true,
                 ..default()
             },
             ..default()
@@ -150,7 +150,7 @@ fn setup(
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             illuminance: light_consts::lux::AMBIENT_DAYLIGHT * 5.0,
-            shadows_enabled: true,
+            // shadows_enabled: true,
             ..default()
         },
         transform: Transform {

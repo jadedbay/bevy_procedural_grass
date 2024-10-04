@@ -43,7 +43,7 @@ fn vertex(vertex: Vertex) -> GrassVertexOutput {
     position.x *= width;
 
     let p0 = vec2<f32>(0.0);
-    let p2 = vec2<f32>(1.0, 1.0);
+    let p2 = vec2<f32>(1.0, 0.7);
     var curve = grass.curve;
     var midpoint = 0.5;
 

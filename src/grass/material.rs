@@ -1,5 +1,7 @@
-use bevy::{pbr::{ExtendedMaterial, MaterialExtension}, prelude::*, render::{render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, ShaderRef, SpecializedMeshPipelineError, TextureDimension, TextureFormat}}};
+use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}}};
 use noise::{NoiseFn, Perlin, Simplex};
+
+use crate::render::instance::GrassInstanceData;
 
 pub type GrassMaterial = ExtendedMaterial<StandardMaterial, GrassMaterialExtension>;
 

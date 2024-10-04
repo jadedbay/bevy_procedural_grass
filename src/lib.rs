@@ -1,4 +1,4 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::graph::NodePbr, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::{graph::NodePbr, MaterialPipeline, PreparedMaterial}, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, render_asset::RenderAssetPlugin, render_graph::RenderGraphApp, render_phase::AddRenderCommand, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::{grass_setup, GrassChunk}, config::GrassConfig, cull::cull_chunks, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
@@ -35,21 +35,20 @@ impl Plugin for ProceduralGrassPlugin {
         app
             .register_type::<Grass>()
             .register_type::<Image>()
-            .register_asset_reflect::<GrassMaterial>()
             .insert_resource(self.config.clone())
             .add_plugins((
+                GrassMaterialPlugin,
                 ExtractComponentPlugin::<Grass>::default(),
                 ExtractComponentPlugin::<GrassChunk>::default(),
-                MaterialPlugin::<GrassMaterial>::default(),
             ))
             .add_systems(PostStartup, grass_setup)
             .add_systems(Update, cull_chunks);
-
+        
         let render_app = app.sub_app_mut(RenderApp);
-
+        
         render_app
-            .add_render_command::<Opaque3d, DrawGrass>()
-            .init_resource::<SpecializedMeshPipelines<GrassRenderPipeline>>()
+        .add_render_command::<Opaque3d, DrawGrass>()
+        .init_resource::<SpecializedMeshPipelines<GrassRenderPipeline>>()
             .add_systems(
                 Render, 
                 (
@@ -82,5 +81,24 @@ impl Plugin for ProceduralGrassPlugin {
             .init_resource::<PrefixSumPipeline>()
             .init_resource::<GrassComputePipeline>()
             .init_resource::<GrassRenderPipeline>();
+    }
+}
+
+struct GrassMaterialPlugin;
+impl Plugin for GrassMaterialPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .init_asset::<GrassMaterial>()
+            .register_asset_reflect::<GrassMaterial>() 
+            .add_plugins((
+                ExtractInstancesPlugin::<AssetId<GrassMaterial>>::extract_visible(),
+                RenderAssetPlugin::<PreparedMaterial<GrassMaterial>>::default(),
+            ));
+    }
+
+    fn finish(&self, app: &mut App) {
+        if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
+            render_app.init_resource::<MaterialPipeline<GrassMaterial>>();
+        }
     }
 }
