@@ -11,6 +11,7 @@ pub struct GrassMaterialExtension {
     #[uniform(100)] pub curve: f32,
     #[uniform(100)] pub roughness_variance: f32,
     #[uniform(100)] pub reflectance_variance: f32,
+    #[uniform(100)] pub min_ao: f32,
     #[uniform(100)] pub midrib_softness: f32,
     #[uniform(100)] pub rim_position: f32,
     #[uniform(100)] pub rim_softness: f32,

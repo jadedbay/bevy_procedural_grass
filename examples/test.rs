@@ -61,7 +61,7 @@ fn setup(
                 double_sided: true,
                 ..default()
             }),
-            visibility: Visibility::Visible,
+            visibility: Visibility::Hidden,
             ..default()
         },
     )).with_children(|parent| {
@@ -83,7 +83,7 @@ fn setup(
                         base: StandardMaterial { 
                             base_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
                             perceptual_roughness: 0.65,
-                            reflectance: 0.2,
+                            reflectance: 0.15,
                             double_sided: true,
                             ..default()
                         },
@@ -91,7 +91,8 @@ fn setup(
                             width: 0.05,
                             curve: 1.0,
                             roughness_variance: 0.15,
-                            reflectance_variance: 0.2,
+                            reflectance_variance: 0.15,
+                            min_ao: 0.5,
                             midrib_softness: 0.03,
                             rim_position: 0.5,
                             rim_softness: 0.08,

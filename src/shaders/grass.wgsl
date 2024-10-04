@@ -10,12 +10,11 @@
     utils::rand_f,
 }
 #import bevy_render::maths::PI_2
-#import bevy_procedural_grass::grass_types::GrassMaterial;
-
-@group(2) @binding(100)
-var<uniform> grass: GrassMaterial;
-@group(2) @binding(101)
-var texture: texture_2d<f32>;
+#import bevy_procedural_grass::{
+    GrassMaterial,
+    identity_matrix, rotate, quadratic_bezier, bezier_tangent,
+    grass_material as grass, grass_texture,
+};
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -102,8 +101,14 @@ fn fragment(
 
     var pbr_input = pbr_input_from_standard_material(vo, is_front);
 
-    let sampled_texture = textureSampleBias(texture, pbr_bindings::base_color_sampler, in.uv, view.mip_bias);
-    pbr_input.material.base_color = mix(pbr_input.material.base_color * 0.65, pbr_input.material.base_color, sampled_texture);
+    let sampled_texture = textureSampleBias(grass_texture, pbr_bindings::base_color_sampler, in.uv, view.mip_bias);
+
+    let ao = mix(grass.min_ao, 1.0, in.uv.y);
+    pbr_input.material.base_color = mix(
+        pbr_input.material.base_color * 0.65, 
+        pbr_input.material.base_color, 
+        sampled_texture
+    ) * ao;
     pbr_input.material.perceptual_roughness = mix(
         material.perceptual_roughness - grass.roughness_variance, 
         material.perceptual_roughness, 
@@ -117,45 +122,8 @@ fn fragment(
 
     var color = apply_pbr_lighting(pbr_input);
     color = main_pass_post_lighting_processing(pbr_input, color);
+
     return color;
 
     // return vec4<f32>(pbr_input.world_normal, 1.0);
-}
-
-const identity_matrix: mat4x4<f32> = mat4x4<f32>(
-    vec4<f32>(1.0, 0.0, 0.0, 0.0),
-    vec4<f32>(0.0, 1.0, 0.0, 0.0),
-    vec4<f32>(0.0, 0.0, 1.0, 0.0),
-    vec4<f32>(0.0, 0.0, 0.0, 1.0)
-);
-
-fn rotate(v: vec3<f32>, direction: vec2<f32>) -> vec3<f32> {
-    let angle = atan2(direction.y, direction.x);
-    let rotation_matrix = mat3x3<f32>(
-        cos(angle), 0.0, -sin(angle),
-        0.0, 1.0, 0.0,
-        sin(angle), 0.0, cos(angle)
-    );
-
-    return rotation_matrix * v;
-}
-
-fn quadratic_bezier(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>) -> vec2<f32> {
-    let u = 1.0 - t;
-    let tt = t * t;
-    let uu = u * u;
-
-    var p = uu * p0;
-    p = p + 2.0 * u * t * p1;
-    p = p + tt * p2;
-
-    return p;
-}
-
-fn bezier_tangent(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>) -> vec2<f32> {
-    let u = 1.0 - t;
-    
-    let tangent = 2.0 * u * (p1 - p0) + 2.0 * t * (p2 - p1);
-    
-    return tangent;
 }

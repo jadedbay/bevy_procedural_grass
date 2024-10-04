@@ -1,22 +1,16 @@
 #import bevy_pbr::{
-    prepass_io::{VertexOutput, FragmentOutput},
-    pbr_types::StandardMaterial,
+    prepass_io::VertexOutput,
     pbr_bindings,
-    pbr_bindings::material,
-    pbr_fragment::pbr_input_from_standard_material,
-    pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},
     mesh_functions::{get_world_from_local, mesh_position_local_to_world},
     view_transformations::position_world_to_clip,
-    mesh_view_bindings::view,
     utils::rand_f,
 }
 #import bevy_render::maths::PI_2
-#import bevy_procedural_grass::grass_types::GrassMaterial;
-
-@group(2) @binding(100)
-var<uniform> grass: GrassMaterial;
-@group(2) @binding(101)
-var texture: texture_2d<f32>;
+#import bevy_procedural_grass::{
+    GrassMaterial,
+    identity_matrix, rotate, quadratic_bezier, bezier_tangent,
+    grass_material as grass,
+};
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -63,42 +57,4 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.uv = vertex.uv;
 
     return out;
-}
-
-const identity_matrix: mat4x4<f32> = mat4x4<f32>(
-    vec4<f32>(1.0, 0.0, 0.0, 0.0),
-    vec4<f32>(0.0, 1.0, 0.0, 0.0),
-    vec4<f32>(0.0, 0.0, 1.0, 0.0),
-    vec4<f32>(0.0, 0.0, 0.0, 1.0)
-);
-
-fn rotate(v: vec3<f32>, direction: vec2<f32>) -> vec3<f32> {
-    let angle = atan2(direction.y, direction.x);
-    let rotation_matrix = mat3x3<f32>(
-        cos(angle), 0.0, -sin(angle),
-        0.0, 1.0, 0.0,
-        sin(angle), 0.0, cos(angle)
-    );
-
-    return rotation_matrix * v;
-}
-
-fn quadratic_bezier(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>) -> vec2<f32> {
-    let u = 1.0 - t;
-    let tt = t * t;
-    let uu = u * u;
-
-    var p = uu * p0;
-    p = p + 2.0 * u * t * p1;
-    p = p + tt * p2;
-
-    return p;
-}
-
-fn bezier_tangent(t: f32, p0: vec2<f32>, p1: vec2<f32>, p2: vec2<f32>) -> vec2<f32> {
-    let u = 1.0 - t;
-    
-    let tangent = 2.0 * u * (p1 - p0) + 2.0 * t * (p2 - p1);
-    
-    return tangent;
 }

@@ -71,6 +71,7 @@ pub(crate) fn queue_grass(
     }
 }
 
+// Copied from bevy to add custom draw function
 pub fn queue_grass_shadows(
     shadow_draw_functions: Res<DrawFunctions<Shadow>>,
     prepass_pipeline: Res<PrepassPipeline<GrassMaterial>>,
@@ -100,6 +101,7 @@ pub fn queue_grass_shadows(
                 continue;
             };
 
+            // TODO: add options in GrassConfig for shadows from types of lights (and fix shader)
             let is_directional_light = matches!(light_entity, LightEntity::Directional { .. });
             let visible_entities = match light_entity {
                 LightEntity::Directional {

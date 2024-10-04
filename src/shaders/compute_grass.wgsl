@@ -1,5 +1,5 @@
 #import bevy_pbr::utils::rand_f
-#import bevy_procedural_grass::grass_types::{GrassInstance, Aabb2d};
+#import bevy_procedural_grass::{GrassInstance, Aabb2d};
 
 @group(0) @binding(0) var<storage, read_write> output: array<GrassInstance>;
 @group(0) @binding(1) var heightmap: texture_2d<f32>;

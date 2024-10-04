@@ -1,5 +1,5 @@
 #import bevy_render::view::View
-#import bevy_procedural_grass::grass_types::GrassInstance;
+#import bevy_procedural_grass::GrassInstance;
 
 @group(0) @binding(0) var<storage, read> instances: array<GrassInstance>;
 @group(0) @binding(1) var<storage, read_write> vote: array<u32>;

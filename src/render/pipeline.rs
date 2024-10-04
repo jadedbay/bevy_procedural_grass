@@ -15,7 +15,7 @@ pub(crate) struct GrassComputePipeline {
     pub compact_pipeline_id: CachedComputePipelineId,
     pub reset_args_pipeline_id: CachedComputePipelineId,
 
-    _grass_types_shader: Handle<Shader>,
+    _grass_util_shader: Handle<Shader>,
 }
 
 impl FromWorld for GrassComputePipeline {
@@ -129,7 +129,7 @@ impl FromWorld for GrassComputePipeline {
             cull_pipeline_id,
             compact_pipeline_id,
             reset_args_pipeline_id,
-            _grass_types_shader: world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_types.wgsl")
+            _grass_util_shader: world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_util.wgsl")
         }
     }
 }

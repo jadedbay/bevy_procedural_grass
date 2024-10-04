@@ -1,4 +1,4 @@
-#import bevy_procedural_grass::grass_types::DrawIndexedIndirectArgs;
+#import bevy_procedural_grass::DrawIndexedIndirectArgs;
 
 @group(0) @binding(0) var<storage, read_write> indirect_args: DrawIndexedIndirectArgs;
 

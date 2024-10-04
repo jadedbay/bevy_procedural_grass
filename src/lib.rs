@@ -23,7 +23,7 @@ pub struct ProceduralGrassPlugin {
 
 impl Plugin for ProceduralGrassPlugin {
     fn build(&self, app: &mut App) {
-        embedded_asset!(app, "shaders/grass_types.wgsl");
+        embedded_asset!(app, "shaders/grass_util.wgsl");
         embedded_asset!(app, "shaders/compute_grass.wgsl");
         embedded_asset!(app, "shaders/scan.wgsl");
         embedded_asset!(app, "shaders/scan_blocks.wgsl");
@@ -48,24 +48,23 @@ impl Plugin for ProceduralGrassPlugin {
         let render_app = app.sub_app_mut(RenderApp);
         
         render_app
-        // .init_resource::<SpecializedMeshPipelines<GrassRenderPipeline>>()
             .add_systems(
                 Render, 
                 (
                     update_computed_grass.before(RenderSet::PrepareResources),
-                    // queue_grass.in_set(RenderSet::QueueMeshes),
                     prepare_grass.in_set(RenderSet::PrepareBindGroups),
                     compute_grass.after(RenderSet::PrepareBindGroups).before(RenderSet::Render), // dont know if .after is required?
                 )   
             );
-
+        
+        // TODO: do a distance cull for the shadow pass (separate indirect buffer for shadow pass)
         render_app.add_render_graph_node::<CullGrassNode>(Core3d, CullGrassNodeLabel);
         render_app.add_render_graph_node::<ResetArgsNode>(Core3d, ResetArgsNodeLabel);
 
         render_app.add_render_graph_edges(
             Core3d, 
             (
-                CullGrassNodeLabel,
+                CullGrassNodeLabel, // TODO: have gpu culling optional
                 NodePbr::ShadowPass,
             )
         );
@@ -84,7 +83,7 @@ impl Plugin for ProceduralGrassPlugin {
 }
 
 
-// This is essentially MaterialPlugin but using a custom Draw Function
+// This is MaterialPlugin but using a custom Draw Function
 struct GrassMaterialPlugin;
 impl Plugin for GrassMaterialPlugin {
     fn build(&self, app: &mut App) {

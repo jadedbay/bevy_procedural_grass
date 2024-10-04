@@ -69,7 +69,7 @@ impl GrassChunkBuffers {
                 &render_device, 
                 instance_count as u32, 
                 scan_workgroup_count,
-            )
+            ),
         }
     }
 }

@@ -1,4 +1,4 @@
-#import bevy_procedural_grass::grass_types::{GrassInstance, DrawIndexedIndirectArgs};
+#import bevy_procedural_grass::{GrassInstance, DrawIndexedIndirectArgs};
 
 @group(0) @binding(0) var<storage, read> instance_data: array<GrassInstance>;
 @group(0) @binding(1) var<storage, read> vote_buffer: array<u32>;
