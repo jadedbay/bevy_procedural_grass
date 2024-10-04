@@ -70,13 +70,14 @@ pub(crate) fn cull_chunks(
                         continue 'chunk;
                     } else {
                         if let Some(chunk_entity) = cull_chunks.0.remove(&chunk_pos) {
+                            commands.entity(entity).remove_children(&[chunk_entity]);
                             commands.entity(chunk_entity).despawn();
                         }
                     }
                 }
             }
         }
-         
+        
         commands.entity(entity).push_children(new_chunks.as_slice());
     }
 }

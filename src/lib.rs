@@ -84,6 +84,7 @@ impl Plugin for ProceduralGrassPlugin {
     }
 }
 
+
 struct GrassMaterialPlugin;
 impl Plugin for GrassMaterialPlugin {
     fn build(&self, app: &mut App) {
