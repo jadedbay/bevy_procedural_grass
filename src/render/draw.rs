@@ -2,7 +2,7 @@ use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, System
 
 use crate::{prelude::GrassConfig, GrassMaterial};
 
-use super::prepare::{GrassChunkBindGroups, GrassChunkCullBindGroups};
+use super::prepare::{GrassChunkBindGroups, GrassChunkCullBindGroups, GrassShadowBindGroups};
 
 pub(crate) type DrawGrass = (
     SetItemPipeline,
@@ -17,15 +17,14 @@ pub(crate) type DrawGrassPrepass = (
     SetPrepassViewBindGroup<0>,
     SetMeshBindGroup<1>,
     SetMaterialBindGroup<GrassMaterial, 2>,
-    DrawGrassInstanced,
+    DrawGrassShadowInstanced,
 );
 
 pub(crate) struct DrawGrassInstanced;
-
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
     type ViewQuery = ();
-    type ItemQuery = (Option<Read<GrassChunkBindGroups>>, Option<Read<GrassChunkCullBindGroups>>);
+    type ItemQuery = Read<GrassChunkCullBindGroups>;
 
     #[inline]
     fn render<'w>(
@@ -42,7 +41,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                 return RenderCommandResult::Failure;
             };
             
-            let Some((bind_groups, cull_bind_groups)) = grass_bind_groups else {
+            let Some(bind_groups) = grass_bind_groups else {
                 return RenderCommandResult::Failure;
             };
 
@@ -52,18 +51,11 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                 GpuBufferInfo::Indexed {
                     buffer,
                     index_format,
-                    count,
+                    count: _,
                 } => {
                     pass.set_index_buffer(buffer.slice(..), 0, *index_format);
-                    if let Some(cull_bind_groups) = cull_bind_groups {
-                        pass.set_vertex_buffer(1, cull_bind_groups.compact_buffer.slice(..));
-                        pass.draw_indexed_indirect(&cull_bind_groups.indirect_args_buffer, 0);
-                    } else if let Some(bind_groups) = bind_groups {
-                        pass.set_vertex_buffer(1, bind_groups.instance_buffer.slice(..));
-                        pass.draw_indexed(0..*count, 0, 0..bind_groups.instance_count);
-                    } else {
-                        return RenderCommandResult::Failure;
-                    } 
+                    pass.set_vertex_buffer(1, bind_groups.compact_buffer.slice(..));
+                    pass.draw_indexed_indirect(&bind_groups.indirect_args_buffer, 0);
                 }
                 GpuBufferInfo::NonIndexed => unreachable!()
             }
@@ -71,3 +63,50 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             RenderCommandResult::Success
     }
 }
+
+pub(crate) struct DrawGrassShadowInstanced;
+
+impl<P: PhaseItem> RenderCommand<P> for DrawGrassShadowInstanced {
+    type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
+    type ViewQuery = ();
+    type ItemQuery = Read<GrassShadowBindGroups>;
+
+    #[inline]
+    fn render<'w>(
+            item: &P,
+            _view: ROQueryItem<'w, Self::ViewQuery>,
+            grass_bind_groups: Option<ROQueryItem<'w, Self::ItemQuery>>,
+            (meshes, render_mesh_instances): SystemParamItem<'w, '_, Self::Param>,
+            pass: &mut TrackedRenderPass<'w>,
+        ) -> RenderCommandResult {
+            let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(item.entity()) else { 
+                return RenderCommandResult::Failure; 
+            };
+            let Some(gpu_mesh) = meshes.into_inner().get(mesh_instance.mesh_asset_id) else {
+                return RenderCommandResult::Failure;
+            };
+            
+            let Some(bind_groups) = grass_bind_groups else {
+                return RenderCommandResult::Failure;
+            };
+
+            pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
+
+            match &gpu_mesh.buffer_info {
+                GpuBufferInfo::Indexed {
+                    buffer,
+                    index_format,
+                    count: _,
+                } => {
+                    pass.set_index_buffer(buffer.slice(..), 0, *index_format);
+                    pass.set_vertex_buffer(1, bind_groups.0.compact_buffer.slice(..));
+                    pass.draw_indexed_indirect(&bind_groups.0.indirect_args_buffer, 0);
+                }
+                GpuBufferInfo::NonIndexed => unreachable!()
+            }
+            
+            RenderCommandResult::Success
+    }
+}
+
+

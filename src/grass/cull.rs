@@ -53,7 +53,6 @@ pub(crate) fn cull_chunks(
                                     chunk_aabb,
                                     gpu_info.instance_count,
                                     gpu_info.scan_workgroup_count,
-                                    grass_config.gpu_culling,
                                 ),
                                 mesh.clone(),
                                 material.clone(),

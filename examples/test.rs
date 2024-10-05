@@ -68,7 +68,7 @@ fn setup(
         parent.spawn(
             GrassBundle {
                 grass: Grass {
-                    chunk_count: UVec2::splat(12),
+                    chunk_count: UVec2::splat(1),
                     density: 50.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),

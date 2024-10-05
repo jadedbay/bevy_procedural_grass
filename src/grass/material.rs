@@ -17,7 +17,7 @@ pub struct GrassMaterialExtension {
     #[uniform(100)] pub rim_softness: f32,
     #[uniform(100)] pub width_normal_strength: f32,
     #[texture(101)] pub texture: Option<Handle<Image>>, // Create texture binding in material extension instead of using base_color_texture in StandardMaterial to customize how its applied. 
-                                                        // Could just use StandardMaterial texture if I can work out how to disable StandardMaterialFlags::BASE_COLOR_TEXTURE
+                                                        // Could just use StandardMaterial texture if I disable StandardMaterialFlags::BASE_COLOR_TEXTURE but not sure what else that would do.
 }
 impl MaterialExtension for GrassMaterialExtension {
     fn vertex_shader() -> ShaderRef {

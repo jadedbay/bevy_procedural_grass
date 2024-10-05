@@ -5,17 +5,18 @@
 @group(0) @binding(1) var<storage, read_write> vote: array<u32>;
 @group(0) @binding(2) var<uniform> view: View;
 
+@group(0) @binding(3) var<storage, read_write> shadow_vote: array<u32>;
+
 @compute @workgroup_size(256)
 fn main(
     @builtin(global_invocation_id) global_id: vec3<u32>,
 ) {
     let instance = instances[global_id.x];
-    if (instance.position.w != 1.0 || !point_in_frustum(instance.position.xyz)) {
-        vote[global_id.x] = 0u;
-        return; 
-    }
+    let in_frustum = point_in_frustum(instance.position.xyz);
+    let distance = length(instance.position.xyz - view.world_position);
 
-    vote[global_id.x] = 1u;
+    vote[global_id.x] = u32(in_frustum);
+    shadow_vote[global_id.x] = u32(in_frustum && distance < 25.0); 
 }
 
 fn point_in_frustum(point: vec3<f32>) -> bool {

@@ -45,6 +45,7 @@ impl FromWorld for GrassComputePipeline {
                     storage_buffer_read_only_sized(false, None),
                     storage_buffer::<Vec<u32>>(false),
                     uniform_buffer::<ViewUniform>(true),
+                    storage_buffer::<Vec<u32>>(false),
                 )
             )
         );

@@ -97,19 +97,19 @@ impl PrefixSumPipeline {
 
 pub fn prefix_sum_pass(
     render_context: &mut RenderContext,
-    query_iter: QueryIter<'_, '_, (&GrassChunkCullBindGroups, &PrefixSumBindGroups), ()>,
+    chunks: Vec<(&GrassChunkCullBindGroups, &PrefixSumBindGroups)>,
+    // query_iter: QueryIter<'_, '_, (&GrassChunkCullBindGroups, &PrefixSumBindGroups), ()>,
     scan_pipeline: &ComputePipeline,
     scan_blocks_pipeline: &ComputePipeline,
 ) {
 
-    let q: Vec<_> = query_iter.collect();
     {
         let mut pass = render_context
             .command_encoder()
             .begin_compute_pass(&ComputePassDescriptor::default());
 
         pass.set_pipeline(scan_pipeline);
-        for (_, bind_groups) in &q {
+        for (_, bind_groups) in &chunks {
             pass.set_bind_group(0, &bind_groups.scan_bind_group, &[]);
             pass.dispatch_workgroups(bind_groups.scan_workgroups, 1, 1);
         }
@@ -120,7 +120,7 @@ pub fn prefix_sum_pass(
             .begin_compute_pass(&ComputePassDescriptor::default());
 
         pass.set_pipeline(scan_blocks_pipeline);
-        for (_, bind_groups) in &q {
+        for (_, bind_groups) in &chunks {
         pass.set_push_constants(0, &(bind_groups.scan_workgroups as u32).to_le_bytes());
         pass.set_bind_group(0, &bind_groups.scan_blocks_bind_group, &[]);
         pass.dispatch_workgroups(bind_groups.scan_blocks_workgroups, 1, 1);
