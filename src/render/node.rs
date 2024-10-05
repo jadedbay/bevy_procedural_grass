@@ -1,36 +1,36 @@
 use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{CachedPipelineState, CommandEncoderDescriptor, ComputePassDescriptor, PipelineCache}, renderer::{RenderContext, RenderDevice, RenderQueue}, view::ViewUniformOffset}};
 
-use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
+use crate::{prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassConfig};
 
-use super::{pipeline::GrassComputePipeline, prepare::{ComputeGrassMarker, GrassChunkBindGroups, ComputedGrassEntities}};
+use super::{pipeline::GrassComputePipeline, prepare::{ComputeGrassMarker, ComputedGrassEntities, GrassChunkBindGroups, GrassChunkComputeBindGroup, GrassChunkCullBindGroups}};
 
 pub fn compute_grass(
-    query: Query<(Entity, &GrassChunkBindGroups), With<ComputeGrassMarker>>,
+    query: Query<(Entity, &GrassChunkComputeBindGroup)>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
     pipeline_id: Res<GrassComputePipeline>,
     pipeline_cache: Res<PipelineCache>,
     mut grass_entities: ResMut<ComputedGrassEntities>,
 ) {
-    if query.is_empty() { return; }
+    if query.is_empty() { return; } // encoder/submit is expensive
+
     let mut command_encoder = render_device.create_command_encoder(&CommandEncoderDescriptor::default());
     let Some(compute_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.compute_id) else { return; };
 
-    for (entity, bind_groups) in query.iter() {
+    for (entity, bind_group) in query.iter() {
             let mut pass = command_encoder.begin_compute_pass(&ComputePassDescriptor::default());
             
             pass.set_pipeline(compute_pipeline);
             
-            pass.set_bind_group(0, &bind_groups.chunk_bind_group.as_ref().unwrap(), &[]);
-            pass.dispatch_workgroups(bind_groups.workgroup_count, 1, 1);
+            pass.set_bind_group(0, &bind_group.bind_group, &[]);
+            pass.dispatch_workgroups(bind_group.workgroup_count, 1, 1);
             
             grass_entities.0.push(entity);
     }
-    
     render_queue.submit([command_encoder.finish()]);
 }
 
-enum CullGrassState {
+enum NodeState {
     Loading,
     Loaded
 }
@@ -39,15 +39,15 @@ enum CullGrassState {
 pub(crate) struct CullGrassNodeLabel;
 
 pub struct CullGrassNode {
-    state: CullGrassState,
-    query: QueryState<(&'static GrassChunkBindGroups, &'static PrefixSumBindGroups)>,
+    state: NodeState,
+    query: QueryState<(&'static GrassChunkCullBindGroups, &'static PrefixSumBindGroups)>,
     view_offset_query: QueryState<&'static ViewUniformOffset>,
 }
 
 impl FromWorld for CullGrassNode {
     fn from_world(world: &mut World) -> Self {
         Self {
-            state: CullGrassState::Loading,
+            state: NodeState::Loading,
             query: QueryState::new(world),
             view_offset_query: QueryState::new(world),
         }
@@ -56,11 +56,14 @@ impl FromWorld for CullGrassNode {
 
 impl render_graph::Node for CullGrassNode {
     fn update(&mut self, world: &mut World) {
+        let grass_config = world.resource::<GrassConfig>();
+        if !grass_config.gpu_culling { return }
+
         self.query.update_archetypes(world);
         self.view_offset_query.update_archetypes(world);
 
         match self.state {
-            CullGrassState::Loading => {
+            NodeState::Loading => {
                 let pipeline_cache = world.resource::<PipelineCache>();
                 let compute_pipeline = world.resource::<GrassComputePipeline>();
                 let prefix_sum_pipeline = world.resource::<PrefixSumPipeline>();
@@ -75,7 +78,7 @@ impl render_graph::Node for CullGrassNode {
                 ];
 
                 if pipeline_states.iter().all(|state| matches!(state, CachedPipelineState::Ok(_))) {
-                    self.state = CullGrassState::Loaded;
+                    self.state = NodeState::Loaded;
                 } else if pipeline_states.iter().any(|state| {
                     if let CachedPipelineState::Err(err) = state {
                         panic!("Error initializing one or more grass pipelines: {}", err);
@@ -85,7 +88,7 @@ impl render_graph::Node for CullGrassNode {
                     unreachable!();
                 }
             }
-            CullGrassState::Loaded => {}
+            NodeState::Loaded => {}
         }
     }
 
@@ -95,9 +98,12 @@ impl render_graph::Node for CullGrassNode {
             render_context: &mut RenderContext<'w>,
             world: &'w World,
     ) -> Result<(), render_graph::NodeRunError> {
+        let grass_config = world.resource::<GrassConfig>();
+        if !grass_config.gpu_culling { return Ok(()) }
+
         match self.state {
-            CullGrassState::Loading => {}
-            CullGrassState::Loaded => {
+            NodeState::Loading => {}
+            NodeState::Loaded => {
                 let Ok(view_offset) = self.view_offset_query.get_manual(world, graph.view_entity()) else { return Ok(()); };
                 
                 let pipeline_id = world.resource::<GrassComputePipeline>();
@@ -148,23 +154,18 @@ impl render_graph::Node for CullGrassNode {
     }
 }
 
-enum ResetArgsNodeState {
-    Loading,
-    Loaded,
-}
-
 #[derive(RenderLabel, Hash, Debug, Eq, PartialEq, Clone, Copy)]
 pub(crate) struct ResetArgsNodeLabel;
 
 pub struct ResetArgsNode {
-    state: ResetArgsNodeState,
-    query: QueryState<&'static GrassChunkBindGroups>,
+    state: NodeState,
+    query: QueryState<&'static GrassChunkCullBindGroups>,
 }
 
 impl FromWorld for ResetArgsNode {
     fn from_world(world: &mut World) -> Self {
         Self {
-            state: ResetArgsNodeState::Loading,
+            state: NodeState::Loading,
             query: QueryState::new(world),
         }
     }
@@ -172,16 +173,19 @@ impl FromWorld for ResetArgsNode {
 
 impl render_graph::Node for ResetArgsNode {
     fn update(&mut self, world: &mut World) {
+        let grass_config = world.resource::<GrassConfig>();
+        if !grass_config.gpu_culling { return }
+
         self.query.update_archetypes(world);
         
         match self.state {
-            ResetArgsNodeState::Loading => {
+            NodeState::Loading => {
                 let pipeline_cache = world.resource::<PipelineCache>();
                 let compute_pipeline = world.resource::<GrassComputePipeline>();
 
                 match pipeline_cache.get_compute_pipeline_state(compute_pipeline.reset_args_pipeline_id) {
                     CachedPipelineState::Ok(_) => {
-                        self.state = ResetArgsNodeState::Loaded;
+                        self.state = NodeState::Loaded;
                     }
                     CachedPipelineState::Err(err) => {
                         panic!("Failed initialising reset args pipeline {err}");
@@ -189,7 +193,7 @@ impl render_graph::Node for ResetArgsNode {
                     _ => {}
                 } 
             }
-            ResetArgsNodeState::Loaded => {}
+            NodeState::Loaded => {}
         }
     }
 
@@ -199,9 +203,12 @@ impl render_graph::Node for ResetArgsNode {
         render_context: &mut RenderContext<'w>,
         world: &'w World,
     ) -> Result<(), render_graph::NodeRunError> {
+        let grass_config = world.resource::<GrassConfig>();
+        if !grass_config.gpu_culling { return Ok(()) }
+
         match self.state {
-            ResetArgsNodeState::Loading => {}
-            ResetArgsNodeState::Loaded => {
+            NodeState::Loading => {}
+            NodeState::Loaded => {
                 let pipeline_id = world.resource::<GrassComputePipeline>();
                 let pipeline_cache = world.resource::<PipelineCache>();
 

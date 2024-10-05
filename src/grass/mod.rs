@@ -64,16 +64,6 @@ pub struct GrassGpuInfo {
     pub scan_groups_workgroup_count: u32,
 }
 
-impl ExtractComponent for GrassChunk {
-    type QueryData = (&'static GrassChunk, &'static GrassChunkBuffers);
-    type QueryFilter = ();
-    type Out = (GrassChunk, GrassChunkBuffers);
-
-    fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
-        Some((item.0.clone(), item.1.clone()))
-    }
-}
-
 impl ExtractComponent for Grass {
     type QueryData = (&'static Grass, &'static GrassGpuInfo, Entity);
     type QueryFilter = ();
