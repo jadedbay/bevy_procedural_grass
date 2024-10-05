@@ -1,6 +1,6 @@
 use bevy::{pbr::{MaterialExtension, MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, AsBindGroup, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureSampleType, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
 
-use crate::{grass::chunk::Aabb2dGpu, GrassMaterial};
+use crate::util::aabb::Aabb2dGpu;
 
 use super::instance::GrassInstanceData;
 
@@ -31,7 +31,7 @@ impl FromWorld for GrassComputePipeline {
                     texture_2d(TextureSampleType::Float { filterable: true }),
                     uniform_buffer::<f32>(false),
                     uniform_buffer::<f32>(false),
-                    uniform_buffer::<Aabb2dGpu>(false), //TODO: dynamic offset
+                    uniform_buffer::<Aabb2dGpu>(false), //TODO: dynamic offset?
                     uniform_buffer::<Aabb2dGpu>(false),
                 )
             )
@@ -44,8 +44,9 @@ impl FromWorld for GrassComputePipeline {
                 (
                     storage_buffer_read_only_sized(false, None),
                     storage_buffer::<Vec<u32>>(false),
-                    uniform_buffer::<ViewUniform>(true),
                     storage_buffer::<Vec<u32>>(false),
+                    uniform_buffer::<ViewUniform>(true),
+                    uniform_buffer::<f32>(false),
                 )
             )
         );

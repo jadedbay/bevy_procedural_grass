@@ -7,10 +7,9 @@ pub mod clump;
 pub mod config;
 pub mod material;
 
-use chunk::{Aabb2dGpu, GrassChunk, GrassChunkBuffers};
 use cull::GrassCullChunks;
 
-use crate::{prefix_sum::calculate_workgroup_counts, GrassMaterial};
+use crate::{prefix_sum::calculate_workgroup_counts, util::aabb::Aabb2dGpu, GrassMaterial};
 
 #[derive(Bundle, Default)]
 pub struct GrassBundle {

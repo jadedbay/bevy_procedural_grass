@@ -1,4 +1,6 @@
-use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{DrawMesh, RenderMeshInstances, SetMaterialBindGroup, SetMeshBindGroup, SetMeshViewBindGroup, SetPrepassViewBindGroup}, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}}};
+use std::marker::PhantomData;
+
+use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{DrawMesh, RenderMeshInstances, SetMaterialBindGroup, SetMeshBindGroup, SetMeshViewBindGroup, SetPrepassViewBindGroup}, prelude::Component, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}, render_resource::Buffer}};
 
 use crate::{prelude::GrassConfig, GrassMaterial};
 
@@ -9,7 +11,7 @@ pub(crate) type DrawGrass = (
     SetMeshViewBindGroup<0>,
     SetMeshBindGroup<1>,
     SetMaterialBindGroup<GrassMaterial, 2>,
-    DrawGrassInstanced,
+    DrawGrassInstanced<GrassChunkCullBindGroups>,
 );
 
 pub(crate) type DrawGrassPrepass = (
@@ -17,14 +19,29 @@ pub(crate) type DrawGrassPrepass = (
     SetPrepassViewBindGroup<0>,
     SetMeshBindGroup<1>,
     SetMaterialBindGroup<GrassMaterial, 2>,
-    DrawGrassShadowInstanced,
+    DrawGrassInstanced<GrassShadowBindGroups>,
 );
 
-pub(crate) struct DrawGrassInstanced;
-impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
+trait GrassBindGroups: Component {
+    fn compact_buffer(&self) -> &Buffer;
+    fn indirect_args_buffer(&self) -> &Buffer;
+}
+
+impl GrassBindGroups for GrassChunkCullBindGroups {
+    fn compact_buffer(&self) -> &Buffer { &self.compact_buffer }
+    fn indirect_args_buffer(&self) -> &Buffer { &self.indirect_args_buffer }
+}
+impl GrassBindGroups for GrassShadowBindGroups {
+    fn compact_buffer(&self) -> &Buffer { &self.0.compact_buffer }
+    fn indirect_args_buffer(&self) -> &Buffer { &self.0.indirect_args_buffer }
+}
+
+#[allow(private_bounds)]
+pub(crate) struct DrawGrassInstanced<B: GrassBindGroups>(PhantomData<B>);
+impl<P: PhaseItem, B: GrassBindGroups> RenderCommand<P> for DrawGrassInstanced<B> {
     type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
     type ViewQuery = ();
-    type ItemQuery = Read<GrassChunkCullBindGroups>;
+    type ItemQuery = Read<B>;
 
     #[inline]
     fn render<'w>(
@@ -54,8 +71,8 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
                     count: _,
                 } => {
                     pass.set_index_buffer(buffer.slice(..), 0, *index_format);
-                    pass.set_vertex_buffer(1, bind_groups.compact_buffer.slice(..));
-                    pass.draw_indexed_indirect(&bind_groups.indirect_args_buffer, 0);
+                    pass.set_vertex_buffer(1, bind_groups.compact_buffer().slice(..));
+                    pass.draw_indexed_indirect(&bind_groups.indirect_args_buffer(), 0);
                 }
                 GpuBufferInfo::NonIndexed => unreachable!()
             }
@@ -63,50 +80,3 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             RenderCommandResult::Success
     }
 }
-
-pub(crate) struct DrawGrassShadowInstanced;
-
-impl<P: PhaseItem> RenderCommand<P> for DrawGrassShadowInstanced {
-    type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
-    type ViewQuery = ();
-    type ItemQuery = Read<GrassShadowBindGroups>;
-
-    #[inline]
-    fn render<'w>(
-            item: &P,
-            _view: ROQueryItem<'w, Self::ViewQuery>,
-            grass_bind_groups: Option<ROQueryItem<'w, Self::ItemQuery>>,
-            (meshes, render_mesh_instances): SystemParamItem<'w, '_, Self::Param>,
-            pass: &mut TrackedRenderPass<'w>,
-        ) -> RenderCommandResult {
-            let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(item.entity()) else { 
-                return RenderCommandResult::Failure; 
-            };
-            let Some(gpu_mesh) = meshes.into_inner().get(mesh_instance.mesh_asset_id) else {
-                return RenderCommandResult::Failure;
-            };
-            
-            let Some(bind_groups) = grass_bind_groups else {
-                return RenderCommandResult::Failure;
-            };
-
-            pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
-
-            match &gpu_mesh.buffer_info {
-                GpuBufferInfo::Indexed {
-                    buffer,
-                    index_format,
-                    count: _,
-                } => {
-                    pass.set_index_buffer(buffer.slice(..), 0, *index_format);
-                    pass.set_vertex_buffer(1, bind_groups.0.compact_buffer.slice(..));
-                    pass.draw_indexed_indirect(&bind_groups.0.indirect_args_buffer, 0);
-                }
-                GpuBufferInfo::NonIndexed => unreachable!()
-            }
-            
-            RenderCommandResult::Success
-    }
-}
-
-

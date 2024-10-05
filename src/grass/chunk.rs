@@ -1,7 +1,6 @@
 
 use bevy::{ecs::query::QueryItem, math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{extract_component::ExtractComponent, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
-use super::Grass;
-use crate::{grass::{cull::GrassCullChunks, GrassGpuInfo}, prefix_sum::{calculate_workgroup_counts, PrefixSumBuffers}, render::instance::GrassInstanceData, GrassMaterial};
+use crate::{grass::{cull::GrassCullChunks, GrassGpuInfo}, prefix_sum::PrefixSumBuffers, render::instance::GrassInstanceData, util::aabb::Aabb2dGpu, GrassMaterial};
 
 #[derive(Component, Clone)]
 pub struct GrassChunk {
@@ -17,7 +16,7 @@ pub struct GrassChunkBuffers {
     pub aabb_buffer: Buffer,
     pub instance_buffer: Buffer,
     pub cull_buffers: GrassChunkCullBuffers,
-    pub shadow_buffers: GrassShadowBuffers,
+    pub(crate) shadow_buffers: GrassShadowBuffers,
 }
 
 #[derive(Clone)]
@@ -50,12 +49,12 @@ impl GrassChunkCullBuffers {
                 &BufferInitDescriptor {
                     label: Some("indirect_indexed_args"),
                     contents: DrawIndexedIndirectArgs {
-                    index_count: 39, // TODO
-                    instance_count: 0,
-                    first_index: 0,
-                    base_vertex: 0,
-                    first_instance: 0,
-                }.as_bytes(),
+                        index_count: 39, // TODO
+                        instance_count: 0,
+                        first_index: 0,
+                        base_vertex: 0,
+                        first_instance: 0,
+                    }.as_bytes(),
                 usage: BufferUsages::STORAGE | BufferUsages::INDIRECT,
             }),
             prefix_sum_buffers: PrefixSumBuffers::create_buffers(
@@ -105,22 +104,5 @@ impl ExtractComponent for GrassChunk {
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
         Some((item.0.clone(), item.1.clone()))
-    }
-}
-
-
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, ShaderType)]
-#[repr(C)]
-pub(crate) struct Aabb2dGpu {
-    min: Vec2,
-    max: Vec2,
-}
-
-impl From<Aabb2d> for Aabb2dGpu {
-    fn from(aabb: Aabb2d) -> Self {
-        Self {
-            min: aabb.min,
-            max: aabb.max,
-        }
     }
 }

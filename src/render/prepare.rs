@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}, utils::HashMap};
 use super::pipeline::GrassComputePipeline;
-use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers, GrassShadowBuffers}, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassConfig};
+use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers, GrassShadowBuffers}, config::GrassConfigGpu, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassConfig};
 
 
 // TODO: test whether this is actually improves performance or if its faster to recompute everyframe
@@ -46,6 +46,7 @@ impl GrassChunkCullBindGroups {
         gpu_info: &GrassGpuInfo,
         pipeline: &GrassComputePipeline,
         view_uniforms: &ViewUniforms,
+        config_buffers: &GrassConfigGpu,
     ) -> Self {
         let cull_bind_group = render_device.create_bind_group(
             Some("cull_bind_group"),
@@ -53,8 +54,9 @@ impl GrassChunkCullBindGroups {
             &BindGroupEntries::sequential((
                 buffers.instance_buffer.as_entire_binding(),
                 cull_buffers.vote_buffer.as_entire_binding(),
-                view_uniforms.uniforms.binding().unwrap().clone(),
                 buffers.shadow_buffers.0.vote_buffer.as_entire_binding(),
+                view_uniforms.uniforms.binding().unwrap().clone(),
+                config_buffers.shadow_distance_buffer.as_entire_binding(),
             ))
         );
 
@@ -107,6 +109,7 @@ pub fn prepare_grass(
     images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
     view_uniforms: Res<ViewUniforms>,
+    grass_config_buffers: Res<GrassConfigGpu>,
 ) {
     let Some(_) = view_uniforms.uniforms.binding() else { return; };
     let chunk_layout = pipeline.chunk_layout.clone();
@@ -141,6 +144,7 @@ pub fn prepare_grass(
                 gpu_info,
                 &pipeline,
                 &view_uniforms,
+                &grass_config_buffers
             )
         );
         commands.entity(entity).insert(PrefixSumBindGroups::create_bind_groups(
@@ -161,6 +165,7 @@ pub fn prepare_grass(
                     gpu_info,
                     &pipeline,
                     &view_uniforms,
+                    &grass_config_buffers,
                 )
             )
         );
