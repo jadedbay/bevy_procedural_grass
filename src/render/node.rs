@@ -106,7 +106,11 @@ impl render_graph::Node for CullGrassNode {
                 let pipeline_id = world.resource::<GrassComputePipeline>();
                 let prefix_sum_pipeline = world.resource::<PrefixSumPipeline>();
                 let pipeline_cache = world.resource::<PipelineCache>();
-                
+ 
+                let Some(shadow_cull_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.shadows_cull_pipeline_id) else {
+                    return Ok(());
+                };
+
                 let Some(cull_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.cull_pipeline_id) else {
                     return Ok(());
                 };
@@ -124,9 +128,13 @@ impl render_graph::Node for CullGrassNode {
                     let mut pass = render_context
                         .command_encoder()
                         .begin_compute_pass(&ComputePassDescriptor::default());
-                
-                    pass.set_pipeline(cull_pipeline);
+                    
                     for (grass_bind_groups, _) in self.query.iter_manual(world) {
+                        if grass_bind_groups.shadows {
+                            pass.set_pipeline(shadow_cull_pipeline);
+                        } else {
+                            pass.set_pipeline(cull_pipeline);
+                        }
                         pass.set_bind_group(0, &grass_bind_groups.cull_bind_group, &[view_offset.offset]);
                         pass.dispatch_workgroups(grass_bind_groups.cull_workgroup_count, 1, 1);
                     }

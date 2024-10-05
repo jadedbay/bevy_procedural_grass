@@ -16,7 +16,7 @@ pub struct GrassChunkBuffers {
     pub aabb_buffer: Buffer,
     pub instance_buffer: Buffer,
     pub cull_buffers: GrassChunkCullBuffers,
-    pub(crate) shadow_buffers: GrassShadowBuffers,
+    pub(crate) shadow_buffers: Option<GrassChunkCullBuffers>,
 }
 
 #[derive(Clone)]
@@ -66,18 +66,20 @@ impl GrassChunkCullBuffers {
     }
 }
 
-#[derive(Clone)]
-pub(crate) struct GrassShadowBuffers(pub GrassChunkCullBuffers);
-
 impl GrassChunkBuffers {
     pub(crate) fn create_buffers(
         render_device: &RenderDevice,
         aabb: Aabb2d,
         instance_count: usize,
         scan_workgroup_count: u32,
+        grass_shadows: bool,
     ) -> Self {
         let cull_buffers = GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count);
-        let shadow_buffers = GrassShadowBuffers(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count));
+        let shadow_buffers = if grass_shadows {
+            Some(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count))
+        } else {
+            None
+        };
 
         Self {
             aabb_buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {

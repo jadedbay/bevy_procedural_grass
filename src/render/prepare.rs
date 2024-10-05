@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}, utils::HashMap};
 use super::pipeline::GrassComputePipeline;
-use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers, GrassShadowBuffers}, config::GrassConfigGpu, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassConfig};
+use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigGpu, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassConfig};
 
 
 // TODO: test whether this is actually improves performance or if its faster to recompute everyframe
@@ -30,6 +30,8 @@ pub struct GrassChunkBindGroups {
 pub struct GrassChunkCullBindGroups {
     pub indirect_args_buffer: Buffer,
     pub cull_bind_group: BindGroup,
+    pub shadows: bool,
+
     pub cull_workgroup_count: u32,
     pub compact_workgroup_count: u32,
 
@@ -48,17 +50,32 @@ impl GrassChunkCullBindGroups {
         view_uniforms: &ViewUniforms,
         config_buffers: &GrassConfigGpu,
     ) -> Self {
-        let cull_bind_group = render_device.create_bind_group(
-            Some("cull_bind_group"),
-            &pipeline.cull_layout,
-            &BindGroupEntries::sequential((
-                buffers.instance_buffer.as_entire_binding(),
-                cull_buffers.vote_buffer.as_entire_binding(),
-                buffers.shadow_buffers.0.vote_buffer.as_entire_binding(),
-                view_uniforms.uniforms.binding().unwrap().clone(),
-                config_buffers.shadow_distance_buffer.as_entire_binding(),
-            ))
-        );
+        let mut shadows = true;
+        let cull_bind_group = if let Some(shadow_buffers) = &buffers.shadow_buffers {
+            render_device.create_bind_group(
+                Some("cull_bind_group_with_shadows"),
+                &pipeline.shadow_cull_layout,
+                &BindGroupEntries::sequential((
+                    buffers.instance_buffer.as_entire_binding(),
+                    cull_buffers.vote_buffer.as_entire_binding(),
+                    view_uniforms.uniforms.binding().unwrap().clone(),
+                    config_buffers.shadow_distance_buffer.as_entire_binding(),
+                    shadow_buffers.vote_buffer.as_entire_binding(),
+                )),
+            )
+        } else {
+            shadows = false;
+            render_device.create_bind_group(
+                Some("cull_bind_group_without_shadows"),
+                &pipeline.cull_layout,
+                &BindGroupEntries::sequential((
+                    buffers.instance_buffer.as_entire_binding(),
+                    cull_buffers.vote_buffer.as_entire_binding(),
+                    view_uniforms.uniforms.binding().unwrap().clone(),
+                    config_buffers.shadow_distance_buffer.as_entire_binding(),
+                )),
+            )
+        };
 
         let indirect_indexed_args_buffer = &cull_buffers.indirect_args_buffer; 
 
@@ -84,6 +101,7 @@ impl GrassChunkCullBindGroups {
         Self {
             indirect_args_buffer: indirect_indexed_args_buffer.clone(),
             cull_bind_group,
+            shadows,
             cull_workgroup_count: (gpu_info.instance_count as f32 / 256.).ceil() as u32,
             compact_workgroup_count: gpu_info.scan_workgroup_count,
             compact_buffer: cull_buffers.compact_buffer.clone(),
@@ -110,6 +128,7 @@ pub fn prepare_grass(
     render_device: Res<RenderDevice>,
     view_uniforms: Res<ViewUniforms>,
     grass_config_buffers: Res<GrassConfigGpu>,
+    config: Res<GrassConfig>,
 ) {
     let Some(_) = view_uniforms.uniforms.binding() else { return; };
     let chunk_layout = pipeline.chunk_layout.clone();
@@ -156,30 +175,32 @@ pub fn prepare_grass(
             gpu_info.scan_groups_workgroup_count,
         ));
 
-        commands.entity(entity).insert(
-            GrassShadowBindGroups(
-                GrassChunkCullBindGroups::create_bind_groups(
-                    &render_device,
-                    buffers,
-                    &buffers.shadow_buffers.0,
-                    gpu_info,
-                    &pipeline,
-                    &view_uniforms,
-                    &grass_config_buffers,
+        if let Some(shadow_buffers) = &buffers.shadow_buffers {
+            commands.entity(entity).insert(
+                GrassShadowBindGroups(
+                    GrassChunkCullBindGroups::create_bind_groups(
+                        &render_device,
+                        buffers,
+                        &shadow_buffers,
+                        gpu_info,
+                        &pipeline,
+                        &view_uniforms,
+                        &grass_config_buffers,
+                    )
                 )
-            )
-        );
-        commands.entity(entity).insert(
-            ShadowPrefixSumBindGroups(
-                PrefixSumBindGroups::create_bind_groups(
-                    &render_device,
-                    &prefix_sum_pipeline,
-                    &buffers.shadow_buffers.0.vote_buffer,
-                    &buffers.shadow_buffers.0.prefix_sum_buffers,
-                    gpu_info.scan_workgroup_count,
-                    gpu_info.scan_groups_workgroup_count,
+            );
+            commands.entity(entity).insert(
+                ShadowPrefixSumBindGroups(
+                    PrefixSumBindGroups::create_bind_groups(
+                        &render_device,
+                        &prefix_sum_pipeline,
+                        &shadow_buffers.vote_buffer,
+                        &shadow_buffers.prefix_sum_buffers,
+                        gpu_info.scan_workgroup_count,
+                        gpu_info.scan_groups_workgroup_count,
+                    )
                 )
-            )
-        );
+            );
+        }
     }
 }

@@ -1,9 +1,12 @@
 use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::{RenderDevice, RenderQueue}}};
 
+use super::cull::GrassCullChunks;
+
 #[derive(Resource, Clone, ExtractResource, Reflect)]
 #[reflect(Resource)]
 pub struct GrassConfig {
     pub cull_distance: f32,
+    pub grass_shadows: bool,
     pub shadow_distance: f32,
 }
 
@@ -11,6 +14,7 @@ impl Default for GrassConfig {
     fn default() -> Self {
         Self {
             cull_distance: 250.0,
+            grass_shadows: true,
             shadow_distance: 20.0,
         }
     }
@@ -39,6 +43,23 @@ pub(crate) fn init_config_buffers(
     );
 }
 
+pub(crate) fn reload_grass_chunks(
+    config: Res<GrassConfig>,
+    mut grass_shadows: Local<bool>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut GrassCullChunks)>,
+) {
+    if config.grass_shadows != *grass_shadows {
+        *grass_shadows = config.grass_shadows;
+        for (entity, mut cull_chunks) in &mut query {
+            for (_, chunk_entity) in cull_chunks.0.iter() {
+                commands.entity(entity).remove_children(&[*chunk_entity]);
+                commands.entity(*chunk_entity).despawn();
+            }
+            cull_chunks.0.clear();
+        }
+    }
+}
 
 pub(crate) fn update_config_buffers(
     render_queue: Res<RenderQueue>,

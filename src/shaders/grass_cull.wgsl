@@ -3,9 +3,11 @@
 
 @group(0) @binding(0) var<storage, read> instances: array<GrassInstance>;
 @group(0) @binding(1) var<storage, read_write> vote: array<u32>;
-@group(0) @binding(2) var<storage, read_write> shadow_vote: array<u32>;
-@group(0) @binding(3) var<uniform> view: View;
-@group(0) @binding(4) var<uniform> cull_distance: f32;
+@group(0) @binding(2) var<uniform> view: View;
+@group(0) @binding(3) var<uniform> cull_distance: f32;
+#ifdef SHADOW
+@group(0) @binding(4) var<storage, read_write> shadow_vote: array<u32>;
+#endif
 
 
 @compute @workgroup_size(256)
@@ -14,10 +16,12 @@ fn main(
 ) {
     let instance = instances[global_id.x];
     let in_frustum = point_in_frustum(instance.position.xyz);
-    let distance = length(instance.position.xyz - view.world_position);
-
     vote[global_id.x] = u32(in_frustum);
-    shadow_vote[global_id.x] = u32(in_frustum && distance < cull_distance); 
+
+    #ifdef SHADOW
+    let distance = length(instance.position.xyz - view.world_position);
+    shadow_vote[global_id.x] = u32(in_frustum && distance < cull_distance);
+    #endif
 }
 
 fn point_in_frustum(point: vec3<f32>) -> bool {

@@ -1,4 +1,4 @@
-use bevy::{pbr::{MaterialExtension, MeshPipeline, MeshPipelineKey}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, AsBindGroup, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureSampleType, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, renderer::RenderDevice, view::ViewUniform}};
+use bevy::{prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
 
 use crate::util::aabb::Aabb2dGpu;
 
@@ -8,10 +8,12 @@ use super::instance::GrassInstanceData;
 pub(crate) struct GrassComputePipeline {
     pub chunk_layout: BindGroupLayout,
     pub cull_layout: BindGroupLayout,
+    pub shadow_cull_layout: BindGroupLayout,
     pub compact_layout: BindGroupLayout,
     pub reset_args_layout: BindGroupLayout,
     pub compute_id: CachedComputePipelineId,
     pub cull_pipeline_id: CachedComputePipelineId,
+    pub shadows_cull_pipeline_id: CachedComputePipelineId,
     pub compact_pipeline_id: CachedComputePipelineId,
     pub reset_args_pipeline_id: CachedComputePipelineId,
 
@@ -36,6 +38,22 @@ impl FromWorld for GrassComputePipeline {
                 )
             )
         );
+        
+
+        // TODO: load/unload cull pipelines based of config
+        let shadow_cull_layout = render_device.create_bind_group_layout(
+            "cull_grass_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    storage_buffer_read_only_sized(false, None),
+                    storage_buffer::<Vec<u32>>(false),
+                    uniform_buffer::<ViewUniform>(true),
+                    uniform_buffer::<f32>(false),
+                    storage_buffer::<Vec<u32>>(false),
+                )
+            )
+        );
 
         let cull_layout = render_device.create_bind_group_layout(
             "cull_grass_layout",
@@ -43,7 +61,6 @@ impl FromWorld for GrassComputePipeline {
                 ShaderStages::COMPUTE,
                 (
                     storage_buffer_read_only_sized(false, None),
-                    storage_buffer::<Vec<u32>>(false),
                     storage_buffer::<Vec<u32>>(false),
                     uniform_buffer::<ViewUniform>(true),
                     uniform_buffer::<f32>(false),
@@ -101,7 +118,16 @@ impl FromWorld for GrassComputePipeline {
                 entry_point: "main".into(),
             }
         );
-
+        let shadows_cull_pipeline_id = pipeline_cache.queue_compute_pipeline(
+            ComputePipelineDescriptor {
+                label: Some("cull_grass_pipeline".into()),
+                layout: vec![shadow_cull_layout.clone()],
+                push_constant_ranges: Vec::new(),
+                shader: cull_shader.clone(),
+                shader_defs: vec!["SHADOW".into()],
+                entry_point: "main".into(),
+            }
+        );
         let compute_id = pipeline_cache
             .queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("grass_gen_compute_pipeline".into()),
@@ -125,10 +151,12 @@ impl FromWorld for GrassComputePipeline {
         Self {
             chunk_layout,
             cull_layout,
+            shadow_cull_layout,
             compact_layout,
             reset_args_layout,
             compute_id,
             cull_pipeline_id,
+            shadows_cull_pipeline_id,
             compact_pipeline_id,
             reset_args_pipeline_id,
             _grass_util_shader: world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/grass_util.wgsl")
