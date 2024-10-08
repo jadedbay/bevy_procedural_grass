@@ -28,10 +28,11 @@ impl Plugin for ProceduralGrassPlugin {
         embedded_asset!(app, "shaders/scan.wgsl");
         embedded_asset!(app, "shaders/scan_blocks.wgsl");
         embedded_asset!(app, "shaders/compact.wgsl");
-        embedded_asset!(app, "shaders/grass.wgsl");
         embedded_asset!(app, "shaders/grass_cull.wgsl");
         embedded_asset!(app, "shaders/reset_args.wgsl");
         embedded_asset!(app, "shaders/grass_prepass.wgsl");
+        embedded_asset!(app, "shaders/grass_vertex.wgsl");
+        embedded_asset!(app, "shaders/grass_fragment.wgsl");
 
         app
             .register_type::<Grass>()

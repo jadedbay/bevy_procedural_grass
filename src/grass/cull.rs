@@ -1,4 +1,4 @@
-use bevy::{math::{bounding::Aabb2d, Affine3A}, prelude::*, render::{primitives::{Aabb, Frustum}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
+use bevy::{math::{bounding::Aabb2d, Affine3A}, prelude::*, render::{batching::NoAutomaticBatching, primitives::{Aabb, Frustum}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
 
 use crate::prelude::GrassMaterial;
 
@@ -62,6 +62,7 @@ pub(crate) fn cull_chunks(
                                     ..default()
                                 },
                                 NoFrustumCulling,
+                                NoAutomaticBatching,
                             )).id();
 
                             cull_chunks.0.insert(chunk_pos, chunk_entity);

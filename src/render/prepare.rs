@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}, utils::HashMap};
+use bevy::{core_pipeline::core_3d::Opaque3d, prelude::*, render::{globals::GlobalsBuffer, render_asset::RenderAssets, render_phase::ViewBinnedRenderPhases, render_resource::{BindGroup, BindGroupEntries, Buffer}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}, utils::HashMap};
 use super::pipeline::GrassComputePipeline;
 use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigGpu, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassConfig};
 
@@ -18,12 +18,6 @@ pub(crate) fn update_computed_grass(
 pub struct GrassChunkComputeBindGroup {
     pub bind_group: BindGroup,
     pub workgroup_count: u32,
-}
-
-#[derive(Component, Clone, Debug)]
-pub struct GrassChunkBindGroups {
-    pub instance_buffer: Buffer,
-    pub instance_count: u32,
 }
 
 #[derive(Component, Clone)]
@@ -128,7 +122,6 @@ pub fn prepare_grass(
     render_device: Res<RenderDevice>,
     view_uniforms: Res<ViewUniforms>,
     grass_config_buffers: Res<GrassConfigGpu>,
-    config: Res<GrassConfig>,
 ) {
     let Some(_) = view_uniforms.uniforms.binding() else { return; };
     let chunk_layout = pipeline.chunk_layout.clone();

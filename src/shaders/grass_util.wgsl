@@ -25,6 +25,7 @@ struct DrawIndexedIndirectArgs {
 struct GrassMaterial {
     width: f32,
     curve: f32,
+    midpoint: f32,
     roughness_variance: f32,
     reflectance_variance: f32,
     min_ao: f32,
@@ -32,6 +33,15 @@ struct GrassMaterial {
     rim_position: f32,
     rim_softness: f32,
     width_normal_strength: f32,
+    texture_strength: f32,
+}
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) world_position: vec4<f32>,
+    @location(1) world_normal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
+    @location(3) facing: vec2<f32>,
 }
 
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(
@@ -49,6 +59,17 @@ fn rotate(v: vec3<f32>, direction: vec2<f32>) -> vec3<f32> {
         sin(angle), 0.0, cos(angle)
     );
 
+    return rotation_matrix * v;
+}
+
+fn rotate_x(v: vec3<f32>, angle: f32) -> vec3<f32> {
+    let cos_angle = cos(angle);
+    let sin_angle = sin(angle);
+    let rotation_matrix = mat3x3<f32>(
+        1.0, 0.0, 0.0,
+        0.0, cos_angle, -sin_angle,
+        0.0, sin_angle, cos_angle
+    );
     return rotation_matrix * v;
 }
 

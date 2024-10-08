@@ -69,7 +69,7 @@ fn setup(
             GrassBundle {
                 grass: Grass {
                     chunk_count: UVec2::splat(1),
-                    density: 50.0,
+                    density: 25.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
                         scale: 0.0,
@@ -84,12 +84,14 @@ fn setup(
                             base_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
                             perceptual_roughness: 0.65,
                             reflectance: 0.15,
+                            diffuse_transmission: 0.4,
                             double_sided: true,
                             ..default()
                         },
                         extension: GrassMaterialExtension {
                             width: 0.05,
                             curve: 1.0,
+                            midpoint: 0.5,
                             roughness_variance: 0.15,
                             reflectance_variance: 0.15,
                             min_ao: 0.5,
@@ -97,6 +99,7 @@ fn setup(
                             rim_position: 0.5,
                             rim_softness: 0.08,
                             width_normal_strength: 0.3,
+                            texture_strength: 0.65,
                             texture: Some(images.add(create_grass_texture(1024, 1024, [12.0, 4.0]))),
                         }
                     }
@@ -126,7 +129,7 @@ fn setup(
 
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            illuminance: light_consts::lux::AMBIENT_DAYLIGHT * 5.0,
+            illuminance: light_consts::lux::DIRECT_SUNLIGHT,
             shadows_enabled: true,
             ..default()
         },

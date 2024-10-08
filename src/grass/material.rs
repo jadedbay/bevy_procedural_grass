@@ -1,14 +1,15 @@
-use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline, PBR_PREPASS_SHADER_HANDLE}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}}};
+use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline, PBR_PREPASS_SHADER_HANDLE}, prelude::*, render::{globals::GlobalsUniform, mesh::MeshVertexBufferLayoutRef, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, BindGroupLayout, Extent3d, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}}};
 use noise::{NoiseFn, Perlin, Simplex};
 
 use crate::render::instance::GrassInstanceData;
 
 pub type GrassMaterial = ExtendedMaterial<StandardMaterial, GrassMaterialExtension>;
 
-#[derive(Asset, AsBindGroup, Reflect, Debug, Clone, Default)]
+#[derive(Asset, AsBindGroup, Reflect, Clone, Default)]
 pub struct GrassMaterialExtension {
     #[uniform(100)] pub width: f32,
     #[uniform(100)] pub curve: f32,
+    #[uniform(100)] pub midpoint: f32,
     #[uniform(100)] pub roughness_variance: f32,
     #[uniform(100)] pub reflectance_variance: f32,
     #[uniform(100)] pub min_ao: f32,
@@ -16,18 +17,19 @@ pub struct GrassMaterialExtension {
     #[uniform(100)] pub rim_position: f32,
     #[uniform(100)] pub rim_softness: f32,
     #[uniform(100)] pub width_normal_strength: f32,
+    #[uniform(100)] pub texture_strength: f32,
     #[texture(101)] pub texture: Option<Handle<Image>>, // Create texture binding in material extension instead of using base_color_texture in StandardMaterial to customize how its applied. 
                                                         // Could just use StandardMaterial texture if I disable StandardMaterialFlags::BASE_COLOR_TEXTURE but not sure what else that would do.
 }
 impl MaterialExtension for GrassMaterialExtension {
     fn vertex_shader() -> ShaderRef {
-        "embedded://bevy_procedural_grass/shaders/grass.wgsl".into()
+        "embedded://bevy_procedural_grass/shaders/grass_vertex.wgsl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        "embedded://bevy_procedural_grass/shaders/grass.wgsl".into()
+        "embedded://bevy_procedural_grass/shaders/grass_fragment.wgsl".into()
     }
     fn prepass_vertex_shader() -> ShaderRef {
-        "embedded://bevy_procedural_grass/shaders/grass_prepass.wgsl".into()
+        "embedded://bevy_procedural_grass/shaders/grass_vertex.wgsl".into()
     }
     
     fn specialize(
