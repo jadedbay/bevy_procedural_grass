@@ -22,7 +22,7 @@
 #import bevy_procedural_grass::{
     GrassMaterial,
     identity_matrix, rotate, quadratic_bezier, bezier_tangent, rotate_x,
-    grass_material as grass, grass_texture,
+    grass_material as grass, grass_texture, wind_texture
 };
 
 #ifdef PREPASS_PIPELINE
@@ -33,6 +33,8 @@
         @location(1) uv: vec2<f32>,
 
         @location(3) i_pos: vec4<f32>,
+        @location(4) i_chunk_uv: vec2<f32>,
+        @location(5) i_facing: vec2<f32>,
     }
 #else
     struct Vertex {
@@ -41,6 +43,8 @@
         @location(2) uv: vec2<f32>,
 
         @location(3) i_pos: vec4<f32>,
+        @location(4) i_chunk_uv: vec2<f32>,
+        @location(5) i_facing: vec2<f32>,
     };
 #endif
 
@@ -72,11 +76,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     position.z = bezier.x;
     // position = rotate_x(position, -(sin(globals.time) * 0.3));  
 
-    var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
-    let facing_angle: f32 = rand_f(&state) * PI_2;
-    let facing = vec2<f32>(cos(facing_angle), sin(facing_angle));
-
-    position = rotate(position, facing);
+    position = rotate(position, vertex.i_facing);
     position += ipos;
     
     var out: VertexOutput;
@@ -96,7 +96,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         out.world_position = vec4<f32>(position, 1.0);
         
         out.world_normal = normal;
-        out.facing = facing;
+        out.facing = vertex.i_facing;
     #endif
 
     out.uv = vertex.uv;

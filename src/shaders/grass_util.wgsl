@@ -4,9 +4,13 @@
 var<uniform> grass_material: GrassMaterial;
 @group(2) @binding(101)
 var grass_texture: texture_2d<f32>;
+@group(2) @binding(102)
+var wind_texture: texture_2d<f32>;
 
 struct GrassInstance {
     position: vec4<f32>,
+    chunk_uv: vec2<f32>,
+    facing: vec2<f32>,
 }
 
 struct Aabb2d {

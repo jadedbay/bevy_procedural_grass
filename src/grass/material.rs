@@ -20,7 +20,8 @@ pub struct GrassMaterialExtension {
     #[uniform(100)] pub texture_strength: f32,
     #[texture(101)] pub texture: Option<Handle<Image>>, // Create texture binding in material extension instead of using base_color_texture in StandardMaterial to customize how its applied. 
                                                         // Could just use StandardMaterial texture if I disable StandardMaterialFlags::BASE_COLOR_TEXTURE but not sure what else that would do.
-}
+    #[texture(102)] pub wind_texture: Handle<Image>,
+                                                    }
 impl MaterialExtension for GrassMaterialExtension {
     fn vertex_shader() -> ShaderRef {
         "embedded://bevy_procedural_grass/shaders/grass_vertex.wgsl".into()
@@ -47,6 +48,16 @@ impl MaterialExtension for GrassMaterialExtension {
                     offset: 0,
                     shader_location: 3,
                 },
+                VertexAttribute {
+                    format: VertexFormat::Float32x2,
+                    offset: VertexFormat::Float32x4.size(),
+                    shader_location: 4,
+                },
+                VertexAttribute {
+                    format: VertexFormat::Float32x2,
+                    offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size(),
+                    shader_location: 5,
+                }
             ],
         });
         descriptor.primitive.cull_mode = None;

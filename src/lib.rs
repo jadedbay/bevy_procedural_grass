@@ -2,7 +2,7 @@ use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3
 
 use grass::{chunk::GrassChunk, config::{init_config_buffers, reload_grass_chunks, update_config_buffers, GrassConfig, GrassConfigGpu}, cull::cull_chunks, grass_setup, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
-use render::{draw::DrawGrassPrepass, node::{compute_grass, ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
+use render::{compute::compute_grass, draw::DrawGrassPrepass, node::{ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
 
 use crate::render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, prepare::prepare_grass, queue::queue_grass};
 
@@ -30,7 +30,6 @@ impl Plugin for ProceduralGrassPlugin {
         embedded_asset!(app, "shaders/compact.wgsl");
         embedded_asset!(app, "shaders/grass_cull.wgsl");
         embedded_asset!(app, "shaders/reset_args.wgsl");
-        embedded_asset!(app, "shaders/grass_prepass.wgsl");
         embedded_asset!(app, "shaders/grass_vertex.wgsl");
         embedded_asset!(app, "shaders/grass_fragment.wgsl");
 

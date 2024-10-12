@@ -167,6 +167,8 @@ pub fn queue_grass_shadows(
                     | AlphaMode::AlphaToCoverage => MeshPipelineKey::MAY_DISCARD,
                     _ => MeshPipelineKey::NONE,
                 };
+
+                
                 let pipeline_id = pipelines.specialize(
                     &pipeline_cache,
                     &prepass_pipeline,

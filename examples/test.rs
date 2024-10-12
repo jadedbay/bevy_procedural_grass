@@ -2,6 +2,7 @@ use bevy::{color::palettes::css::{RED, WHITE}, pbr::{wireframe::{Wireframe, Wire
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::{grass::material::create_grass_texture, prelude::*};
 use bevy_flycam::prelude::*;
+use bevy_compute_noise::prelude::*;
 
 use iyes_perf_ui::{entries::PerfUiBundle, prelude::*};
 use noise::NoiseFn;
@@ -22,6 +23,7 @@ fn main() {
             ProceduralGrassPlugin::default(),
             WireframePlugin,
             MaterialPlugin::<NormalMaterial>::default(),
+            ComputeNoisePlugin::<Perlin2d>::default(),
         ))
         .add_plugins((
             bevy::diagnostic::FrameTimeDiagnosticsPlugin,
@@ -47,6 +49,8 @@ fn setup(
 ) {
     let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
+    let wind_image = ComputeNoiseImage::create_image(ComputeNoiseSize::D2(512, 512), ComputeNoiseFormat::Rgba);
+    let wind_handle = images.add(wind_image);
 
     apply_height_map(&mut plane, &noise_image, 0.0);
     plane.compute_normals();
@@ -65,7 +69,7 @@ fn setup(
             ..default()
         },
     )).with_children(|parent| {
-        parent.spawn(
+        parent.spawn((
             GrassBundle {
                 grass: Grass {
                     chunk_count: UVec2::splat(1),
@@ -101,6 +105,7 @@ fn setup(
                             width_normal_strength: 0.3,
                             texture_strength: 0.65,
                             texture: Some(images.add(create_grass_texture(1024, 1024, [12.0, 4.0]))),
+                            wind_texture: wind_handle.clone(),
                         }
                     }
                 ),
@@ -109,8 +114,12 @@ fn setup(
                     ..default()
                 },
                 ..default()
+            },
+            ComputeNoiseComponent::<Perlin2d> {
+                image: wind_handle,
+                noise: Perlin2d::new(0, 5, 1, false),
             }
-        );
+        ));
     });
 
     commands.spawn((

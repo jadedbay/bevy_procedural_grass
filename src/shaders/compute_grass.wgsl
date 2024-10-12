@@ -1,4 +1,5 @@
 #import bevy_pbr::utils::rand_f
+#import bevy_render::maths::PI_2
 #import bevy_procedural_grass::{GrassInstance, Aabb2d};
 
 @group(0) @binding(0) var<storage, read_write> output: array<GrassInstance>;
@@ -31,5 +32,13 @@ fn main(
 
     let height = textureLoad(heightmap, texture_coords, 0).r;
 
-    output[global_id.x] = GrassInstance(vec4<f32>(chunk_position.x, height * height_scale + height_offset, chunk_position.y, 1.0));  
+    var instance: GrassInstance;
+    instance.position = vec4<f32>(chunk_position.x, height * height_scale + height_offset, chunk_position.y, 1.0);
+    instance.chunk_uv = local_uv;
+
+    let facing_angle: f32 = rand_f(&state) * PI_2;
+    let facing = vec2<f32>(cos(facing_angle), sin(facing_angle));
+    instance.facing = facing;
+    
+    output[global_id.x] = instance;
 }
