@@ -6,7 +6,7 @@ use super::cull::GrassCullChunks;
 #[reflect(Resource)]
 pub struct GrassConfig {
     pub cull_distance: f32,
-    pub grass_shadows: bool,
+    pub grass_shadows: GrassCastShadows,
     pub shadow_distance: f32,
 }
 
@@ -14,10 +14,63 @@ impl Default for GrassConfig {
     fn default() -> Self {
         Self {
             cull_distance: 250.0,
-            grass_shadows: true,
+            grass_shadows: GrassCastShadows::default(),
             shadow_distance: 20.0,
         }
     }
+}
+
+#[derive(Reflect, Clone)]
+#[reflect(Default)]
+pub enum GrassCastShadows {
+    Enabled(GrassLightTypes),
+    Disabled,
+}
+impl Default for GrassCastShadows {
+    fn default() -> Self {
+        Self::Enabled(GrassLightTypes {
+            directional: true,
+            point: false,
+            spot: false,
+        })
+    }
+}
+impl GrassCastShadows {
+    pub fn enabled(&self) -> bool {
+        matches!(self, Self::Enabled(_))
+    }
+
+    pub fn light_enabled(&self, light_type: GrassLightType) -> bool {
+        match self {
+            Self::Enabled(types) => types.is_enabled(light_type),
+            Self::Disabled => false,
+        }
+    }
+}
+
+#[derive(Default, Reflect, Clone)]
+#[reflect(Default)]
+pub struct GrassLightTypes {
+    directional: bool,
+    point: bool,
+    spot: bool,
+}
+
+impl GrassLightTypes {
+    pub fn is_enabled(&self, light_type: GrassLightType) -> bool {
+        match light_type {
+            GrassLightType::Directional => self.directional,
+            GrassLightType::Point => self.point,
+            GrassLightType::Spot => self.spot,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum GrassLightType {
+    Directional,
+    Point,
+    Spot,
 }
 
 #[derive(Resource, Clone, ExtractResource)]
@@ -45,12 +98,14 @@ pub(crate) fn init_config_buffers(
 
 pub(crate) fn reload_grass_chunks(
     config: Res<GrassConfig>,
-    mut grass_shadows: Local<bool>,
+    mut shadows_enabled: Local<bool>,
     mut commands: Commands,
     mut query: Query<(Entity, &mut GrassCullChunks)>,
 ) {
-    if config.grass_shadows != *grass_shadows {
-        *grass_shadows = config.grass_shadows;
+    let config_shadows_enabled = config.grass_shadows.enabled();
+
+    if config_shadows_enabled != *shadows_enabled {
+        *shadows_enabled = config_shadows_enabled;
         for (entity, mut cull_chunks) in &mut query {
             for (_, chunk_entity) in cull_chunks.0.iter() {
                 commands.entity(entity).remove_children(&[*chunk_entity]);
@@ -76,5 +131,4 @@ pub(crate) fn update_config_buffers(
         *shadow_distance = config.shadow_distance;
     }
 }
-
 

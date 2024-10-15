@@ -94,7 +94,7 @@ fn setup(
                         },
                         extension: GrassMaterialExtension {
                             width: 0.05,
-                            curve: 1.0,
+                            curve: 0.5,
                             midpoint: 0.5,
                             roughness_variance: 0.15,
                             reflectance_variance: 0.15,
@@ -117,7 +117,7 @@ fn setup(
             },
             ComputeNoiseComponent::<Perlin2d> {
                 image: wind_handle,
-                noise: Perlin2d::new(0, 5, 1, false),
+                noise: Perlin2d::new(0, 7, 2, false),
             }
         ));
     });
@@ -135,6 +135,31 @@ fn setup(
         color: WHITE.into(),
         brightness: 5000.0,
     });
+
+    commands
+        .spawn(PointLightBundle {
+            // transform: Transform::from_xyz(5.0, 8.0, 2.0),
+            transform: Transform::from_xyz(1.0, 2.0, 0.0),
+            point_light: PointLight {
+                intensity: 100_000.0,
+                color: RED.into(),
+                shadows_enabled: true,
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|builder| {
+            builder.spawn(PbrBundle {
+                mesh: meshes.add(Sphere::new(0.1).mesh().uv(32, 18)),
+                material: materials.add(StandardMaterial {
+                    base_color: RED.into(),
+                    emissive: LinearRgba::new(4.0, 0.0, 0.0, 0.0),
+                    ..default()
+                }),
+                ..default()
+            });
+        });
+
 
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {

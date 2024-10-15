@@ -58,11 +58,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     position.x *= width;
 
     let p0 = vec2<f32>(0.0);
-    let p2 = vec2<f32>(1.0, 0.7);
+    let p2 = vec2<f32>(1.0, 0.0);
     var curve = grass.curve;
-
-    // curve += -sin(globals.time + 0.5) * 0.2;
     var midpoint = grass.midpoint;
+
+    let t = sample_wind_texture(vertex.i_chunk_uv, 0.0); 
+    // curve -= sample_wind_texture(vertex.i_chunk_uv, 0.0);
 
     let p1 = vec2<f32>(midpoint, curve);
     let bezier = quadratic_bezier(vertex.uv.y, p0, p1, p2);
@@ -70,11 +71,13 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     #ifndef PREPASS_PIPELINE
         var normal = normalize(vec3<f32>(0.0, tangent.x, -tangent.y));
+        normal = rotate_x(normal, t + 0.3);
     #endif
 
     position.y = bezier.y;
     position.z = bezier.x;
-    // position = rotate_x(position, -(sin(globals.time) * 0.3));  
+    position = rotate_x(position, t + 0.3);  
+
 
     position = rotate(position, vertex.i_facing);
     position += ipos;
@@ -86,8 +89,10 @@ fn vertex(vertex: Vertex) -> VertexOutput {
             vec4<f32>(position, 1.0)
         );
         out.position = position_world_to_clip(out.world_position.xyz);
-        out.clip_position_unclamped = out.position;
-        out.position.z = min(out.position.z, 1.0);
+        #ifdef DEPTH_CLAMP_ORTHO
+            out.clip_position_unclamped = out.position;
+            out.position.z = min(out.position.z, 1.0);
+        #endif
     #else
         out.position = mesh_position_local_to_clip(
             identity_matrix,
@@ -97,9 +102,18 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         
         out.world_normal = normal;
         out.facing = vertex.i_facing;
+        out.t = vec4<f32>(t);
     #endif
 
     out.uv = vertex.uv;
 
     return out;
+}
+
+fn sample_wind_texture(uv: vec2<f32>, offset: f32) -> f32 {
+    let texture_size = textureDimensions(wind_texture);
+
+    let scrolled_uv = uv + globals.time * 0.2;
+    let pixel_coords = vec2<i32>(fract(scrolled_uv + offset) * vec2<f32>(texture_size));
+    return textureLoad(wind_texture, pixel_coords, 0).r;
 }

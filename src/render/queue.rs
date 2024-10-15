@@ -1,6 +1,6 @@
 use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{CascadesVisibleEntities, CubemapVisibleEntities, ExtractedDirectionalLight, ExtractedPointLight, LightEntity, MaterialPipeline, MaterialPipelineKey, MeshPipelineKey, PreparedMaterial, PrepassPipeline, RenderLightmaps, RenderMaterialInstances, RenderMeshInstanceFlags, RenderMeshInstances, Shadow, ShadowBinKey, ViewLightEntities}, prelude::*, render::{mesh::GpuMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, view::{ExtractedView, VisibleEntities, WithMesh}}};
 
-use crate::grass::{chunk::GrassChunk, material::GrassMaterial};
+use crate::{grass::{chunk::GrassChunk, config::GrassLightType, material::GrassMaterial}, prelude::GrassConfig};
 
 use super::draw::{DrawGrass, DrawGrassPrepass};
 
@@ -87,6 +87,7 @@ pub fn queue_grass_shadows(
     point_light_entities: Query<&CubemapVisibleEntities, With<ExtractedPointLight>>,
     directional_light_entities: Query<&CascadesVisibleEntities, With<ExtractedDirectionalLight>>,
     spot_light_entities: Query<&VisibleEntities, With<ExtractedPointLight>>,
+    grass_config: Res<GrassConfig>,
 ) {
     for (entity, view_lights) in &view_lights {
 
@@ -96,6 +97,16 @@ pub fn queue_grass_shadows(
             let Ok(light_entity) = view_light_entities.get_mut(view_light_entity) else {
                 continue;
             };
+
+            let light_type = match light_entity {
+                LightEntity::Directional { .. } => GrassLightType::Directional,
+                LightEntity::Point { .. } => GrassLightType::Point,
+                LightEntity::Spot { .. } => GrassLightType::Spot,
+            };
+
+            if !grass_config.grass_shadows.light_enabled(light_type) {
+                continue;
+            }
 
             let Some(shadow_phase) = shadow_render_phases.get_mut(&view_light_entity) else {
                 continue;
