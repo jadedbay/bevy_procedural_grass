@@ -108,3 +108,15 @@ impl ExtractComponent for GrassChunk {
         Some((item.0.clone(), item.1.clone()))
     }
 }
+
+pub(crate) fn unload_chunks(
+    commands: &mut Commands,
+    entity: Entity,
+    cull_chunks: &mut GrassCullChunks,
+) {
+    for (_, chunk_entity) in cull_chunks.0.iter() {
+        commands.entity(entity).remove_children(&[*chunk_entity]);
+        commands.entity(*chunk_entity).despawn();
+    }
+    cull_chunks.0.clear();
+}

@@ -1,4 +1,4 @@
-use bevy::{color::palettes::css::{RED, WHITE}, pbr::{wireframe::{Wireframe, WireframePlugin}, DirectionalLightShadowMap}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy::{color::palettes::css::{RED, WHITE}, pbr::{wireframe::{Wireframe, WireframePlugin}, DirectionalLightShadowMap}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}, renderer::RenderDevice}, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::{grass::material::create_grass_texture, prelude::*};
 use bevy_flycam::prelude::*;
@@ -79,7 +79,6 @@ fn setup(
                         scale: 0.0,
                     }),
                     y_offset: 0.0001,
-                    ..default()
                 },
                 mesh: meshes.add(GrassMesh::mesh(7)),
                 material: grass_materials.add(

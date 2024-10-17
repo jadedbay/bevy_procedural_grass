@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::{RenderDevice, RenderQueue}}};
 
-use super::cull::GrassCullChunks;
+use super::{chunk::unload_chunks, cull::GrassCullChunks};
 
 #[derive(Resource, Clone, ExtractResource, Reflect)]
 #[reflect(Resource)]
@@ -48,12 +48,21 @@ impl GrassCastShadows {
     }
 }
 
-#[derive(Default, Reflect, Clone)]
+#[derive(Reflect, Clone)]
 #[reflect(Default)]
 pub struct GrassLightTypes {
     directional: bool,
     point: bool,
     spot: bool,
+}
+impl Default for GrassLightTypes {
+    fn default() -> Self {
+        Self {
+            directional: true,
+            point: false,
+            spot: false,
+        }
+    }
 }
 
 impl GrassLightTypes {
@@ -96,7 +105,7 @@ pub(crate) fn init_config_buffers(
     );
 }
 
-pub(crate) fn reload_grass_chunks(
+pub(crate) fn toggle_shadows(
     config: Res<GrassConfig>,
     mut shadows_enabled: Local<bool>,
     mut commands: Commands,
@@ -107,11 +116,7 @@ pub(crate) fn reload_grass_chunks(
     if config_shadows_enabled != *shadows_enabled {
         *shadows_enabled = config_shadows_enabled;
         for (entity, mut cull_chunks) in &mut query {
-            for (_, chunk_entity) in cull_chunks.0.iter() {
-                commands.entity(entity).remove_children(&[*chunk_entity]);
-                commands.entity(*chunk_entity).despawn();
-            }
-            cull_chunks.0.clear();
+            unload_chunks(&mut commands, entity, &mut cull_chunks); 
         }
     }
 }

@@ -7,6 +7,7 @@ pub mod clump;
 pub mod config;
 pub mod material;
 
+use chunk::unload_chunks;
 use cull::GrassCullChunks;
 
 use crate::{prefix_sum::calculate_workgroup_counts, util::aabb::Aabb2dGpu, GrassMaterial};
@@ -23,7 +24,6 @@ pub struct GrassBundle {
 
 #[derive(Reflect, Component, Clone)]
 pub struct Grass {
-    pub tile_count: UVec2,
     pub chunk_count: UVec2, // TODO: calculate this maybe?
     pub density: f32,
     pub height_map: Option<GrassHeightMap>,
@@ -39,7 +39,6 @@ pub struct GrassHeightMap {
 impl Default for Grass {
     fn default() -> Self {
         Self {
-            tile_count: UVec2::splat(1),
             chunk_count: UVec2::splat(1),
             density: 10.0,
             height_map: None,
@@ -76,11 +75,16 @@ impl ExtractComponent for Grass {
 pub(crate) fn grass_setup(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
-    grass_query: Query<(Entity, &Grass, &Parent)>,
+    grass_query: Query<(Entity, &Grass, &Parent), Changed<Grass>>,
+    mut chunk_query: Query<&mut GrassCullChunks>,
     ground_query: Query<&Handle<Mesh>>,
     render_device: Res<RenderDevice>,
 ) {
     for (entity, grass, parent) in grass_query.iter() {
+        if let Ok(mut cull_chunks) = chunk_query.get_mut(entity) {
+            unload_chunks(&mut commands, entity, &mut cull_chunks);
+        } 
+
         let mesh = meshes.get(ground_query.get(parent.get()).unwrap()).unwrap();
         let mesh_aabb = mesh.compute_aabb().unwrap();
         let mesh_aabb2d = Aabb2d::new(mesh_aabb.center.xz(), mesh_aabb.half_extents.xz());

@@ -98,13 +98,12 @@ pub fn queue_grass_shadows(
                 continue;
             };
 
-            let light_type = match light_entity {
-                LightEntity::Directional { .. } => GrassLightType::Directional,
-                LightEntity::Point { .. } => GrassLightType::Point,
-                LightEntity::Spot { .. } => GrassLightType::Spot,
-            };
-
-            if !grass_config.grass_shadows.light_enabled(light_type) {
+            if !grass_config.grass_shadows.light_enabled(
+                match light_entity {
+                    LightEntity::Directional { .. } => GrassLightType::Directional,
+                    LightEntity::Point { .. } => GrassLightType::Point,
+                    LightEntity::Spot { .. } => GrassLightType::Spot,
+                }) {
                 continue;
             }
 
@@ -112,7 +111,6 @@ pub fn queue_grass_shadows(
                 continue;
             };
 
-            // TODO: add options in GrassConfig for shadows from types of lights (and fix shader)
             let is_directional_light = matches!(light_entity, LightEntity::Directional { .. });
             let visible_entities = match light_entity {
                 LightEntity::Directional {
