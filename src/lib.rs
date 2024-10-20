@@ -45,7 +45,6 @@ impl Plugin for ProceduralGrassPlugin {
                 ExtractResourcePlugin::<GrassConfigGpu>::default(),
             ))
             .add_systems(Startup, init_config_buffers)
-            .add_systems(PostStartup, grass_setup)
             .add_systems(Update, (
                 grass_setup,
                 update_config_buffers, 

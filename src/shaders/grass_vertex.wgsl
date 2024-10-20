@@ -58,25 +58,31 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     position.x *= width;
 
     let p0 = vec2<f32>(0.0);
-    let p2 = vec2<f32>(1.0, 0.0);
+
     var curve = grass.curve;
-    var midpoint = grass.midpoint;
+
+    let angle = grass.tilt * PI_2 * 0.5;
+    let p2 = vec2<f32>(cos(angle), sin(angle));
+    var midpoint = (p2 - p0) * grass.midpoint;
+
+    let blade_normal = normalize(vec2<f32>(-p2.y, p2.x));
+    // let p1 = vec2<f32>(midpoint, 0.0) + blade_normal * curve;
 
     let t = sample_wind_texture(vertex.i_chunk_uv, 0.0); 
     // curve -= sample_wind_texture(vertex.i_chunk_uv, 0.0);
 
-    let p1 = vec2<f32>(midpoint, curve);
+    let p1 = midpoint + blade_normal * curve;
     let bezier = quadratic_bezier(vertex.uv.y, p0, p1, p2);
     let tangent = normalize(bezier_tangent(vertex.uv.y, p0, p1, p2));
 
     #ifndef PREPASS_PIPELINE
         var normal = normalize(vec3<f32>(0.0, tangent.x, -tangent.y));
-        normal = rotate_x(normal, t + 0.3);
+        // normal = rotate_x(normal, t + 0.3);
     #endif
 
     position.y = bezier.y;
     position.z = bezier.x;
-    position = rotate_x(position, t + 0.3);  
+    // position = rotate_x(position, t + 0.3);  
 
 
     position = rotate(position, vertex.i_facing);

@@ -1,4 +1,4 @@
-use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline, PBR_PREPASS_SHADER_HANDLE}, prelude::*, render::{globals::GlobalsUniform, mesh::MeshVertexBufferLayoutRef, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, BindGroupLayout, Extent3d, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}}};
+use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline, PBR_PREPASS_SHADER_HANDLE}, prelude::*, render::{globals::GlobalsUniform, mesh::MeshVertexBufferLayoutRef, render_asset::{RenderAssetUsages, RenderAssets}, render_resource::{AsBindGroup, AsBindGroupShaderType, BindGroupLayout, Extent3d, RenderPipelineDescriptor, ShaderRef, ShaderType, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, texture::GpuImage}};
 use noise::{NoiseFn, Perlin, Simplex};
 
 use crate::render::instance::GrassInstanceData;
@@ -6,18 +6,22 @@ use crate::render::instance::GrassInstanceData;
 pub type GrassMaterial = ExtendedMaterial<StandardMaterial, GrassMaterialExtension>;
 
 #[derive(Asset, AsBindGroup, Reflect, Clone, Default)]
+#[uniform(100, GrassMaterialUniform)]
+#[reflect(Default)]
 pub struct GrassMaterialExtension {
-    #[uniform(100)] pub width: f32,
-    #[uniform(100)] pub curve: f32,
-    #[uniform(100)] pub midpoint: f32,
-    #[uniform(100)] pub roughness_variance: f32,
-    #[uniform(100)] pub reflectance_variance: f32,
-    #[uniform(100)] pub min_ao: f32,
-    #[uniform(100)] pub midrib_softness: f32,
-    #[uniform(100)] pub rim_position: f32,
-    #[uniform(100)] pub rim_softness: f32,
-    #[uniform(100)] pub width_normal_strength: f32,
-    #[uniform(100)] pub texture_strength: f32,
+    pub tip_color: Color,
+    pub width: f32,
+    pub curve: f32,
+    pub tilt: f32,
+    pub midpoint: f32,
+    pub roughness_variance: f32,
+    pub reflectance_variance: f32,
+    pub min_ao: f32,
+    pub midrib_softness: f32,
+    pub rim_position: f32,
+    pub rim_softness: f32,
+    pub width_normal_strength: f32,
+    pub texture_strength: f32,
     #[texture(101)] pub texture: Option<Handle<Image>>, // Create texture binding in material extension instead of using base_color_texture in StandardMaterial to customize how its applied. 
                                                         // Could just use StandardMaterial texture if I disable StandardMaterialFlags::BASE_COLOR_TEXTURE but not sure what else that would do.
     #[texture(102)] pub wind_texture: Handle<Image>,
@@ -63,6 +67,46 @@ impl MaterialExtension for GrassMaterialExtension {
         descriptor.primitive.cull_mode = None;
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Default, ShaderType)]
+pub struct GrassMaterialUniform {
+    pub tip_color: Vec4,
+    pub width: f32,
+    pub curve: f32,
+    pub tilt: f32,
+    pub midpoint: f32,
+    pub roughness_variance: f32,
+    pub reflectance_variance: f32,
+    pub min_ao: f32,
+    pub midrib_softness: f32,
+    pub rim_position: f32,
+    pub rim_softness: f32,
+    pub width_normal_strength: f32,
+    pub texture_strength: f32,
+}
+
+impl AsBindGroupShaderType<GrassMaterialUniform> for GrassMaterialExtension {
+    fn as_bind_group_shader_type(
+        &self, 
+        _images: &RenderAssets<GpuImage>
+    ) -> GrassMaterialUniform {
+        GrassMaterialUniform {
+            tip_color: LinearRgba::from(self.tip_color).to_vec4(),
+            width: self.width,
+            curve: self.curve,
+            tilt: self.tilt,
+            midpoint: self.midpoint,
+            roughness_variance: self.roughness_variance,
+            reflectance_variance: self.reflectance_variance,
+            min_ao: self.min_ao,
+            midrib_softness: self.midrib_softness,
+            rim_position: self.rim_position,
+            rim_softness: self.rim_softness,
+            width_normal_strength: self.width_normal_strength,
+            texture_strength: self.texture_strength,
+        }
     }
 }
 
