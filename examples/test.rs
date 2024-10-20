@@ -86,7 +86,7 @@ fn setup(
                         base: StandardMaterial { 
                             base_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
                             perceptual_roughness: 0.65,
-                            reflectance: 0.15,
+                            reflectance: 0.1,
                             diffuse_transmission: 0.4,
                             double_sided: true,
                             ..default()
@@ -94,18 +94,21 @@ fn setup(
                         extension: GrassMaterialExtension {
                             tip_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
                             width: 0.05,
-                            curve: 0.5,
+                            curve: 0.3,
                             tilt: 0.25,
                             midpoint: 0.5,
                             roughness_variance: 0.15,
-                            reflectance_variance: 0.15,
+                            reflectance_variance: 0.1,
                             min_ao: 0.5,
                             midrib_softness: 0.03,
                             rim_position: 0.5,
                             rim_softness: 0.08,
                             width_normal_strength: 0.3,
                             texture_strength: 0.65,
-                            texture: Some(images.add(create_grass_texture(1024, 1024, [12.0, 4.0]))),
+                            texture: Some(images.add(create_grass_texture(4096, 4096, [12.0, 4.0]))),
+                            oscillation_speed: 5.0,
+                            oscillation_flexibility: 1.0,
+                            oscillation_strength: 0.2,
                             wind_texture: wind_handle.clone(),
                         }
                     }

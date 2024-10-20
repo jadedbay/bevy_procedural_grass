@@ -16,13 +16,11 @@ impl GrassMesh {
             uvs.push([1.0, y]);
 
             if i > 0 {
-                indices.push(2 * i);
-                indices.push(2 * i - 1);
-                indices.push(2 * i - 2);
-
-                indices.push(2 * i + 1);
-                indices.push(2 * i - 1);
-                indices.push(2 * i);
+                let base = 2 * (i - 1);
+                indices.extend_from_slice(&[
+                    base + 2, base + 1, base,
+                    base + 3, base + 1, base + 2,
+                ]);
             }
         }
 
@@ -30,9 +28,9 @@ impl GrassMesh {
         uvs.push([0.5, 1.0]);
 
         let tip = 2 * segments - 1;
-        indices.push(tip);
-        indices.push(tip - 1);
-        indices.push(tip + 1);
+        indices.extend_from_slice(&[
+            tip, tip - 1, tip + 1,
+        ]);
 
         let mut grass_mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::all());
         grass_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);

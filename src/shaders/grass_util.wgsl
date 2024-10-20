@@ -40,6 +40,9 @@ struct GrassMaterial {
     rim_softness: f32,
     width_normal_strength: f32,
     texture_strength: f32,
+    oscillation_speed: f32,
+    oscillation_flexibility: f32,
+    oscillation_strength: f32,
 }
 
 struct VertexOutput {

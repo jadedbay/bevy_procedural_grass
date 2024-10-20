@@ -1,4 +1,4 @@
-use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline, PBR_PREPASS_SHADER_HANDLE}, prelude::*, render::{globals::GlobalsUniform, mesh::MeshVertexBufferLayoutRef, render_asset::{RenderAssetUsages, RenderAssets}, render_resource::{AsBindGroup, AsBindGroupShaderType, BindGroupLayout, Extent3d, RenderPipelineDescriptor, ShaderRef, ShaderType, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, texture::GpuImage}};
+use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline}, prelude::*, render::{globals::GlobalsUniform, mesh::MeshVertexBufferLayoutRef, render_asset::{RenderAssetUsages, RenderAssets}, render_resource::{AsBindGroup, AsBindGroupShaderType, BindGroupLayout, Extent3d, RenderPipelineDescriptor, ShaderRef, ShaderType, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, texture::GpuImage}};
 use noise::{NoiseFn, Perlin, Simplex};
 
 use crate::render::instance::GrassInstanceData;
@@ -11,19 +11,26 @@ pub type GrassMaterial = ExtendedMaterial<StandardMaterial, GrassMaterialExtensi
 pub struct GrassMaterialExtension {
     pub tip_color: Color,
     pub width: f32,
+
     pub curve: f32,
     pub tilt: f32,
     pub midpoint: f32,
+
     pub roughness_variance: f32,
     pub reflectance_variance: f32,
     pub min_ao: f32,
+
     pub midrib_softness: f32,
     pub rim_position: f32,
     pub rim_softness: f32,
     pub width_normal_strength: f32,
+
     pub texture_strength: f32,
-    #[texture(101)] pub texture: Option<Handle<Image>>, // Create texture binding in material extension instead of using base_color_texture in StandardMaterial to customize how its applied. 
-                                                        // Could just use StandardMaterial texture if I disable StandardMaterialFlags::BASE_COLOR_TEXTURE but not sure what else that would do.
+    #[texture(101)] pub texture: Option<Handle<Image>>,
+
+    pub oscillation_speed: f32,
+    pub oscillation_flexibility: f32,
+    pub oscillation_strength: f32,
     #[texture(102)] pub wind_texture: Handle<Image>,
                                                     }
 impl MaterialExtension for GrassMaterialExtension {
@@ -84,7 +91,10 @@ pub struct GrassMaterialUniform {
     pub rim_position: f32,
     pub rim_softness: f32,
     pub width_normal_strength: f32,
-    pub texture_strength: f32,
+    pub texture_strength: f32, 
+    pub oscillation_speed: f32,
+    pub oscillation_flexibility: f32,
+    pub oscillation_strength: f32,
 }
 
 impl AsBindGroupShaderType<GrassMaterialUniform> for GrassMaterialExtension {
@@ -106,6 +116,9 @@ impl AsBindGroupShaderType<GrassMaterialUniform> for GrassMaterialExtension {
             rim_softness: self.rim_softness,
             width_normal_strength: self.width_normal_strength,
             texture_strength: self.texture_strength,
+            oscillation_speed: self.oscillation_speed,
+            oscillation_flexibility: self.oscillation_flexibility,
+            oscillation_strength: self.oscillation_strength,
         }
     }
 }

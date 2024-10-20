@@ -29,6 +29,7 @@
     @group(0) @binding(1) var<uniform> globals: Globals;
 
     struct Vertex {
+        @builtin(instance_index) instance_index: u32,
         @location(0) position: vec3<f32>,
         @location(1) uv: vec2<f32>,
 
@@ -38,6 +39,7 @@
     }
 #else
     struct Vertex {
+        @builtin(instance_index) instance_index: u32,
         @location(0) position: vec3<f32>,
         @location(1) normal: vec3<f32>,
         @location(2) uv: vec2<f32>,
@@ -57,25 +59,25 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let width = grass.width * (1.0 - pow(vertex.uv.y, 2.0)) * (0.7 + (1.0 - 0.7) * vertex.uv.y); // TODO: change this
     position.x *= width;
 
-    let p0 = vec2<f32>(0.0);
-
-    var curve = grass.curve;
-
-    let angle = grass.tilt * PI_2 * 0.5;
-    let p2 = vec2<f32>(cos(angle), sin(angle));
-    var midpoint = (p2 - p0) * grass.midpoint;
-
-    let blade_normal = normalize(vec2<f32>(-p2.y, p2.x));
-    // let p1 = vec2<f32>(midpoint, 0.0) + blade_normal * curve;
-
     let t = sample_wind_texture(vertex.i_chunk_uv, 0.0); 
-    // curve -= sample_wind_texture(vertex.i_chunk_uv, 0.0);
 
-    let p1 = midpoint + blade_normal * curve;
-    let bezier = quadratic_bezier(vertex.uv.y, p0, p1, p2);
-    let tangent = normalize(bezier_tangent(vertex.uv.y, p0, p1, p2));
+    let p0 = vec2<f32>(0.0);
+    let angle = grass.tilt * PI_2 * 0.5;
+    var p2 = vec2<f32>(cos(angle), sin(angle));
+    let midpoint = (p2 - p0) * grass.midpoint;
+    let blade_normal = normalize(vec2<f32>(-p2.y, p2.x));
+    var p1 = midpoint + blade_normal * grass.curve;
+
+    var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
+    let r = rand_f(&state);
+    let oscillation = (sin(globals.time * grass.oscillation_speed + (1.0 - vertex.uv.y) * grass.oscillation_flexibility + r * PI_2) * 0.5 + 0.5) * grass.oscillation_strength;
+    p1 -= blade_normal * oscillation;
+    p2 -= blade_normal * oscillation;
+
+    var bezier = quadratic_bezier(vertex.uv.y, p0, p1, p2);
 
     #ifndef PREPASS_PIPELINE
+        let tangent = normalize(bezier_tangent(vertex.uv.y, p0, p1, p2));
         var normal = normalize(vec3<f32>(0.0, tangent.x, -tangent.y));
         // normal = rotate_x(normal, t + 0.3);
     #endif
