@@ -1,6 +1,6 @@
-use bevy::{core_pipeline::core_3d::Opaque3d, prelude::*, render::{globals::GlobalsBuffer, render_asset::RenderAssets, render_phase::ViewBinnedRenderPhases, render_resource::{BindGroup, BindGroupEntries, Buffer}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}, utils::HashMap};
+use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}};
 use super::pipeline::GrassComputePipeline;
-use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigGpu, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassConfig};
+use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigGpu, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}};
 
 
 // TODO: test whether this is actually improves performance or if its faster to recompute everyframe

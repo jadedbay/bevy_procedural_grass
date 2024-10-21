@@ -1,8 +1,8 @@
-use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{CachedPipelineState, CommandEncoderDescriptor, ComputePassDescriptor, PipelineCache}, renderer::{RenderContext, RenderDevice, RenderQueue}, view::ViewUniformOffset}};
+use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderLabel}, render_resource::{CachedPipelineState, ComputePassDescriptor, PipelineCache}, renderer::RenderContext, view::ViewUniformOffset}};
 
-use crate::{prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassConfig};
+use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
 
-use super::{pipeline::GrassComputePipeline, prepare::{ComputedGrassEntities, GrassChunkComputeBindGroup, GrassChunkCullBindGroups, GrassShadowBindGroups, ShadowPrefixSumBindGroups}};
+use super::{pipeline::GrassComputePipeline, prepare::{GrassChunkCullBindGroups, GrassShadowBindGroups, ShadowPrefixSumBindGroups}};
 
 enum NodeState {
     Loading,

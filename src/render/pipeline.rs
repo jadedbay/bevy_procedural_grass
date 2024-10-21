@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{globals::GlobalsUniform, render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer, uniform_buffer_sized}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, ShaderType, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
+use bevy::{prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
 
 use crate::util::aabb::Aabb2dGpu;
 

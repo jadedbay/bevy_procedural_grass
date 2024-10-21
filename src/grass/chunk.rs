@@ -1,6 +1,6 @@
 
-use bevy::{ecs::query::QueryItem, math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{extract_component::ExtractComponent, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs, ShaderType}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
-use crate::{grass::{cull::GrassCullChunks, GrassGpuInfo}, prefix_sum::PrefixSumBuffers, render::instance::GrassInstanceData, util::aabb::Aabb2dGpu, GrassMaterial};
+use bevy::{ecs::query::QueryItem, math::bounding::Aabb2d, prelude::*, render::{extract_component::ExtractComponent, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs}, renderer::RenderDevice}};
+use crate::{grass::cull::GrassCullChunks, prefix_sum::PrefixSumBuffers, render::instance::GrassInstanceData, util::aabb::Aabb2dGpu};
 
 #[derive(Component, Clone)]
 pub struct GrassChunk {

@@ -43,6 +43,9 @@ struct GrassMaterial {
     oscillation_speed: f32,
     oscillation_flexibility: f32,
     oscillation_strength: f32,
+    wind_direction: vec2<f32>,
+    wind_speed: f32,
+    wind_strength: f32,
 }
 
 struct VertexOutput {

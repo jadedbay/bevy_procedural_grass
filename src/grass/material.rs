@@ -1,5 +1,5 @@
-use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline}, prelude::*, render::{globals::GlobalsUniform, mesh::MeshVertexBufferLayoutRef, render_asset::{RenderAssetUsages, RenderAssets}, render_resource::{AsBindGroup, AsBindGroupShaderType, BindGroupLayout, Extent3d, RenderPipelineDescriptor, ShaderRef, ShaderType, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, texture::GpuImage}};
-use noise::{NoiseFn, Perlin, Simplex};
+use bevy::{pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline}, prelude::*, render::{mesh::MeshVertexBufferLayoutRef, render_asset::{RenderAssetUsages, RenderAssets}, render_resource::{AsBindGroup, AsBindGroupShaderType, Extent3d, RenderPipelineDescriptor, ShaderRef, ShaderType, SpecializedMeshPipelineError, TextureDimension, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode}, texture::GpuImage}};
+use noise::{NoiseFn, Simplex};
 
 use crate::render::instance::GrassInstanceData;
 
@@ -31,6 +31,9 @@ pub struct GrassMaterialExtension {
     pub oscillation_speed: f32,
     pub oscillation_flexibility: f32,
     pub oscillation_strength: f32,
+    pub wind_direction: Vec2,
+    pub wind_speed: f32,
+    pub wind_strength: f32,
     #[texture(102)] pub wind_texture: Handle<Image>,
                                                     }
 impl MaterialExtension for GrassMaterialExtension {
@@ -95,6 +98,9 @@ pub struct GrassMaterialUniform {
     pub oscillation_speed: f32,
     pub oscillation_flexibility: f32,
     pub oscillation_strength: f32,
+    pub wind_direction: Vec2,
+    pub wind_speed: f32,
+    pub wind_strength: f32,
 }
 
 impl AsBindGroupShaderType<GrassMaterialUniform> for GrassMaterialExtension {
@@ -119,6 +125,9 @@ impl AsBindGroupShaderType<GrassMaterialUniform> for GrassMaterialExtension {
             oscillation_speed: self.oscillation_speed,
             oscillation_flexibility: self.oscillation_flexibility,
             oscillation_strength: self.oscillation_strength,
+            wind_direction: self.wind_direction,
+            wind_speed: self.wind_speed,
+            wind_strength: self.wind_strength,
         }
     }
 }

@@ -1,4 +1,6 @@
-use bevy::{color::palettes::css::{RED, WHITE}, pbr::{wireframe::{Wireframe, WireframePlugin}, DirectionalLightShadowMap}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, Face, ShaderRef, TextureDimension, TextureFormat}, renderer::RenderDevice}, window::PresentMode};
+use std::f64::consts::PI;
+
+use bevy::{color::palettes::css::{RED, WHITE}, math::NormedVectorSpace, pbr::{wireframe::WireframePlugin, DirectionalLightShadowMap}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::{grass::material::create_grass_texture, prelude::*};
 use bevy_flycam::prelude::*;
@@ -105,11 +107,14 @@ fn setup(
                             rim_softness: 0.08,
                             width_normal_strength: 0.3,
                             texture_strength: 0.65,
-                            texture: Some(images.add(create_grass_texture(4096, 4096, [12.0, 4.0]))),
+                            texture: Some(images.add(create_grass_texture(2048, 2048, [12.0, 4.0]))),
                             oscillation_speed: 5.0,
                             oscillation_flexibility: 1.0,
-                            oscillation_strength: 0.2,
-                            wind_texture: wind_handle.clone(),
+                            oscillation_strength: 0.1,
+                            wind_direction: Vec2::new(1.0, 1.0).normalize(),
+                            wind_speed: 1.0,
+                            wind_strength: 1.0,
+                            wind_texture: images.add(generate_wind_map(1024, 4.0)),
                         }
                     }
                 ),
@@ -248,4 +253,49 @@ impl Material for NormalMaterial {
     fn fragment_shader() -> ShaderRef {
         "normal.wgsl".into()
     }
+}
+
+pub fn generate_wind_map(size: usize, scale: f64) -> Image {
+    let perlin = noise::PerlinSurflet::new(0);
+
+    let mut data = Vec::with_capacity(size * size * 4);
+
+    let (x1, y1, x2, y2) = (-1.0, -1.0, 1.0, 1.0);
+    for y in 0..size {
+        for x in 0..size {
+            let s = x as f64 / size as f64;
+            let t = y as f64 / size as f64;
+            let dx = x2 - x1;
+            let dy = y2 - y1;
+
+            let nx = x1 + (s * 2.0 * PI).cos() * (dx / (2.0 * PI));
+            let ny = y1 + (t * 2.0 * PI).cos() * (dy / (2.0 * PI));
+            let nz = x1 + (s * 2.0 * PI).sin() * (dx / (2.0 * PI));
+            let nw = y1 + (t * 2.0 * PI).sin() * (dy / (2.0 * PI));
+
+            let noise = perlin.get([nx * scale, ny * scale, nz * scale, nw * scale]);
+            let noise_scaled = ((noise + 1.0) / 2.0 * 16777215.0) as u32;
+
+            let r = ((noise_scaled >> 16) & 255) as u8;
+            let g = ((noise_scaled >> 8) & 255) as u8;
+            let b = (noise_scaled & 255) as u8;
+
+            data.push(r); 
+            data.push(g); 
+            data.push(b); 
+            data.push(255);
+        }
+    }
+
+    Image::new(
+        Extent3d {
+            width: size as u32, 
+            height: size as u32, 
+            depth_or_array_layers: 1
+        },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::all(),
+    )
 }

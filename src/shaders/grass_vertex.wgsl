@@ -18,7 +18,7 @@
 #endif
 
 #import bevy_pbr::utils::rand_f
-#import bevy_render::maths::PI_2
+#import bevy_render::maths::{PI_2, PI}
 #import bevy_procedural_grass::{
     GrassMaterial,
     identity_matrix, rotate, quadratic_bezier, bezier_tangent, rotate_x,
@@ -61,30 +61,34 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let t = sample_wind_texture(vertex.i_chunk_uv, 0.0); 
 
+    var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
+
     let p0 = vec2<f32>(0.0);
     let angle = grass.tilt * PI_2 * 0.5;
     var p2 = vec2<f32>(cos(angle), sin(angle));
-    let midpoint = (p2 - p0) * grass.midpoint;
+    let midpoint = (p2 - p0) * mix(grass.midpoint - 0.3, grass.midpoint + 0.3, rand_f(&state));
     let blade_normal = normalize(vec2<f32>(-p2.y, p2.x));
-    var p1 = midpoint + blade_normal * grass.curve;
+    var p1 = midpoint + blade_normal * mix(grass.curve - 0.2, grass.curve + 0.2, rand_f(&state));
 
-    var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
     let r = rand_f(&state);
     let oscillation = (sin(globals.time * grass.oscillation_speed + (1.0 - vertex.uv.y) * grass.oscillation_flexibility + r * PI_2) * 0.5 + 0.5) * grass.oscillation_strength;
-    p1 -= blade_normal * oscillation;
-    p2 -= blade_normal * oscillation;
+    // p1 -= blade_normal * oscillation;
+    // p2 -= blade_normal * oscillation;
+
+    // let rad = wind.direction * PI / 180.0;
+    // let direction = vec2<f32>(cos(rad), sin(rad));
 
     var bezier = quadratic_bezier(vertex.uv.y, p0, p1, p2);
 
     #ifndef PREPASS_PIPELINE
         let tangent = normalize(bezier_tangent(vertex.uv.y, p0, p1, p2));
         var normal = normalize(vec3<f32>(0.0, tangent.x, -tangent.y));
-        // normal = rotate_x(normal, t + 0.3);
+        // normal = apply_wind(normal, t);
     #endif
 
     position.y = bezier.y;
     position.z = bezier.x;
-    // position = rotate_x(position, t + 0.3);  
+    // position = apply_wind(position, t);
 
 
     position = rotate(position, vertex.i_facing);
@@ -121,7 +125,14 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 fn sample_wind_texture(uv: vec2<f32>, offset: f32) -> f32 {
     let texture_size = textureDimensions(wind_texture);
 
+    // let rad = grass.wind_direction * PI / 180.0;
+    // let direction = vec2<f32>(cos(rad), sin(rad));
+
     let scrolled_uv = uv + globals.time * 0.2;
     let pixel_coords = vec2<i32>(fract(scrolled_uv + offset) * vec2<f32>(texture_size));
     return textureLoad(wind_texture, pixel_coords, 0).r;
+}
+
+fn apply_wind(in: vec3<f32>, t: f32) -> vec3<f32> {
+    return rotate_x(in, sin(-t) * 0.5);
 }
