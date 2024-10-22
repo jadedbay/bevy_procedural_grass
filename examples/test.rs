@@ -95,6 +95,7 @@ fn setup(
                         },
                         extension: GrassMaterialExtension {
                             tip_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
+                            length: 1.0,
                             width: 0.05,
                             curve: 0.3,
                             tilt: 0.25,

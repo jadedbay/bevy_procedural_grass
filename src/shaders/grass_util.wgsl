@@ -28,6 +28,7 @@ struct DrawIndexedIndirectArgs {
 
 struct GrassMaterial {
     tip_color: vec4<f32>,
+    length: f32,
     width: f32,
     curve: f32,
     tilt: f32,

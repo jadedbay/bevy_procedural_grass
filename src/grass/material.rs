@@ -10,6 +10,7 @@ pub type GrassMaterial = ExtendedMaterial<StandardMaterial, GrassMaterialExtensi
 #[reflect(Default)]
 pub struct GrassMaterialExtension {
     pub tip_color: Color,
+    pub length: f32,
     pub width: f32,
 
     pub curve: f32,
@@ -83,6 +84,7 @@ impl MaterialExtension for GrassMaterialExtension {
 #[derive(Clone, Default, ShaderType)]
 pub struct GrassMaterialUniform {
     pub tip_color: Vec4,
+    pub length: f32,
     pub width: f32,
     pub curve: f32,
     pub tilt: f32,
@@ -110,6 +112,7 @@ impl AsBindGroupShaderType<GrassMaterialUniform> for GrassMaterialExtension {
     ) -> GrassMaterialUniform {
         GrassMaterialUniform {
             tip_color: LinearRgba::from(self.tip_color).to_vec4(),
+            length: self.length,
             width: self.width,
             curve: self.curve,
             tilt: self.tilt,
