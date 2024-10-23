@@ -11,6 +11,10 @@ struct GrassInstance {
     position: vec4<f32>,
     chunk_uv: vec2<f32>,
     facing: vec2<f32>,
+    length: f32,
+    tilt: f32,
+    midpoint: f32,
+    curve: f32,
 }
 
 struct Aabb2d {

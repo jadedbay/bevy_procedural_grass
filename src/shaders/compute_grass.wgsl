@@ -1,6 +1,6 @@
 #import bevy_pbr::utils::rand_f
 #import bevy_render::maths::PI_2
-#import bevy_procedural_grass::{GrassInstance, Aabb2d};
+#import bevy_procedural_grass::{GrassInstance, Aabb2d, GrassMaterial};
 
 @group(0) @binding(0) var<storage, read_write> output: array<GrassInstance>;
 @group(0) @binding(1) var heightmap: texture_2d<f32>;
@@ -8,6 +8,11 @@
 @group(0) @binding(3) var<uniform> height_offset: f32;
 @group(0) @binding(4) var<uniform> chunk_aabb: Aabb2d;
 @group(0) @binding(5) var<uniform> aabb: Aabb2d;
+
+@group(1) @binding(100)
+var<uniform> grass: GrassMaterial;
+
+// #import bevy_procedural_grass::grass_material as grass
 
 @compute @workgroup_size(512)
 fn main(
@@ -39,6 +44,11 @@ fn main(
     let facing_angle: f32 = rand_f(&state) * PI_2;
     let facing = vec2<f32>(cos(facing_angle), sin(facing_angle));
     instance.facing = facing;
+
+    instance.length = mix(grass.length - 0.2, grass.length, rand_f(&state));
+    instance.tilt = mix(grass.tilt, grass.tilt + 0.2, rand_f(&state));
+    instance.midpoint = mix(grass.midpoint, grass.midpoint + 0.2, rand_f(&state));
+    instance.curve = mix(grass.curve, grass.curve + 0.2, rand_f(&state));
     
     output[global_id.x] = instance;
 }

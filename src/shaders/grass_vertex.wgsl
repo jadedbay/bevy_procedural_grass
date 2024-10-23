@@ -36,6 +36,10 @@
         @location(3) i_pos: vec4<f32>,
         @location(4) i_chunk_uv: vec2<f32>,
         @location(5) i_facing: vec2<f32>,
+        @location(6) i_length: f32,
+        @location(7) i_tilt: f32,
+        @location(8) i_midpoint: f32,
+        @location(9) i_curve: f32,
     }
 #else
     struct Vertex {
@@ -47,6 +51,10 @@
         @location(3) i_pos: vec4<f32>,
         @location(4) i_chunk_uv: vec2<f32>,
         @location(5) i_facing: vec2<f32>,
+        @location(6) i_length: f32,
+        @location(7) i_tilt: f32,
+        @location(8) i_midpoint: f32,
+        @location(9) i_curve: f32,
     };
 #endif
 
@@ -64,11 +72,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
 
     let p0 = vec2<f32>(0.0);
-    let angle = grass.tilt * PI_2 * 0.5;
-    var p2 = vec2<f32>(cos(angle), sin(angle)) * grass.length;
-    let midpoint = (p2 - p0) * mix(grass.midpoint - 0.3, grass.midpoint + 0.3, rand_f(&state));
+    let angle = vertex.i_tilt * PI_2 * 0.5;
+    var p2 = vec2<f32>(cos(angle), sin(angle)) * vertex.i_length;
+    let midpoint = (p2 - p0) * vertex.i_midpoint;
     let blade_normal = normalize(vec2<f32>(-p2.y, p2.x));
-    var p1 = midpoint + blade_normal * mix(grass.curve - 0.2, grass.curve + 0.2, rand_f(&state)) * grass.length;
+    var p1 = midpoint + blade_normal * vertex.i_curve * vertex.i_length;
 
     let r = rand_f(&state);
     let oscillation = (sin(globals.time * grass.oscillation_speed + (1.0 - vertex.uv.y) * grass.oscillation_flexibility + r * PI_2) * 0.5 + 0.5) * grass.oscillation_strength;

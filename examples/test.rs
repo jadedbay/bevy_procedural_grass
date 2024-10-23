@@ -98,7 +98,7 @@ fn setup(
                             length: 1.0,
                             width: 0.05,
                             curve: 0.3,
-                            tilt: 0.25,
+                            tilt: 0.15,
                             midpoint: 0.5,
                             roughness_variance: 0.15,
                             reflectance_variance: 0.1,

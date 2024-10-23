@@ -81,6 +81,7 @@ impl Plugin for ProceduralGrassPlugin {
 
     fn finish(&self, app: &mut App) {
         app.sub_app_mut(RenderApp)
+            .init_resource::<MaterialPipeline<GrassMaterial>>() // Init MaterialPipeline here, need material_layout in GrassComputePipeline
             .init_resource::<ComputedGrassEntities>()
             .init_resource::<PrefixSumPipeline>()
             .init_resource::<GrassComputePipeline>();
@@ -119,9 +120,9 @@ impl Plugin for GrassMaterialPlugin {
         }
     }
 
-    fn finish(&self, app: &mut App) {
-        if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
-            render_app.init_resource::<MaterialPipeline<GrassMaterial>>();
-        }
-    }
+    // fn finish(&self, app: &mut App) {
+    //     if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
+    //         render_app.init_resource::<MaterialPipeline<GrassMaterial>>();
+    //     }
+    // }
 }

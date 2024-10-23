@@ -1,6 +1,6 @@
-use bevy::{prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
-
-use crate::util::aabb::Aabb2dGpu;
+use bevy::{pbr::MaterialPipeline, prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
+use bevy::render::render_resource::AsBindGroup;
+use crate::{prelude::GrassMaterial, util::aabb::Aabb2dGpu};
 
 use super::instance::GrassInstanceData;
 
@@ -96,6 +96,9 @@ impl FromWorld for GrassComputePipeline {
         let compact_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/compact.wgsl");
         let reset_args_shader = world.resource::<AssetServer>().load("embedded://bevy_procedural_grass/shaders/reset_args.wgsl");
         
+        let material_pipeline = world.resource::<MaterialPipeline<GrassMaterial>>();
+        let material_layout = material_pipeline.material_layout.clone();
+
         let pipeline_cache = world.resource_mut::<PipelineCache>();
 
         let compact_pipeline_id = pipeline_cache.queue_compute_pipeline(
@@ -128,10 +131,12 @@ impl FromWorld for GrassComputePipeline {
                 entry_point: "main".into(),
             }
         );
+
+
         let compute_id = pipeline_cache
             .queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("grass_gen_compute_pipeline".into()),
-                layout: vec![chunk_layout.clone()],
+                layout: vec![chunk_layout.clone(), material_layout],
                 push_constant_ranges: Vec::new(),
                 shader,
                 shader_defs: vec![],
