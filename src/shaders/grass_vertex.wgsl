@@ -67,12 +67,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let width = grass.width * (1.0 - pow(vertex.uv.y, 2.0)) * (0.7 + (1.0 - 0.7) * vertex.uv.y); // TODO: change this
     position.x *= width;
 
-    let t = sample_wind_texture(vertex.i_chunk_uv, 0.0); 
+    let t = sample_wind_texture(vertex.i_chunk_uv, 0.0) * grass.wind_strength; 
 
     var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
 
     let p0 = vec2<f32>(0.0);
-    let angle = vertex.i_tilt * PI_2 * 0.5;
+    let angle = vertex.i_tilt;
     var p2 = vec2<f32>(cos(angle), sin(angle)) * vertex.i_length;
     let midpoint = (p2 - p0) * vertex.i_midpoint;
     let blade_normal = normalize(vec2<f32>(-p2.y, p2.x));
@@ -80,8 +80,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let r = rand_f(&state);
     let oscillation = (sin(globals.time * grass.oscillation_speed + (1.0 - vertex.uv.y) * grass.oscillation_flexibility + r * PI_2) * 0.5 + 0.5) * grass.oscillation_strength;
-    // p1 -= blade_normal * oscillation;
-    // p2 -= blade_normal * oscillation;
+    p1 -= blade_normal * oscillation;
+    p2 -= blade_normal * oscillation;
 
     // let rad = wind.direction * PI / 180.0;
     // let direction = vec2<f32>(cos(rad), sin(rad));
@@ -122,7 +122,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         
         out.world_normal = normal;
         out.facing = vertex.i_facing;
-        out.t = vec4<f32>(t);
     #endif
 
     out.uv = vertex.uv;
@@ -133,14 +132,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 fn sample_wind_texture(uv: vec2<f32>, offset: f32) -> f32 {
     let texture_size = textureDimensions(wind_texture);
 
-    // let rad = grass.wind_direction * PI / 180.0;
-    // let direction = vec2<f32>(cos(rad), sin(rad));
-
-    let scrolled_uv = uv + globals.time * 0.2;
+    let scrolled_uv = uv + grass.wind_direction * globals.time * 0.2;
     let pixel_coords = vec2<i32>(fract(scrolled_uv + offset) * vec2<f32>(texture_size));
     return textureLoad(wind_texture, pixel_coords, 0).r;
 }
 
 fn apply_wind(in: vec3<f32>, t: f32) -> vec3<f32> {
-    return rotate_x(in, sin(-t) * 0.5);
+    return rotate_x(in, sin(-t));
 }

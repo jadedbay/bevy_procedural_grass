@@ -1,6 +1,6 @@
 use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::{graph::NodePbr, MaterialPipeline, PreparedMaterial, PrepassPipelinePlugin, Shadow}, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, extract_resource::ExtractResourcePlugin, render_asset::{prepare_assets, RenderAssetPlugin}, render_graph::RenderGraphApp, render_phase::{AddRenderCommand, DrawFunctions}, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::GrassChunk, config::{init_config_buffers, toggle_shadows, update_config_buffers, GrassConfig, GrassConfigGpu}, cull::cull_chunks, grass_setup, material::GrassMaterial, Grass};
+use grass::{chunk::GrassChunk, clump::{clump_startup, prepare_clump, GrassClumpConfig, GrassClumps}, config::{init_config_buffers, toggle_shadows, update_config_buffers, GrassConfig, GrassConfigGpu}, cull::cull_chunks, grass_setup, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
 use render::{compute::compute_grass, draw::DrawGrassPrepass, node::{ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
 
@@ -36,15 +36,19 @@ impl Plugin for ProceduralGrassPlugin {
         app
             .register_type::<Grass>()
             .register_type::<GrassConfig>()
+            .register_type::<GrassClumpConfig>()
             .insert_resource(self.config.clone())
+            .insert_resource(GrassClumpConfig::default())
             .add_plugins((
                 GrassMaterialPlugin,
                 ExtractComponentPlugin::<Grass>::default(),
                 ExtractComponentPlugin::<GrassChunk>::default(),
                 ExtractResourcePlugin::<GrassConfig>::default(),
                 ExtractResourcePlugin::<GrassConfigGpu>::default(),
+                ExtractResourcePlugin::<GrassClumps>::default(),
+                ExtractResourcePlugin::<GrassClumpConfig>::default(),
             ))
-            .add_systems(Startup, init_config_buffers)
+            .add_systems(Startup, (init_config_buffers, clump_startup))
             .add_systems(Update, (
                 grass_setup,
                 update_config_buffers, 
@@ -59,6 +63,7 @@ impl Plugin for ProceduralGrassPlugin {
                 (
                     update_computed_grass.after(RenderSet::ExtractCommands).before(RenderSet::PrepareResources),
                     prepare_grass.in_set(RenderSet::PrepareBindGroups),
+                    prepare_clump.in_set(RenderSet::PrepareBindGroups),
                     compute_grass.after(RenderSet::PrepareBindGroups).before(RenderSet::Render), // dont know if .after is required?
                 )   
             );

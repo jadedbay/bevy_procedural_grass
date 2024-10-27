@@ -24,7 +24,7 @@ pub struct GrassBundle {
 
 #[derive(Reflect, Component, Clone)]
 pub struct Grass {
-    pub chunk_count: UVec2, // TODO: calculate this maybe?
+    pub chunk_count: UVec2,
     pub density: f32,
     pub height_map: Option<GrassHeightMap>,
     pub y_offset: f32,

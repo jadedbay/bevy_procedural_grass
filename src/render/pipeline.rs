@@ -1,4 +1,4 @@
-use bevy::{pbr::MaterialPipeline, prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
+use bevy::{pbr::MaterialPipeline, prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer, uniform_buffer_sized}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
 use bevy::render::render_resource::AsBindGroup;
 use crate::{prelude::GrassMaterial, util::aabb::Aabb2dGpu};
 
@@ -7,6 +7,7 @@ use super::instance::GrassInstanceData;
 #[derive(Resource)]
 pub(crate) struct GrassComputePipeline {
     pub chunk_layout: BindGroupLayout,
+    pub clump_layout: BindGroupLayout,
     pub cull_layout: BindGroupLayout,
     pub shadow_cull_layout: BindGroupLayout,
     pub compact_layout: BindGroupLayout,
@@ -38,7 +39,19 @@ impl FromWorld for GrassComputePipeline {
                 )
             )
         );
-        
+
+        let clump_layout = render_device.create_bind_group_layout(
+            "clump_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    uniform_buffer::<Aabb2dGpu>(false),
+                    uniform_buffer::<Vec2>(false),
+                    storage_buffer_read_only_sized(false, None),
+                    storage_buffer_read_only_sized(false, None),
+                )
+            )
+        );
 
         // TODO: load/unload cull pipelines based of config
         let shadow_cull_layout = render_device.create_bind_group_layout(
@@ -132,11 +145,10 @@ impl FromWorld for GrassComputePipeline {
             }
         );
 
-
         let compute_id = pipeline_cache
             .queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("grass_gen_compute_pipeline".into()),
-                layout: vec![chunk_layout.clone(), material_layout],
+                layout: vec![chunk_layout.clone(), clump_layout.clone(), material_layout],
                 push_constant_ranges: Vec::new(),
                 shader,
                 shader_defs: vec![],
@@ -155,6 +167,7 @@ impl FromWorld for GrassComputePipeline {
         
         Self {
             chunk_layout,
+            clump_layout,
             cull_layout,
             shadow_cull_layout,
             compact_layout,

@@ -62,7 +62,7 @@ fn setup(
             mesh: meshes.add(plane),
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             material: materials.add(StandardMaterial {
-                base_color: Srgba::rgb(0.5, 0.2, 0.05).into(),
+                base_color: Srgba::rgb(0.15, 0.06, 0.0).into(),
                 reflectance: 0.0,
                 double_sided: true,
                 ..default()
@@ -80,25 +80,25 @@ fn setup(
                         map: images.add(noise_image),
                         scale: 0.0,
                     }),
-                    y_offset: 0.0001,
+                    y_offset: 0.0,
                 },
                 mesh: meshes.add(GrassMesh::mesh(7)),
                 material: grass_materials.add(
                     GrassMaterial {
                         base: StandardMaterial { 
-                            base_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
+                            base_color: Srgba::rgb(0.05, 0.04, 0.0).into(),
                             perceptual_roughness: 0.65,
                             reflectance: 0.1,
-                            diffuse_transmission: 0.4,
+                            diffuse_transmission: 0.5,
                             double_sided: true,
                             ..default()
                         },
                         extension: GrassMaterialExtension {
-                            tip_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
+                            tip_color: Srgba::rgb(0.15, 0.17, 0.01).into(),
                             length: 1.0,
                             width: 0.05,
-                            curve: 0.3,
-                            tilt: 0.15,
+                            curve: 0.1,
+                            tilt: 0.9,
                             midpoint: 0.5,
                             roughness_variance: 0.15,
                             reflectance_variance: 0.1,
@@ -110,9 +110,9 @@ fn setup(
                             texture_strength: 0.65,
                             texture: Some(images.add(create_grass_texture(2048, 2048, [12.0, 4.0]))),
                             oscillation_speed: 5.0,
-                            oscillation_flexibility: 1.0,
+                            oscillation_flexibility: 2.0,
                             oscillation_strength: 0.1,
-                            wind_direction: Vec2::new(1.0, 1.0).normalize(),
+                            wind_direction: Vec2::new(-1.0, -1.0).normalize(),
                             wind_speed: 1.0,
                             wind_strength: 1.0,
                             wind_texture: images.add(generate_wind_map(1024, 4.0)),

@@ -59,7 +59,13 @@ struct VertexOutput {
     @location(1) world_normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
     @location(3) facing: vec2<f32>,
-    @location(4) t: vec4<f32>,
+}
+
+struct GrassClump {
+    color: vec4<f32>,
+    facing: vec2<f32>,
+    length: f32,
+    tilt: f32,
 }
 
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(
