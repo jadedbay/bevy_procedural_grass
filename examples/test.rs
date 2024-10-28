@@ -62,7 +62,7 @@ fn setup(
             mesh: meshes.add(plane),
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             material: materials.add(StandardMaterial {
-                base_color: Srgba::rgb(0.15, 0.06, 0.0).into(),
+                base_color: Srgba::rgb(0.05, 0.04, 0.0).into(),
                 reflectance: 0.0,
                 double_sided: true,
                 ..default()
@@ -75,7 +75,7 @@ fn setup(
             GrassBundle {
                 grass: Grass {
                     chunk_count: UVec2::splat(1),
-                    density: 25.0,
+                    density: 40.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
                         scale: 0.0,
@@ -86,15 +86,15 @@ fn setup(
                 material: grass_materials.add(
                     GrassMaterial {
                         base: StandardMaterial { 
-                            base_color: Srgba::rgb(0.05, 0.04, 0.0).into(),
+                            base_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
                             perceptual_roughness: 0.65,
                             reflectance: 0.1,
-                            diffuse_transmission: 0.5,
+                            diffuse_transmission: 0.4,
                             double_sided: true,
                             ..default()
                         },
                         extension: GrassMaterialExtension {
-                            tip_color: Srgba::rgb(0.15, 0.17, 0.01).into(),
+                            tip_color: Srgba::rgb(0.117, 0.20, 0.0).into(),
                             length: 1.0,
                             width: 0.05,
                             curve: 0.1,
@@ -102,7 +102,7 @@ fn setup(
                             midpoint: 0.5,
                             roughness_variance: 0.15,
                             reflectance_variance: 0.1,
-                            min_ao: 0.5,
+                            min_ao: 0.2,
                             midrib_softness: 0.03,
                             rim_position: 0.5,
                             rim_softness: 0.08,

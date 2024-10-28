@@ -18,7 +18,7 @@ impl Default for GrassClumpConfig {
                 min: Vec2::new(-50.0, -50.0),
                 max: Vec2::new(50.0, 50.0),
             },
-            count: UVec2::new(50, 50), 
+            count: UVec2::new(40, 40), 
         }
     }
 }
@@ -40,14 +40,23 @@ impl GrassClumpConfig {
                 let y_range = self.aabb.min.y + y as f32 * cell_size.y..self.aabb.min.y + (y + 1) as f32 * cell_size.y;
                 random_points.push(Vec2::new(rng.gen_range(x_range), rng.gen_range(y_range)));
                 
-                let random_angle = rng.gen_range(0.0..std::f32::consts::TAU);
-                let random_direction = Vec2::new(random_angle.cos(), random_angle.sin());
+
+                let facing = match rng.gen_range(1..=3) {
+                    0 => GrassClumpDirection::In, // In doesn't look natural
+                    1 => GrassClumpDirection::Out,
+                    2 => GrassClumpDirection::Random,
+                    _ => {
+                        let random_angle = rng.gen_range(0.0..std::f32::consts::TAU);
+                        let random_direction = Vec2::new(random_angle.cos(), random_angle.sin());
+                        GrassClumpDirection::Facing(random_direction)
+                    }
+                }.to_vec2();
 
                 clumps.push(
                     GrassClump {
                         color: LinearRgba::rgb(1.0, 1.0, 1.0).to_vec4(),
-                        facing: GrassClumpDirection::Facing(random_direction).to_vec2(),
-                        length: 1.0,
+                        facing,
+                        length: rng.gen_range(0.6..1.2),
                         tilt: 0.8,
                     }
                 )
