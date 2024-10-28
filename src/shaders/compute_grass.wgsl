@@ -116,11 +116,11 @@ fn main(
     let length = clump_params[clump_index].length * grass.length;
     instance.length = mix(length - 0.2, length + 0.2, rand_f(&param_state));
     param_state = u32(instance.position.y * 9000);
-    instance.tilt = mix(grass.tilt, grass.tilt + 0.2, rand_f(&state));
+    instance.tilt = mix(grass.tilt - 0.2, grass.tilt + 0.2, rand_f(&state));
     param_state = u32(instance.facing.x * 100);
-    instance.midpoint = mix(grass.midpoint, grass.midpoint + 0.2, rand_f(&state));
+    instance.midpoint = mix(grass.midpoint - 0.2, grass.midpoint + 0.2, rand_f(&state));
     param_state = u32(instance.position.z * 200);
-    instance.curve = mix(grass.curve, grass.curve + 0.2, rand_f(&state));
+    instance.curve = mix(grass.curve - 0.2, grass.curve + 0.2, rand_f(&state));
     
     output[global_id.x] = instance;
 }

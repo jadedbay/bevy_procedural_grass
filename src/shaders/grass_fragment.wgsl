@@ -63,5 +63,5 @@ fn fragment(
     color = main_pass_post_lighting_processing(pbr_input, color);
 
     return color;
-    // return vec4<f32>(vec3<f32>(in.d), 1.0);
+    // return vec4<f32>(vec3<f32>(in.vd), 1.0);
 }

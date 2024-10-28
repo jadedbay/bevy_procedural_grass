@@ -59,6 +59,7 @@ struct VertexOutput {
     @location(1) world_normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
     @location(3) facing: vec2<f32>,
+    @location(4) vd: f32,
 }
 
 struct GrassClump {

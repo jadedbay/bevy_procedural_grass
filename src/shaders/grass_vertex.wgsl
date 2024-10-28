@@ -2,7 +2,8 @@
     #import bevy_pbr::{
         prepass_io::VertexOutput,
         mesh_functions::{get_world_from_local, mesh_position_local_to_world},
-        view_transformations::position_world_to_clip,
+        view_transformations::position_world_to_clip, 
+        mesh_view_bindings::view,
     }
     #import bevy_render::globals::Globals,
 #else
@@ -67,6 +68,20 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let width = grass.width * (1.0 - pow(vertex.uv.y, 2.0)) * (0.7 + (1.0 - 0.7) * vertex.uv.y); // TODO: change this
     position.x *= width;
 
+    var x_vector: vec2<f32>;
+    if (position.x > 0.0) { x_vector = vec2<f32>(-1.0, 0.0); } else { x_vector = vec2<f32>(1.0, 0.0); };
+
+    let world_view_dir = -normalize(view.view_from_world[2].xyz);
+    // Rotate around Y first, then around X to match the blade's orientation
+    let local_view_dir = vec3<f32>(
+        world_view_dir.x * vertex.i_facing.x + world_view_dir.z * vertex.i_facing.y,
+        world_view_dir.y,
+        -world_view_dir.x * vertex.i_facing.y + world_view_dir.z * vertex.i_facing.x
+    );
+    let raw_vd = dot(x_vector, local_view_dir.xz);
+    let vd = raw_vd * smoothstep(0.5, 1.0, abs(raw_vd));
+    // let vd = dot(x_vector, local_view_dir.xz);
+
     let t = sample_wind_texture(vertex.i_chunk_uv, 0.0) * grass.wind_strength; 
 
     var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
@@ -88,16 +103,15 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     var bezier = quadratic_bezier(vertex.uv.y, p0, p1, p2);
 
+    position.y = bezier.y;
+    position.z = bezier.x;
     #ifndef PREPASS_PIPELINE
         let tangent = normalize(bezier_tangent(vertex.uv.y, p0, p1, p2));
         var normal = normalize(vec3<f32>(0.0, tangent.x, -tangent.y));
         // normal = apply_wind(normal, t);
+        // position += normal * vd * width * 0.2; 
     #endif
-
-    position.y = bezier.y;
-    position.z = bezier.x;
     // position = apply_wind(position, t);
-
 
     position = rotate(position, vertex.i_facing);
     position += ipos;
@@ -122,6 +136,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         
         out.world_normal = normal;
         out.facing = vertex.i_facing;
+        out.vd = vd;
     #endif
 
     out.uv = vertex.uv;

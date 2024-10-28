@@ -1,4 +1,4 @@
-use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{AsBindGroup, BindGroup, BindGroupEntries, Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}};
+use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{AsBindGroup, BindGroup, BindGroupEntries, Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}, utils::HashMap};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{render::pipeline::GrassComputePipeline, util::aabb::Aabb2dGpu};
@@ -18,7 +18,7 @@ impl Default for GrassClumpConfig {
                 min: Vec2::new(-50.0, -50.0),
                 max: Vec2::new(50.0, 50.0),
             },
-            count: UVec2::new(40, 40), 
+            count: UVec2::new(40, 40),
         }
     }
 }
@@ -42,7 +42,7 @@ impl GrassClumpConfig {
                 
 
                 let facing = match rng.gen_range(1..=3) {
-                    0 => GrassClumpDirection::In, // In doesn't look natural
+                    0 => GrassClumpDirection::In,
                     1 => GrassClumpDirection::Out,
                     2 => GrassClumpDirection::Random,
                     _ => {
@@ -55,8 +55,9 @@ impl GrassClumpConfig {
                 clumps.push(
                     GrassClump {
                         color: LinearRgba::rgb(1.0, 1.0, 1.0).to_vec4(),
+                        // facing: GrassClumpDirection::Random.to_vec2(),
                         facing,
-                        length: rng.gen_range(0.6..1.2),
+                        length: rng.gen_range(0.8..1.2),
                         tilt: 0.8,
                     }
                 )
@@ -70,6 +71,11 @@ impl GrassClumpConfig {
         }
     }
 }
+
+pub struct ClumpColors {
+    colors: HashMap<Color, f32>,
+}
+
 
 pub enum GrassClumpDirection {
     In,
@@ -87,6 +93,8 @@ impl GrassClumpDirection {
         }
     }
 }
+
+
 
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 #[repr(C)]

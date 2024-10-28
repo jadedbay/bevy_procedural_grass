@@ -86,7 +86,7 @@ fn setup(
                 material: grass_materials.add(
                     GrassMaterial {
                         base: StandardMaterial { 
-                            base_color: Srgba::rgb(0.15, 0.24, 0.03).into(),
+                            base_color: Srgba::rgb(0.117, 0.20, 0.0).into(),
                             perceptual_roughness: 0.65,
                             reflectance: 0.1,
                             diffuse_transmission: 0.4,
@@ -94,7 +94,7 @@ fn setup(
                             ..default()
                         },
                         extension: GrassMaterialExtension {
-                            tip_color: Srgba::rgb(0.117, 0.20, 0.0).into(),
+                            tip_color: Srgba::rgb(0.15, 0.17, 0.01).into(),
                             length: 1.0,
                             width: 0.05,
                             curve: 0.1,
