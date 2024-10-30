@@ -83,6 +83,7 @@ fn setup(
                     y_offset: 0.0,
                 },
                 mesh: meshes.add(GrassMesh::mesh(7)),
+                lod_mesh: GrassLODMesh(meshes.add(GrassMesh::mesh(3))),
                 material: grass_materials.add(
                     GrassMaterial {
                         base: StandardMaterial { 
@@ -97,8 +98,8 @@ fn setup(
                             tip_color: Srgba::rgb(0.15, 0.17, 0.01).into(),
                             length: 1.0,
                             width: 0.05,
-                            curve: 0.1,
-                            tilt: 0.9,
+                            curve: 0.3,
+                            tilt: 0.7,
                             midpoint: 0.5,
                             roughness_variance: 0.15,
                             reflectance_variance: 0.1,

@@ -2,7 +2,7 @@ use bevy::{math::{bounding::Aabb2d, Affine3A}, prelude::*, render::{batching::No
 
 use crate::prelude::GrassMaterial;
 
-use super::{chunk::{GrassChunk, GrassChunkBuffers}, config::GrassConfig, Grass, GrassGpuInfo};
+use super::{chunk::{GrassChunk, GrassChunkBuffers}, config::GrassConfig, lod::GrassLODMesh, Grass, GrassGpuInfo};
 
 #[derive(Component)]
 pub(crate) struct GrassCullChunks(pub HashMap<UVec2, Entity>);
@@ -10,11 +10,11 @@ pub(crate) struct GrassCullChunks(pub HashMap<UVec2, Entity>);
 pub(crate) fn cull_chunks(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
-    mut q_grass: Query<(Entity, &Grass, &GrassGpuInfo, &mut GrassCullChunks, &Handle<Mesh>, &Handle<GrassMaterial>, &Visibility)> ,
+    mut q_grass: Query<(Entity, &Grass, &GrassGpuInfo, &mut GrassCullChunks, &Handle<Mesh>, &GrassLODMesh, &Handle<GrassMaterial>, &Visibility)> ,
     camera_query: Query<(&Transform, &Frustum)>,
     grass_config: Res<GrassConfig>,
 ) {
-    for (entity, grass, gpu_info, mut cull_chunks, mesh, material, visibility) in &mut q_grass {
+    for (entity, grass, gpu_info, mut cull_chunks, mesh, lod_mesh, material, visibility) in &mut q_grass {
         let chunk_min = gpu_info.aabb.min;
         let chunk_max = chunk_min + gpu_info.chunk_size;
         
@@ -56,6 +56,7 @@ pub(crate) fn cull_chunks(
                                     grass_config.grass_shadows.enabled(),
                                 ),
                                 mesh.clone(),
+                                lod_mesh.clone(),
                                 material.clone(),
                                 SpatialBundle {
                                     visibility: *visibility,

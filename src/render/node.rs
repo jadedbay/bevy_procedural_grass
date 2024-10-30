@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderL
 
 use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
 
-use super::{pipeline::GrassComputePipeline, prepare::{GrassChunkCullBindGroups, GrassShadowBindGroups, ShadowPrefixSumBindGroups}};
+use super::{pipeline::GrassComputePipeline, prepare::{GrassChunkCullBindGroups, GrassChunkCullBindGroupsLOD, GrassShadowBindGroups, PrefixSumBindGroupsLOD, ShadowPrefixSumBindGroups}};
 
 enum NodeState {
     Loading,
@@ -14,7 +14,8 @@ pub(crate) struct CullGrassNodeLabel;
 
 pub struct CullGrassNode {
     state: NodeState,
-    query: QueryState<(&'static GrassChunkCullBindGroups, &'static PrefixSumBindGroups)>, 
+    query: QueryState<(&'static GrassChunkCullBindGroups, &'static PrefixSumBindGroups)>,
+    lod_query: QueryState<(&'static GrassChunkCullBindGroupsLOD, &'static PrefixSumBindGroupsLOD)>,
     shadow_query: QueryState<(&'static GrassShadowBindGroups, &'static ShadowPrefixSumBindGroups)>,
     view_offset_query: QueryState<&'static ViewUniformOffset>,
 }
@@ -24,6 +25,7 @@ impl FromWorld for CullGrassNode {
         Self {
             state: NodeState::Loading,
             query: QueryState::new(world),
+            lod_query: QueryState::new(world),
             shadow_query: QueryState::new(world),
             view_offset_query: QueryState::new(world),
         }
@@ -33,6 +35,7 @@ impl FromWorld for CullGrassNode {
 impl render_graph::Node for CullGrassNode {
     fn update(&mut self, world: &mut World) {
         self.query.update_archetypes(world);
+        self.lod_query.update_archetypes(world);
         self.shadow_query.update_archetypes(world);
         self.view_offset_query.update_archetypes(world);
 
@@ -113,9 +116,8 @@ impl render_graph::Node for CullGrassNode {
                         pass.dispatch_workgroups(grass_bind_groups.cull_workgroup_count, 1, 1);
                     }
                 }
-
+                // HIGH
                 prefix_sum_pass(render_context, self.query.iter_manual(world).collect(), prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
-                
                 {
                     let mut pass = render_context
                         .command_encoder()
@@ -128,7 +130,26 @@ impl render_graph::Node for CullGrassNode {
                         pass.dispatch_workgroups(grass_bind_groups.compact_workgroup_count as u32, 1, 1); 
                     }
                 }
-
+                // LOW
+                let lod_bind_groups: Vec<_> = self.lod_query.iter_manual(world)
+                    .map(|(lod_bind_groups, lod_prefix_sum_bind_groups)| 
+                        (&lod_bind_groups.0, &lod_prefix_sum_bind_groups.0)
+                    )
+                    .collect();
+                prefix_sum_pass(render_context, lod_bind_groups, prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
+                {
+                    let mut pass = render_context
+                        .command_encoder()
+                        .begin_compute_pass(&ComputePassDescriptor::default());
+                
+                    pass.set_pipeline(compact_pipeline);
+                    
+                    for (grass_bind_groups, _) in self.lod_query.iter_manual(world) {
+                        pass.set_bind_group(0, &grass_bind_groups.0.compact_bind_group, &[]);
+                        pass.dispatch_workgroups(grass_bind_groups.0.compact_workgroup_count as u32, 1, 1); 
+                    }
+                }
+                // SHADOW
                 let shadow_bind_groups: Vec<_> = self.shadow_query.iter_manual(world)
                     .map(|(shadow_bind_groups, shadow_prefix_sum_bind_groups)| 
                         (&shadow_bind_groups.0, &shadow_prefix_sum_bind_groups.0)
@@ -159,6 +180,7 @@ pub(crate) struct ResetArgsNodeLabel;
 pub struct ResetArgsNode {
     state: NodeState,
     query: QueryState<&'static GrassChunkCullBindGroups>,
+    lod_query: QueryState<&'static GrassChunkCullBindGroupsLOD>,
     shadow_query: QueryState<&'static GrassShadowBindGroups>,
 }
 
@@ -167,6 +189,7 @@ impl FromWorld for ResetArgsNode {
         Self {
             state: NodeState::Loading,
             query: QueryState::new(world),
+            lod_query: QueryState::new(world),
             shadow_query: QueryState::new(world),
         }
     }
@@ -175,6 +198,7 @@ impl FromWorld for ResetArgsNode {
 impl render_graph::Node for ResetArgsNode {
     fn update(&mut self, world: &mut World) {
         self.query.update_archetypes(world);
+        self.lod_query.update_archetypes(world);
         self.shadow_query.update_archetypes(world);
         
         match self.state {
@@ -219,6 +243,10 @@ impl render_graph::Node for ResetArgsNode {
                 pass.set_pipeline(reset_args_pipeline);
                 for grass_bind_groups in self.query.iter_manual(world) {
                     pass.set_bind_group(0, &grass_bind_groups.reset_args_bind_group, &[]);
+                    pass.dispatch_workgroups(1, 1, 1);
+                }
+                for grass_bind_groups in self.lod_query.iter_manual(world) {
+                    pass.set_bind_group(0, &grass_bind_groups.0.reset_args_bind_group, &[]);
                     pass.dispatch_workgroups(1, 1, 1);
                 }
                 for grass_bind_groups in self.shadow_query.iter_manual(world) {

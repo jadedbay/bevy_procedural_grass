@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::{RenderDevice, RenderQueue}}};
+use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_resource::{Buffer, BufferInitDescriptor, BufferUsages, ShaderType}, renderer::{RenderDevice, RenderQueue}}};
 
 use super::{chunk::unload_chunks, cull::GrassCullChunks};
 
@@ -6,6 +6,7 @@ use super::{chunk::unload_chunks, cull::GrassCullChunks};
 #[reflect(Resource)]
 pub struct GrassConfig {
     pub cull_distance: f32,
+    pub lod_distance: f32,
     pub grass_shadows: GrassCastShadows,
     pub shadow_distance: f32,
 }
@@ -14,6 +15,7 @@ impl Default for GrassConfig {
     fn default() -> Self {
         Self {
             cull_distance: 250.0,
+            lod_distance: 50.0,
             grass_shadows: GrassCastShadows::default(),
             shadow_distance: 20.0,
         }
@@ -82,10 +84,23 @@ pub enum GrassLightType {
     Spot,
 }
 
-#[derive(Resource, Clone, ExtractResource)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, ShaderType)]
+#[repr(C)]
 pub struct GrassConfigGpu {
-    pub shadow_distance_buffer: Buffer,
+    pub shadow_distance: f32,
+    pub lod_distance: f32,
 }
+impl From<GrassConfig> for GrassConfigGpu {
+    fn from(value: GrassConfig) -> Self {
+        Self {
+            shadow_distance: value.shadow_distance,
+            lod_distance: value.lod_distance,
+        }
+    }
+}
+
+#[derive(Resource, Clone, ExtractResource)]
+pub struct GrassConfigBuffer(pub Buffer);
 
 pub(crate) fn init_config_buffers(
     mut commands: Commands,
@@ -93,15 +108,15 @@ pub(crate) fn init_config_buffers(
     config: Res<GrassConfig>,
 ) {
     commands.insert_resource(
-        GrassConfigGpu {
-            shadow_distance_buffer: render_device.create_buffer_with_data(
+        GrassConfigBuffer(
+            render_device.create_buffer_with_data(
                 &BufferInitDescriptor {
                     label: Some("shadow_distance_buffer"),
-                    contents: bytemuck::cast_slice(&[config.shadow_distance]),
+                    contents: bytemuck::cast_slice(&[GrassConfigGpu::from(config.clone())]),
                     usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
                 }
             )
-        }
+        )
     );
 }
 
@@ -124,14 +139,15 @@ pub(crate) fn toggle_shadows(
 pub(crate) fn update_config_buffers(
     render_queue: Res<RenderQueue>,
     config: Res<GrassConfig>,
-    config_buffers: Res<GrassConfigGpu>,
+    config_buffers: Res<GrassConfigBuffer>,
     mut shadow_distance: Local<f32>,
+    mut lod_distance: Local<f32>,
 ) {
-    if config.shadow_distance != *shadow_distance {
+    if config.shadow_distance != *shadow_distance || config.lod_distance != *lod_distance {
         render_queue.0.write_buffer(
-            &config_buffers.shadow_distance_buffer, 
+            &config_buffers.0, 
             0, 
-            bytemuck::cast_slice(&[config.shadow_distance]),
+            bytemuck::cast_slice(&[GrassConfigGpu::from(config.clone())]),
         );
         *shadow_distance = config.shadow_distance;
     }

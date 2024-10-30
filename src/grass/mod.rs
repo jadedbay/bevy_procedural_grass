@@ -6,9 +6,11 @@ pub mod mesh;
 pub mod clump;
 pub mod config;
 pub mod material;
+pub mod lod;
 
 use chunk::unload_chunks;
 use cull::GrassCullChunks;
+use lod::GrassLODMesh;
 
 use crate::{prefix_sum::calculate_workgroup_counts, util::aabb::Aabb2dGpu, GrassMaterial};
 
@@ -16,6 +18,7 @@ use crate::{prefix_sum::calculate_workgroup_counts, util::aabb::Aabb2dGpu, Grass
 pub struct GrassBundle {
     pub grass: Grass,
     pub mesh: Handle<Mesh>,
+    pub lod_mesh: GrassLODMesh,
     pub material: Handle<GrassMaterial>,
     #[bundle()]
     pub spatial_bundle: SpatialBundle,

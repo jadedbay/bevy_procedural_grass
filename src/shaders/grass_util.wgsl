@@ -59,7 +59,6 @@ struct VertexOutput {
     @location(1) world_normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
     @location(3) facing: vec2<f32>,
-    @location(4) vd: f32,
 }
 
 struct GrassClump {
@@ -67,6 +66,11 @@ struct GrassClump {
     facing: vec2<f32>,
     length: f32,
     tilt: f32,
+}
+
+struct GrassConfig {
+    shadow_distance: f32,
+    lod_distance: f32,
 }
 
 const identity_matrix: mat4x4<f32> = mat4x4<f32>(

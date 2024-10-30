@@ -55,9 +55,8 @@ impl GrassClumpConfig {
                 clumps.push(
                     GrassClump {
                         color: LinearRgba::rgb(1.0, 1.0, 1.0).to_vec4(),
-                        // facing: GrassClumpDirection::Random.to_vec2(),
                         facing,
-                        length: rng.gen_range(0.8..1.2),
+                        length: rng.gen_range(0.7..1.2),
                         tilt: 0.8,
                     }
                 )

@@ -71,18 +71,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var x_vector: vec2<f32>;
     if (position.x > 0.0) { x_vector = vec2<f32>(-1.0, 0.0); } else { x_vector = vec2<f32>(1.0, 0.0); };
 
-    let world_view_dir = -normalize(view.view_from_world[2].xyz);
-    // Rotate around Y first, then around X to match the blade's orientation
-    let local_view_dir = vec3<f32>(
-        world_view_dir.x * vertex.i_facing.x + world_view_dir.z * vertex.i_facing.y,
-        world_view_dir.y,
-        -world_view_dir.x * vertex.i_facing.y + world_view_dir.z * vertex.i_facing.x
-    );
-    let raw_vd = dot(x_vector, local_view_dir.xz);
-    let vd = raw_vd * smoothstep(0.5, 1.0, abs(raw_vd));
-    // let vd = dot(x_vector, local_view_dir.xz);
-
-    let t = sample_wind_texture(vertex.i_chunk_uv, 0.0) * grass.wind_strength; 
+    let t = sample_wind_texture(vertex.i_chunk_uv) * grass.wind_strength; 
 
     var state = bitcast<u32>(vertex.i_pos.x * 100.0 + vertex.i_pos.y * 20.0 + vertex.i_pos.z * 2.0);
 
@@ -109,11 +98,27 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         let tangent = normalize(bezier_tangent(vertex.uv.y, p0, p1, p2));
         var normal = normalize(vec3<f32>(0.0, tangent.x, -tangent.y));
         // normal = apply_wind(normal, t);
-        // position += normal * vd * width * 0.2; 
+
+        // view dependent thickening: sorta works
+        let world_view_dir = -normalize(view.view_from_world[2].xyz);
+        let local_view_dir = vec3<f32>(
+            dot(world_view_dir.xz, vertex.i_facing),
+            world_view_dir.y,
+            dot(world_view_dir.xz, vec2(-vertex.i_facing.y, vertex.i_facing.x))
+        );
+        let raw_vd = dot(x_vector, local_view_dir.xz);
+        let vd = raw_vd * smoothstep(0.5, 1.0, abs(raw_vd));
+        position += normal * vd * width * 0.2;
     #endif
-    // position = apply_wind(position, t);
 
     position = rotate(position, vertex.i_facing);
+
+    // position = rotate(position, mix(vertex.i_facing, grass.wind_direction, grass.wind_strength));
+
+    // position = apply_wind(position, t, vertex.uv.y);
+    // #ifndef PREPASS_PIPELINE
+    //     normal = apply_wind(normal, t, vertex.uv.y);
+    // #endif
     position += ipos;
     
     var out: VertexOutput;
@@ -136,7 +141,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         
         out.world_normal = normal;
         out.facing = vertex.i_facing;
-        out.vd = vd;
     #endif
 
     out.uv = vertex.uv;
@@ -144,14 +148,30 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     return out;
 }
 
-fn sample_wind_texture(uv: vec2<f32>, offset: f32) -> f32 {
+fn sample_wind_texture(uv: vec2<f32>) -> f32 {
     let texture_size = textureDimensions(wind_texture);
 
     let scrolled_uv = uv + grass.wind_direction * globals.time * 0.2;
-    let pixel_coords = vec2<i32>(fract(scrolled_uv + offset) * vec2<f32>(texture_size));
+    let pixel_coords = vec2<i32>(fract(scrolled_uv) * vec2<f32>(texture_size));
     return textureLoad(wind_texture, pixel_coords, 0).r;
 }
 
-fn apply_wind(in: vec3<f32>, t: f32) -> vec3<f32> {
-    return rotate_x(in, sin(-t));
+fn apply_wind(in: vec3<f32>, t: f32, y: f32) -> vec3<f32> {
+    return rotate_around_direction(in, grass.wind_direction, sin(-t) * (y + 0.5));
+}
+
+fn rotate_around_direction(v: vec3<f32>, direction: vec2<f32>, angle: f32) -> vec3<f32> {
+    // Create a perpendicular direction by rotating -90 degrees (y, -x)
+    let perp_direction = vec2<f32>(direction.y, -direction.x);
+    
+    // Use the perpendicular direction as the rotation axis
+    let dir_normalized = normalize(vec3<f32>(perp_direction.x, 0.0, perp_direction.y));
+    
+    // Rodrigues rotation formula
+    let cos_angle = cos(angle);
+    let sin_angle = sin(angle);
+    
+    return v * cos_angle + 
+           cross(dir_normalized, v) * sin_angle + 
+           dir_normalized * dot(dir_normalized, v) * (1.0 - cos_angle);
 }

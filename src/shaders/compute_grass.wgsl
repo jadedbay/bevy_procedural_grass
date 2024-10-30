@@ -90,6 +90,12 @@ fn main(
             instance.position.x - clump_position.x,
             -(instance.position.z - clump_position.y)
         );
+        
+        let max_influence_distance = 1.0;
+        let lerp_factor = max(0.0, 1.0 - closest_distance / max_influence_distance);
+        instance.position.x = mix(instance.position.x, clump_position.x, lerp_factor);
+        instance.position.z = mix(instance.position.z, clump_position.y, lerp_factor);        
+
         let random_angle = (rand_f(&state) - 0.5) * 2.0;
         let rotation_matrix = mat2x2<f32>(
             cos(random_angle), -sin(random_angle),

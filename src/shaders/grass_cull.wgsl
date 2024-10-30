@@ -1,12 +1,13 @@
 #import bevy_render::view::View
-#import bevy_procedural_grass::GrassInstance;
+#import bevy_procedural_grass::{GrassInstance, GrassConfig};
 
 @group(0) @binding(0) var<storage, read> instances: array<GrassInstance>;
 @group(0) @binding(1) var<storage, read_write> vote: array<u32>;
 @group(0) @binding(2) var<uniform> view: View;
-@group(0) @binding(3) var<uniform> cull_distance: f32;
+@group(0) @binding(3) var<uniform> config: GrassConfig;
+@group(0) @binding(4) var<storage, read_write> lod_vote: array<u32>;
 #ifdef SHADOW
-@group(0) @binding(4) var<storage, read_write> shadow_vote: array<u32>;
+    @group(0) @binding(5) var<storage, read_write> shadow_vote: array<u32>;
 #endif
 
 
@@ -16,11 +17,18 @@ fn main(
 ) {
     let instance = instances[global_id.x];
     let in_frustum = point_in_frustum(instance.position.xyz);
-    vote[global_id.x] = u32(in_frustum);
+    // vote[global_id.x] = u32(in_frustum);
 
-    #ifdef SHADOW
     let distance = length(instance.position.xyz - view.world_position);
-    shadow_vote[global_id.x] = u32(in_frustum && distance < cull_distance);
+    if (distance < config.lod_distance) {
+        vote[global_id.x] = u32(in_frustum);
+        lod_vote[global_id.x] = 0u;
+    } else {
+        vote[global_id.x] = 0u;
+        lod_vote[global_id.x] = u32(in_frustum);
+    }
+    #ifdef SHADOW
+        shadow_vote[global_id.x] = u32(in_frustum && distance < config.shadow_distance);
     #endif
 }
 

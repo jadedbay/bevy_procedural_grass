@@ -1,6 +1,6 @@
 use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::{graph::NodePbr, MaterialPipeline, PreparedMaterial, PrepassPipelinePlugin, Shadow}, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, extract_resource::ExtractResourcePlugin, render_asset::{prepare_assets, RenderAssetPlugin}, render_graph::RenderGraphApp, render_phase::{AddRenderCommand, DrawFunctions}, render_resource::SpecializedMeshPipelines, Render, RenderApp, RenderSet}};
 
-use grass::{chunk::GrassChunk, clump::{clump_startup, prepare_clump, GrassClumpConfig, GrassClumps}, config::{init_config_buffers, toggle_shadows, update_config_buffers, GrassConfig, GrassConfigGpu}, cull::cull_chunks, grass_setup, material::GrassMaterial, Grass};
+use grass::{chunk::GrassChunk, clump::{clump_startup, prepare_clump, GrassClumpConfig, GrassClumps}, config::{init_config_buffers, toggle_shadows, update_config_buffers, GrassConfig, GrassConfigBuffer, GrassConfigGpu}, cull::cull_chunks, grass_setup, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
 use render::{compute::compute_grass, draw::DrawGrassPrepass, node::{ResetArgsNode, ResetArgsNodeLabel}, pipeline::GrassComputePipeline, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
 
@@ -13,7 +13,7 @@ pub mod util;
 
 pub mod prelude {
     pub use crate::ProceduralGrassPlugin;
-    pub use crate::grass::{Grass, GrassBundle, GrassHeightMap, mesh::GrassMesh, config::GrassConfig, material::GrassMaterial, material::GrassMaterialExtension};
+    pub use crate::grass::{Grass, GrassBundle, GrassHeightMap, lod::GrassLODMesh, mesh::GrassMesh, config::GrassConfig, material::GrassMaterial, material::GrassMaterialExtension};
 }
 
 #[derive(Default)]
@@ -44,7 +44,7 @@ impl Plugin for ProceduralGrassPlugin {
                 ExtractComponentPlugin::<Grass>::default(),
                 ExtractComponentPlugin::<GrassChunk>::default(),
                 ExtractResourcePlugin::<GrassConfig>::default(),
-                ExtractResourcePlugin::<GrassConfigGpu>::default(),
+                ExtractResourcePlugin::<GrassConfigBuffer>::default(),
                 ExtractResourcePlugin::<GrassClumps>::default(),
                 ExtractResourcePlugin::<GrassClumpConfig>::default(),
             ))

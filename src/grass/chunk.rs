@@ -2,6 +2,8 @@
 use bevy::{ecs::query::QueryItem, math::bounding::Aabb2d, prelude::*, render::{extract_component::ExtractComponent, render_resource::{Buffer, BufferDescriptor, BufferInitDescriptor, BufferUsages, DrawIndexedIndirectArgs}, renderer::RenderDevice}};
 use crate::{grass::cull::GrassCullChunks, prefix_sum::PrefixSumBuffers, render::instance::GrassInstanceData, util::aabb::Aabb2dGpu};
 
+use super::lod::GrassLODMesh;
+
 #[derive(Component, Clone)]
 pub struct GrassChunk {
     pub grass_entity: Entity,
@@ -16,6 +18,7 @@ pub struct GrassChunkBuffers {
     pub aabb_buffer: Buffer,
     pub instance_buffer: Buffer,
     pub cull_buffers: GrassChunkCullBuffers,
+    pub cull_buffers_lod: GrassChunkCullBuffers,
     pub(crate) shadow_buffers: Option<GrassChunkCullBuffers>,
 }
 
@@ -75,6 +78,7 @@ impl GrassChunkBuffers {
         grass_shadows: bool,
     ) -> Self {
         let cull_buffers = GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count);
+        let cull_buffers_lod = GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count);
         let shadow_buffers = if grass_shadows {
             Some(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count))
         } else {
@@ -94,18 +98,19 @@ impl GrassChunkBuffers {
                 mapped_at_creation: false, 
             }),
             cull_buffers,
+            cull_buffers_lod,
             shadow_buffers,
         }
     }
 }
 
 impl ExtractComponent for GrassChunk {
-    type QueryData = (&'static GrassChunk, &'static GrassChunkBuffers);
+    type QueryData = (&'static GrassChunk, &'static GrassChunkBuffers, &'static GrassLODMesh);
     type QueryFilter = ();
-    type Out = (GrassChunk, GrassChunkBuffers);
+    type Out = (GrassChunk, GrassChunkBuffers, GrassLODMesh);
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self::Out> {
-        Some((item.0.clone(), item.1.clone()))
+        Some((item.0.clone(), item.1.clone(), item.2.clone()))
     }
 }
 
