@@ -5,9 +5,15 @@
 @group(0) @binding(1) var<storage, read_write> vote: array<u32>;
 @group(0) @binding(2) var<uniform> view: View;
 @group(0) @binding(3) var<uniform> config: GrassConfig;
-@group(0) @binding(4) var<storage, read_write> lod_vote: array<u32>;
-#ifdef SHADOW
-    @group(0) @binding(5) var<storage, read_write> shadow_vote: array<u32>;
+#ifdef LOD
+    @group(0) @binding(4) var<storage, read_write> lod_vote: array<u32>;
+    #ifdef SHADOW
+        @group(0) @binding(5) var<storage, read_write> shadow_vote: array<u32>;
+    #endif
+#else
+    #ifdef SHADOW
+        @group(0) @binding(4) var<storage, read_write> shadow_vote: array<u32>;
+    #endif
 #endif
 
 
@@ -17,16 +23,18 @@ fn main(
 ) {
     let instance = instances[global_id.x];
     let in_frustum = point_in_frustum(instance.position.xyz);
-    // vote[global_id.x] = u32(in_frustum);
-
     let distance = length(instance.position.xyz - view.world_position);
-    if (distance < config.lod_distance) {
+    #ifndef LOD
         vote[global_id.x] = u32(in_frustum);
-        lod_vote[global_id.x] = 0u;
-    } else {
-        vote[global_id.x] = 0u;
-        lod_vote[global_id.x] = u32(in_frustum);
-    }
+    #else
+        if (distance < config.lod_distance) {
+            vote[global_id.x] = u32(in_frustum);
+            lod_vote[global_id.x] = 0u;
+        } else {
+            vote[global_id.x] = 0u;
+            lod_vote[global_id.x] = u32(in_frustum);
+        }
+    #endif
     #ifdef SHADOW
         shadow_vote[global_id.x] = u32(in_frustum && distance < config.shadow_distance);
     #endif

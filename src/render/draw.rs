@@ -48,12 +48,10 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
         let Some(gpu_mesh) = meshes_inner.get(mesh_instance.mesh_asset_id) else {
             return RenderCommandResult::Failure;
         };
-        let Some(lod_mesh) = meshes_inner.get(lod_mesh.0.id()) else {
-            return RenderCommandResult::Failure;
-        };
 
+        
         pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
-
+        
         match &gpu_mesh.buffer_info {
             GpuBufferInfo::Indexed {
                 buffer,
@@ -66,7 +64,13 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             }
             GpuBufferInfo::NonIndexed => unreachable!()
         }
-
+        
+        let Some(ref lod_mesh_handle) = lod_mesh.0 else {
+            return RenderCommandResult::Success;
+        };
+        let Some(lod_mesh) = meshes_inner.get(lod_mesh_handle.id()) else {
+            return RenderCommandResult::Success;
+        };
         pass.set_vertex_buffer(0, lod_mesh.vertex_buffer.slice(..));
         match &lod_mesh.buffer_info {
             GpuBufferInfo::Indexed {

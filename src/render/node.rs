@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderL
 
 use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
 
-use super::{pipeline::GrassComputePipeline, prepare::{GrassChunkCullBindGroups, GrassChunkCullBindGroupsLOD, GrassShadowBindGroups, PrefixSumBindGroupsLOD, ShadowPrefixSumBindGroups}};
+use super::{pipeline::{GrassComputePipeline, GrassCullPipelineId}, prepare::{GrassChunkCullBindGroups, GrassChunkCullBindGroupsLOD, GrassShadowBindGroups, PrefixSumBindGroupsLOD, ShadowPrefixSumBindGroups}};
 
 enum NodeState {
     Loading,
@@ -14,7 +14,7 @@ pub(crate) struct CullGrassNodeLabel;
 
 pub struct CullGrassNode {
     state: NodeState,
-    query: QueryState<(&'static GrassChunkCullBindGroups, &'static PrefixSumBindGroups)>,
+    query: QueryState<(&'static GrassChunkCullBindGroups, &'static PrefixSumBindGroups, &'static GrassCullPipelineId)>,
     lod_query: QueryState<(&'static GrassChunkCullBindGroupsLOD, &'static PrefixSumBindGroupsLOD)>,
     shadow_query: QueryState<(&'static GrassShadowBindGroups, &'static ShadowPrefixSumBindGroups)>,
     view_offset_query: QueryState<&'static ViewUniformOffset>,
@@ -48,7 +48,7 @@ impl render_graph::Node for CullGrassNode {
                 let pipeline_states = [
                     pipeline_cache.get_compute_pipeline_state(compute_pipeline.compute_id),
                     pipeline_cache.get_compute_pipeline_state(compute_pipeline.compact_pipeline_id),
-                    pipeline_cache.get_compute_pipeline_state(compute_pipeline.cull_pipeline_id),
+                    // pipeline_cache.get_compute_pipeline_state(compute_pipeline.cull_pipeline_id),
                     pipeline_cache.get_compute_pipeline_state(prefix_sum_pipeline.scan_pipeline),
                     pipeline_cache.get_compute_pipeline_state(prefix_sum_pipeline.scan_blocks_pipeline),
                     pipeline_cache.get_compute_pipeline_state(compute_pipeline.reset_args_pipeline_id),
@@ -84,13 +84,13 @@ impl render_graph::Node for CullGrassNode {
                 let prefix_sum_pipeline = world.resource::<PrefixSumPipeline>();
                 let pipeline_cache = world.resource::<PipelineCache>();
  
-                let Some(shadow_cull_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.shadows_cull_pipeline_id) else {
-                    return Ok(());
-                };
+                // let Some(shadow_cull_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.shadows_cull_pipeline_id) else {
+                //     return Ok(());
+                // };
 
-                let Some(cull_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.cull_pipeline_id) else {
-                    return Ok(());
-                };
+                // let Some(cull_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.cull_pipeline_id) else {
+                //     return Ok(());
+                // };
                 let Some(prefix_sum_scan_pipeline) = pipeline_cache.get_compute_pipeline(prefix_sum_pipeline.scan_pipeline) else {
                     return Ok(());
                 };
@@ -106,18 +106,23 @@ impl render_graph::Node for CullGrassNode {
                         .command_encoder()
                         .begin_compute_pass(&ComputePassDescriptor::default());
                     
-                    for (grass_bind_groups, _) in self.query.iter_manual(world) {
-                        if grass_bind_groups.shadows {
-                            pass.set_pipeline(shadow_cull_pipeline);
-                        } else {
-                            pass.set_pipeline(cull_pipeline);
-                        }
+                    for (grass_bind_groups, _, pipeline_id) in self.query.iter_manual(world) {
+                        let Some(cull_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.0) else {
+                            return Ok(());
+                        };
+
+                        pass.set_pipeline(cull_pipeline);
                         pass.set_bind_group(0, &grass_bind_groups.cull_bind_group, &[view_offset.offset]);
                         pass.dispatch_workgroups(grass_bind_groups.cull_workgroup_count, 1, 1);
                     }
                 }
+                let bind_groups: Vec<_> = self.query.iter_manual(world)
+                    .map(|(bind_groups, prefix_sum_bind_groups, _)| 
+                        (bind_groups, prefix_sum_bind_groups)
+                    )
+                    .collect();
                 // HIGH
-                prefix_sum_pass(render_context, self.query.iter_manual(world).collect(), prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
+                prefix_sum_pass(render_context, bind_groups, prefix_sum_scan_pipeline, prefix_sum_scan_blocks_pipeline);
                 {
                     let mut pass = render_context
                         .command_encoder()
@@ -125,7 +130,7 @@ impl render_graph::Node for CullGrassNode {
                 
                     pass.set_pipeline(compact_pipeline);
                     
-                    for (grass_bind_groups, _) in self.query.iter_manual(world) {
+                    for (grass_bind_groups, _, _) in self.query.iter_manual(world) {
                         pass.set_bind_group(0, &grass_bind_groups.compact_bind_group, &[]);
                         pass.dispatch_workgroups(grass_bind_groups.compact_workgroup_count as u32, 1, 1); 
                     }

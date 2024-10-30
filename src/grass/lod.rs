@@ -7,4 +7,4 @@ pub enum GrassLOD {
 } 
 
 #[derive(Component, Default, Clone)]
-pub struct GrassLODMesh(pub Handle<Mesh>);
+pub struct GrassLODMesh(pub Option<Handle<Mesh>>);

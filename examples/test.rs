@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use bevy::{color::palettes::css::{RED, WHITE}, math::NormedVectorSpace, pbr::{wireframe::WireframePlugin, DirectionalLightShadowMap}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_procedural_grass::{grass::material::create_grass_texture, prelude::*};
+use bevy_procedural_grass::{grass::{config::{GrassCastShadows, GrassLightTypes}, material::create_grass_texture}, prelude::*};
 use bevy_flycam::prelude::*;
 use bevy_compute_noise::prelude::*;
 
@@ -83,7 +83,8 @@ fn setup(
                     y_offset: 0.0,
                 },
                 mesh: meshes.add(GrassMesh::mesh(7)),
-                lod_mesh: GrassLODMesh(meshes.add(GrassMesh::mesh(3))),
+                // lod_mesh: GrassLODMesh(Some(meshes.add(GrassMesh::mesh(3)))),
+                lod_mesh: GrassLODMesh(None),
                 material: grass_materials.add(
                     GrassMaterial {
                         base: StandardMaterial { 
