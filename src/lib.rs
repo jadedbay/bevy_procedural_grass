@@ -2,7 +2,7 @@ use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3
 
 use grass::{chunk::GrassChunk, clump::{clump_startup, prepare_clump, GrassClumpConfig, GrassClumps}, config::{init_config_buffers, toggle_shadows, update_config_buffers, GrassConfig, GrassConfigBuffer, GrassConfigGpu}, cull::cull_chunks, grass_setup, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
-use render::{compute::compute_grass, draw::DrawGrassPrepass, node::{ResetArgsNode, ResetArgsNodeLabel}, pipeline::{prepare_cull_pipeline, GrassComputePipeline, GrassCullPipeline}, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
+use render::{compute::compute_grass, draw::{DrawGrassLOD, DrawGrassPrepass}, node::{ResetArgsNode, ResetArgsNodeLabel}, pipeline::{prepare_cull_pipeline, GrassComputePipeline, GrassCullPipeline}, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
 
 use crate::render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, prepare::prepare_grass, queue::queue_grass};
 
@@ -115,6 +115,7 @@ impl Plugin for GrassMaterialPlugin {
                 .init_resource::<DrawFunctions<Shadow>>()
                 .add_render_command::<Shadow, DrawGrassPrepass>()
                 .add_render_command::<Opaque3d, DrawGrass>()
+                .add_render_command::<Opaque3d, DrawGrassLOD>()
                 .init_resource::<SpecializedMeshPipelines<MaterialPipeline<GrassMaterial>>>()
                 .add_systems(
                     Render,

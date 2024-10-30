@@ -83,8 +83,8 @@ fn setup(
                     y_offset: 0.0,
                 },
                 mesh: meshes.add(GrassMesh::mesh(7)),
-                // lod_mesh: GrassLODMesh(Some(meshes.add(GrassMesh::mesh(3)))),
-                lod_mesh: GrassLODMesh(None),
+                lod_mesh: GrassLODMesh(Some(meshes.add(GrassMesh::mesh(3)))),
+                // lod_mesh: GrassLODMesh(None),
                 material: grass_materials.add(
                     GrassMaterial {
                         base: StandardMaterial { 

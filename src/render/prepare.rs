@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, PipelineCache, SpecializedComputePipelines}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}};
+use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, DynamicBindGroupEntries, PipelineCache, SpecializedComputePipelines}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}};
 use super::pipeline::{GrassComputePipeline, GrassCullPipeline, GrassCullPipelineId};
 use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigBuffer, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassLODMesh};
 
@@ -21,108 +21,89 @@ pub struct GrassChunkComputeBindGroup {
 }
 
 #[derive(Component, Clone)]
-pub struct GrassChunkCullBindGroupsLOD(pub(crate) GrassChunkCullBindGroups);
+pub struct CompactBindGroupsLOD(pub(crate) CompactBindGroups);
 #[derive(Component, Clone)]
 pub struct PrefixSumBindGroupsLOD(pub(crate) PrefixSumBindGroups);
 
 #[derive(Component, Clone)]
-pub struct GrassChunkCullBindGroups {
-    pub indirect_args_buffer: Buffer,
-    pub cull_bind_group: BindGroup, // TODO: move this out shadow and lod both run in same cull shader
-    pub shadows: bool,
-
+pub struct GrassChunkCullBindGroup {
     pub cull_workgroup_count: u32,
-    pub compact_workgroup_count: u32,
+    pub cull_bind_group: BindGroup,
+}
+impl GrassChunkCullBindGroup {
+    fn create_bind_group(
+        render_device: &RenderDevice,
+        gpu_info: &GrassGpuInfo,
+        buffers: &GrassChunkBuffers,
+        view_uniforms: &ViewUniforms,
+        config_buffers: &GrassConfigBuffer,
+        cull_pipeline: &GrassCullPipeline,
+    ) -> Self {
+        let mut entries = DynamicBindGroupEntries::sequential((
+            buffers.instance_buffer.as_entire_binding(),
+            buffers.compact_buffers.vote_buffer.as_entire_binding(),
+            view_uniforms.uniforms.binding().unwrap().clone(),
+            config_buffers.0.as_entire_binding(),
+        ));
 
+        let (layout, name) = if let Some(lod_buffers) = &buffers.lod_compact_buffers {
+            entries = entries.extend_sequential((lod_buffers.vote_buffer.as_entire_binding(),));
+            
+            if let Some(shadow_buffers) = &buffers.shadow_compact_buffers {
+                entries = entries.extend_sequential((shadow_buffers.vote_buffer.as_entire_binding(),));
+                (&cull_pipeline.cull_layout_shadow_lod, "cull_bind_group_with_shadows_lod")
+            } else {
+                (&cull_pipeline.cull_layout_or, "cull_bind_group_lod")
+            }
+        } else if let Some(shadow_buffers) = &buffers.shadow_compact_buffers {
+            entries = entries.extend_sequential((shadow_buffers.vote_buffer.as_entire_binding(),));
+            (&cull_pipeline.cull_layout_or, "cull_bind_group_with_shadows")
+        } else {
+            (&cull_pipeline.cull_layout, "cull_bind_group")
+        };
+
+        let cull_bind_group = render_device.create_bind_group(
+            Some(name),
+            layout,
+            &entries,
+        );
+
+        Self {
+            cull_workgroup_count: (gpu_info.instance_count as f32 / 256.).ceil() as u32,
+            cull_bind_group,
+        }
+    }
+}
+
+#[derive(Component, Clone)]
+pub struct CompactBindGroups {
+    pub indirect_args_buffer: Buffer,
+
+    pub compact_workgroup_count: u32,
     pub compact_buffer: Buffer,
     pub compact_bind_group: BindGroup,
 
     pub reset_args_bind_group: BindGroup,
 }
-impl GrassChunkCullBindGroups {
+impl CompactBindGroups {
     fn create_bind_groups(
         render_device: &RenderDevice,
         buffers: &GrassChunkBuffers,
-        cull_buffers: &GrassChunkCullBuffers,
+        compact_buffers: &GrassChunkCullBuffers,
         gpu_info: &GrassGpuInfo,
-        lod: bool,
-        cull_pipeline: &GrassCullPipeline,
         pipeline: &GrassComputePipeline,
-        view_uniforms: &ViewUniforms,
-        config_buffers: &GrassConfigBuffer,
     ) -> Self {
-        // TODO: Move this bind group creation out to seperate from compact
-        let mut shadows = true;
-
-        // TODO: change this
-        let cull_bind_group;
-        if lod {
-            cull_bind_group = if let Some(shadow_buffers) = &buffers.shadow_buffers {
-                render_device.create_bind_group(
-                    Some("cull_bind_group_with_shadows"),
-                    &cull_pipeline.cull_layout_shadow_lod,
-                    &BindGroupEntries::sequential((
-                        buffers.instance_buffer.as_entire_binding(),
-                        cull_buffers.vote_buffer.as_entire_binding(),
-                        view_uniforms.uniforms.binding().unwrap().clone(),
-                        config_buffers.0.as_entire_binding(),
-                        buffers.cull_buffers_lod.vote_buffer.as_entire_binding(),
-                        shadow_buffers.vote_buffer.as_entire_binding(),
-                    )),
-                )
-            } else {
-                shadows = false;
-                render_device.create_bind_group(
-                    Some("cull_bind_group_without_shadows"),
-                    &cull_pipeline.cull_layout_or,
-                    &BindGroupEntries::sequential((
-                        buffers.instance_buffer.as_entire_binding(),
-                        cull_buffers.vote_buffer.as_entire_binding(),
-                        view_uniforms.uniforms.binding().unwrap().clone(),
-                        config_buffers.0.as_entire_binding(),
-                        buffers.cull_buffers_lod.vote_buffer.as_entire_binding(),
-                    )),
-                )
-            };
-        } else {
-            cull_bind_group = if let Some(shadow_buffers) = &buffers.shadow_buffers {
-                render_device.create_bind_group(
-                    Some("cull_bind_group_with_shadows"),
-                    &cull_pipeline.cull_layout_or,
-                    &BindGroupEntries::sequential((
-                        buffers.instance_buffer.as_entire_binding(),
-                        cull_buffers.vote_buffer.as_entire_binding(),
-                        view_uniforms.uniforms.binding().unwrap().clone(),
-                        config_buffers.0.as_entire_binding(),
-                        shadow_buffers.vote_buffer.as_entire_binding(),
-                    )),
-                )
-            } else {
-                shadows = false;
-                render_device.create_bind_group(
-                    Some("cull_bind_group_without_shadows"),
-                    &cull_pipeline.cull_layout,
-                    &BindGroupEntries::sequential((
-                        buffers.instance_buffer.as_entire_binding(),
-                        cull_buffers.vote_buffer.as_entire_binding(),
-                        view_uniforms.uniforms.binding().unwrap().clone(),
-                        config_buffers.0.as_entire_binding(),
-                    )),
-                )
-            };
-        }
-
-        let indirect_indexed_args_buffer = &cull_buffers.indirect_args_buffer; 
+        let indirect_indexed_args_buffer = &compact_buffers.indirect_args_buffer; 
 
         let compact_bind_group = render_device.create_bind_group(
             Some("scan_bind_group"),
             &pipeline.compact_layout,
             &BindGroupEntries::sequential((
                 buffers.instance_buffer.as_entire_binding(),
-                cull_buffers.vote_buffer.as_entire_binding(),
-                cull_buffers.prefix_sum_buffers.scan_buffer.as_entire_binding(),
-                cull_buffers.prefix_sum_buffers.scan_blocks_out_buffer.as_entire_binding(),
-                cull_buffers.compact_buffer.as_entire_binding(),
+                compact_buffers.vote_buffer.as_entire_binding(),
+                compact_buffers.prefix_sum_buffers.scan_buffer.as_entire_binding(),
+                compact_buffers.prefix_sum_buffers.scan_blocks_out_buffer.as_entire_binding(),
+                compact_buffers.compact_buffer.as_entire_binding(),
                 indirect_indexed_args_buffer.as_entire_binding(),
             )),
         );
@@ -135,11 +116,8 @@ impl GrassChunkCullBindGroups {
 
         Self {
             indirect_args_buffer: indirect_indexed_args_buffer.clone(),
-            cull_bind_group,
-            shadows,
-            cull_workgroup_count: (gpu_info.instance_count as f32 / 256.).ceil() as u32,
             compact_workgroup_count: gpu_info.scan_workgroup_count,
-            compact_buffer: cull_buffers.compact_buffer.clone(),
+            compact_buffer: compact_buffers.compact_buffer.clone(),
             compact_bind_group,
             reset_args_bind_group,
         }
@@ -147,7 +125,7 @@ impl GrassChunkCullBindGroups {
 }
 
 #[derive(Component, Clone)]
-pub struct GrassShadowBindGroups(pub GrassChunkCullBindGroups);
+pub struct GrassShadowBindGroups(pub CompactBindGroups);
 
 #[derive(Component, Clone)]
 pub struct ShadowPrefixSumBindGroups(pub PrefixSumBindGroups);
@@ -157,7 +135,7 @@ pub fn prepare_grass(
     pipeline: Res<GrassComputePipeline>,
     cull_pipeline: Res<GrassCullPipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,
-    chunk_query: Query<(Entity, &GrassChunk, &GrassChunkBuffers, &GrassLODMesh)>,
+    chunk_query: Query<(Entity, &GrassChunk, &GrassChunkBuffers)>,
     grass_query: Query<(&Grass, &GrassGpuInfo)>,
     computed_grass: Res<ComputedGrassEntities>,
     images: Res<RenderAssets<GpuImage>>,
@@ -168,7 +146,7 @@ pub fn prepare_grass(
     let Some(_) = view_uniforms.uniforms.binding() else { return; };
     let chunk_layout = pipeline.chunk_layout.clone();
 
-    for (entity, chunk, buffers, lod_mesh) in chunk_query.iter() {
+    for (entity, chunk, buffers) in chunk_query.iter() {
         let (grass, gpu_info) = grass_query.get(chunk.grass_entity).unwrap();
 
         if !computed_grass.0.contains(&entity) {
@@ -191,69 +169,71 @@ pub fn prepare_grass(
         }
 
         commands.entity(entity).insert(
-            GrassChunkCullBindGroups::create_bind_groups(
+            GrassChunkCullBindGroup::create_bind_group(
+                &render_device,
+                gpu_info,
+                buffers,
+                &view_uniforms,
+                &grass_config_buffers,
+                &cull_pipeline,
+            )
+        );
+
+        commands.entity(entity).insert(
+            CompactBindGroups::create_bind_groups(
                 &render_device,
                 buffers,
-                &buffers.cull_buffers,
+                &buffers.compact_buffers,
                 gpu_info,
-                lod_mesh.0.is_some(),
-                &cull_pipeline,
                 &pipeline,
-                &view_uniforms,
-                &grass_config_buffers
             )
         );
         commands.entity(entity).insert(
             PrefixSumBindGroups::create_bind_groups(
                 &render_device,
                 &prefix_sum_pipeline,
-                &buffers.cull_buffers.vote_buffer,
-                &buffers.cull_buffers.prefix_sum_buffers,
+                &buffers.compact_buffers.vote_buffer,
+                &buffers.compact_buffers.prefix_sum_buffers,
                 gpu_info.scan_workgroup_count,
                 gpu_info.scan_groups_workgroup_count,
             )
         );
-        commands.entity(entity).insert(
-            GrassChunkCullBindGroupsLOD(GrassChunkCullBindGroups::create_bind_groups(
-                &render_device,
-                buffers,
-                &buffers.cull_buffers_lod,
-                gpu_info,
-                lod_mesh.0.is_some(),
-                &cull_pipeline,
-                &pipeline,
-                &view_uniforms,
-                &grass_config_buffers
-            )
-        ));
-        commands.entity(entity).insert(
-            PrefixSumBindGroupsLOD(PrefixSumBindGroups::create_bind_groups(
-                &render_device,
-                &prefix_sum_pipeline,
-                &buffers.cull_buffers_lod.vote_buffer,
-                &buffers.cull_buffers_lod.prefix_sum_buffers,
-                gpu_info.scan_workgroup_count,
-                gpu_info.scan_groups_workgroup_count,
-            )
-        ));
 
-        if let Some(shadow_buffers) = &buffers.shadow_buffers {
-            commands.entity(entity).insert(
+        if let Some(lod_buffers) = &buffers.lod_compact_buffers {
+            commands.entity(entity).insert((
+                CompactBindGroupsLOD(
+                    CompactBindGroups::create_bind_groups(
+                        &render_device,
+                        buffers,
+                        &lod_buffers,
+                        gpu_info,
+                        &pipeline,
+                    )
+                ),
+                PrefixSumBindGroupsLOD(
+                    PrefixSumBindGroups::create_bind_groups(
+                        &render_device,
+                        &prefix_sum_pipeline,
+                        &lod_buffers.vote_buffer,
+                        &lod_buffers.prefix_sum_buffers,
+                        gpu_info.scan_workgroup_count,
+                        gpu_info.scan_groups_workgroup_count,
+                    )
+                )
+            ));
+        }
+
+        if let Some(shadow_buffers) = &buffers.shadow_compact_buffers {
+            commands.entity(entity).insert((
                 GrassShadowBindGroups(
-                    GrassChunkCullBindGroups::create_bind_groups(
+                    CompactBindGroups::create_bind_groups(
                         &render_device,
                         buffers,
                         &shadow_buffers,
                         gpu_info,
-                        lod_mesh.0.is_some(),
-                        &cull_pipeline,
                         &pipeline,
-                        &view_uniforms,
-                        &grass_config_buffers,
                     )
-                )
-            );
-            commands.entity(entity).insert(
+                ),
                 ShadowPrefixSumBindGroups(
                     PrefixSumBindGroups::create_bind_groups(
                         &render_device,
@@ -264,7 +244,7 @@ pub fn prepare_grass(
                         gpu_info.scan_groups_workgroup_count,
                     )
                 )
-            );
+            ));
         }
     }
 }

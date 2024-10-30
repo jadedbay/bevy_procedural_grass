@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderL
 
 use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
 
-use super::{pipeline::{GrassComputePipeline, GrassCullPipelineId}, prepare::{GrassChunkCullBindGroups, GrassChunkCullBindGroupsLOD, GrassShadowBindGroups, PrefixSumBindGroupsLOD, ShadowPrefixSumBindGroups}};
+use super::{pipeline::{GrassComputePipeline, GrassCullPipelineId}, prepare::{CompactBindGroups, CompactBindGroupsLOD, GrassChunkCullBindGroup, GrassShadowBindGroups, PrefixSumBindGroupsLOD, ShadowPrefixSumBindGroups}};
 
 enum NodeState {
     Loading,
@@ -14,8 +14,8 @@ pub(crate) struct CullGrassNodeLabel;
 
 pub struct CullGrassNode {
     state: NodeState,
-    query: QueryState<(&'static GrassChunkCullBindGroups, &'static PrefixSumBindGroups, &'static GrassCullPipelineId)>,
-    lod_query: QueryState<(&'static GrassChunkCullBindGroupsLOD, &'static PrefixSumBindGroupsLOD)>,
+    query: QueryState<(&'static GrassChunkCullBindGroup, &'static CompactBindGroups, &'static PrefixSumBindGroups, &'static GrassCullPipelineId)>,
+    lod_query: QueryState<(&'static CompactBindGroupsLOD, &'static PrefixSumBindGroupsLOD)>,
     shadow_query: QueryState<(&'static GrassShadowBindGroups, &'static ShadowPrefixSumBindGroups)>,
     view_offset_query: QueryState<&'static ViewUniformOffset>,
 }
@@ -106,7 +106,7 @@ impl render_graph::Node for CullGrassNode {
                         .command_encoder()
                         .begin_compute_pass(&ComputePassDescriptor::default());
                     
-                    for (grass_bind_groups, _, pipeline_id) in self.query.iter_manual(world) {
+                    for (grass_bind_groups, _, _, pipeline_id) in self.query.iter_manual(world) {
                         let Some(cull_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.0) else {
                             return Ok(());
                         };
@@ -117,7 +117,7 @@ impl render_graph::Node for CullGrassNode {
                     }
                 }
                 let bind_groups: Vec<_> = self.query.iter_manual(world)
-                    .map(|(bind_groups, prefix_sum_bind_groups, _)| 
+                    .map(|(_, bind_groups, prefix_sum_bind_groups, _)| 
                         (bind_groups, prefix_sum_bind_groups)
                     )
                     .collect();
@@ -130,7 +130,7 @@ impl render_graph::Node for CullGrassNode {
                 
                     pass.set_pipeline(compact_pipeline);
                     
-                    for (grass_bind_groups, _, _) in self.query.iter_manual(world) {
+                    for (_, grass_bind_groups, _, _) in self.query.iter_manual(world) {
                         pass.set_bind_group(0, &grass_bind_groups.compact_bind_group, &[]);
                         pass.dispatch_workgroups(grass_bind_groups.compact_workgroup_count as u32, 1, 1); 
                     }
@@ -184,8 +184,8 @@ pub(crate) struct ResetArgsNodeLabel;
 
 pub struct ResetArgsNode {
     state: NodeState,
-    query: QueryState<&'static GrassChunkCullBindGroups>,
-    lod_query: QueryState<&'static GrassChunkCullBindGroupsLOD>,
+    query: QueryState<&'static CompactBindGroups>,
+    lod_query: QueryState<&'static CompactBindGroupsLOD>,
     shadow_query: QueryState<&'static GrassShadowBindGroups>,
 }
 

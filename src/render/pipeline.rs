@@ -227,12 +227,12 @@ pub(crate) fn prepare_cull_pipeline(
     pipeline_cache: Res<PipelineCache>,
     mut pipelines: ResMut<SpecializedComputePipelines<GrassCullPipeline>>,
     cull_pipeline: Res<GrassCullPipeline>,
-    query: Query<(Entity, &GrassLODMesh, &GrassChunkBuffers), With<GrassChunk>>,
+    query: Query<(Entity, &GrassChunkBuffers), With<GrassChunk>>,
 ) {
-    for (entity, lod_mesh, buffers) in &query {
+    for (entity, buffers) in &query {
         let key = GrassCullPipelineKey {
-            lod: lod_mesh.0.is_some(),
-            shadows: buffers.shadow_buffers.is_some(),
+            lod: buffers.lod_compact_buffers.is_some(),
+            shadows: buffers.shadow_compact_buffers.is_some(),
         };
 
         let pipeline_id = pipelines.specialize(

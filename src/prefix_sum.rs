@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only}, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutEntries, Buffer, BufferDescriptor, BufferUsages, CachedComputePipelineId, ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor, PipelineCache, PushConstantRange, ShaderStages}, renderer::{RenderContext, RenderDevice}}};
 
-use crate::render::prepare::GrassChunkCullBindGroups;
+use crate::render::prepare::CompactBindGroups;
 
 #[derive(Resource)]
 pub struct PrefixSumPipeline {
@@ -97,8 +97,7 @@ impl PrefixSumPipeline {
 
 pub fn prefix_sum_pass(
     render_context: &mut RenderContext,
-    chunks: Vec<(&GrassChunkCullBindGroups, &PrefixSumBindGroups)>,
-    // query_iter: QueryIter<'_, '_, (&GrassChunkCullBindGroups, &PrefixSumBindGroups), ()>,
+    chunks: Vec<(&CompactBindGroups, &PrefixSumBindGroups)>,
     scan_pipeline: &ComputePipeline,
     scan_blocks_pipeline: &ComputePipeline,
 ) {
@@ -121,9 +120,9 @@ pub fn prefix_sum_pass(
 
         pass.set_pipeline(scan_blocks_pipeline);
         for (_, bind_groups) in &chunks {
-        pass.set_push_constants(0, &(bind_groups.scan_workgroups as u32).to_le_bytes());
-        pass.set_bind_group(0, &bind_groups.scan_blocks_bind_group, &[]);
-        pass.dispatch_workgroups(bind_groups.scan_blocks_workgroups, 1, 1);
+            pass.set_push_constants(0, &(bind_groups.scan_workgroups as u32).to_le_bytes());
+            pass.set_bind_group(0, &bind_groups.scan_blocks_bind_group, &[]);
+            pass.dispatch_workgroups(bind_groups.scan_blocks_workgroups, 1, 1);
         }
     }
 }

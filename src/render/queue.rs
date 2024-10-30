@@ -1,8 +1,8 @@
 use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{CascadesVisibleEntities, CubemapVisibleEntities, ExtractedDirectionalLight, ExtractedPointLight, LightEntity, MaterialPipeline, MaterialPipelineKey, MeshPipelineKey, PreparedMaterial, PrepassPipeline, RenderMaterialInstances, RenderMeshInstanceFlags, RenderMeshInstances, Shadow, ShadowBinKey, ViewLightEntities}, prelude::*, render::{mesh::GpuMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, view::{ExtractedView, VisibleEntities, WithMesh}}};
 
-use crate::{grass::{chunk::GrassChunk, config::GrassLightType, material::GrassMaterial}, prelude::GrassConfig};
+use crate::{grass::{chunk::GrassChunk, config::GrassLightType, material::GrassMaterial}, prelude::{GrassConfig, GrassLODMesh}};
 
-use super::draw::{DrawGrass, DrawGrassPrepass};
+use super::draw::{DrawGrass, DrawGrassLOD, DrawGrassPrepass};
 
 pub(crate) fn queue_grass(
     opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
@@ -14,11 +14,12 @@ pub(crate) fn queue_grass(
     render_mesh_instances: Res<RenderMeshInstances>,
     render_material_instances: Res<RenderMaterialInstances<GrassMaterial>>,
     render_materials: Res<RenderAssets<PreparedMaterial<GrassMaterial>>>,
-    material_meshes: Query<Entity, With<GrassChunk>>,
+    material_meshes: Query<(Entity, &GrassLODMesh), With<GrassChunk>>,
     mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     mut views: Query<(Entity, &ExtractedView)>,
 ) {
     let draw_grass = opaque_3d_draw_functions.read().id::<DrawGrass>();
+    let draw_grass_lod = opaque_3d_draw_functions.read().id::<DrawGrassLOD>();
 
     let msaa_key = MeshPipelineKey::from_msaa_samples(msaa.samples());
 
@@ -29,7 +30,7 @@ pub(crate) fn queue_grass(
 
         let view_key = msaa_key | MeshPipelineKey::from_hdr(view.hdr);
         
-        for entity in &material_meshes {
+        for (entity, lod) in &material_meshes {
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(entity) else {
                 continue;
             };
@@ -56,10 +57,16 @@ pub(crate) fn queue_grass(
                 &mesh.layout
             ).unwrap();
             
+            let draw_function = if lod.0.is_some() { 
+                draw_grass_lod 
+            } else {
+                draw_grass
+            };
+
             opaque_phase.add(
                 Opaque3dBinKey {
                     pipeline,
-                    draw_function: draw_grass,
+                    draw_function,
                     asset_id: mesh_instance.mesh_asset_id.into(),
                     material_bind_group_id: material.get_bind_group_id().0,
                     lightmap_image: None,

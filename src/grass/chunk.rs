@@ -17,9 +17,9 @@ pub struct GrassChunk {
 pub struct GrassChunkBuffers {
     pub aabb_buffer: Buffer,
     pub instance_buffer: Buffer,
-    pub cull_buffers: GrassChunkCullBuffers,
-    pub cull_buffers_lod: GrassChunkCullBuffers,
-    pub(crate) shadow_buffers: Option<GrassChunkCullBuffers>,
+    pub compact_buffers: GrassChunkCullBuffers,
+    pub lod_compact_buffers: Option<GrassChunkCullBuffers>,
+    pub(crate) shadow_compact_buffers: Option<GrassChunkCullBuffers>,
 }
 
 #[derive(Clone)]
@@ -75,11 +75,16 @@ impl GrassChunkBuffers {
         aabb: Aabb2d,
         instance_count: usize,
         scan_workgroup_count: u32,
+        grass_lod: bool,
         grass_shadows: bool,
     ) -> Self {
-        let cull_buffers = GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count);
-        let cull_buffers_lod = GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count);
-        let shadow_buffers = if grass_shadows {
+        let compact_buffers = GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count);
+        let lod_compact_buffers = if grass_lod {
+            Some(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count))
+        } else {
+            None
+        };
+        let shadow_compact_buffers = if grass_shadows {
             Some(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count))
         } else {
             None
@@ -97,9 +102,9 @@ impl GrassChunkBuffers {
                 usage: BufferUsages::VERTEX | BufferUsages::STORAGE,
                 mapped_at_creation: false, 
             }),
-            cull_buffers,
-            cull_buffers_lod,
-            shadow_buffers,
+            compact_buffers,
+            lod_compact_buffers,
+            shadow_compact_buffers,
         }
     }
 }

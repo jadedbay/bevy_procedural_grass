@@ -1,10 +1,8 @@
-use std::marker::PhantomData;
-
 use bevy::{ecs::{query::ROQueryItem, system::{lifetimeless::{Read, SRes}, SystemParamItem}}, pbr::{RenderMeshInstances, SetMaterialBindGroup, SetMeshBindGroup, SetMeshViewBindGroup, SetPrepassViewBindGroup}, prelude::Component, render::{mesh::{GpuBufferInfo, GpuMesh}, render_asset::RenderAssets, render_phase::{PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass}, render_resource::Buffer}};
 
 use crate::{grass::lod::GrassLOD, prelude::GrassLODMesh, GrassMaterial};
 
-use super::prepare::{GrassChunkCullBindGroups, GrassChunkCullBindGroupsLOD, GrassShadowBindGroups};
+use super::prepare::{CompactBindGroups, CompactBindGroupsLOD, GrassShadowBindGroups};
 
 pub(crate) type DrawGrass = (
     SetItemPipeline,
@@ -12,6 +10,15 @@ pub(crate) type DrawGrass = (
     SetMeshBindGroup<1>,
     SetMaterialBindGroup<GrassMaterial, 2>,
     DrawGrassInstanced,
+);
+
+pub(crate) type DrawGrassLOD = (
+    SetItemPipeline,
+    SetMeshViewBindGroup<0>,
+    SetMeshBindGroup<1>,
+    SetMaterialBindGroup<GrassMaterial, 2>,
+    DrawGrassInstanced,
+    DrawGrassLODInstanced,
 );
 
 pub(crate) type DrawGrassPrepass = (
@@ -22,12 +29,11 @@ pub(crate) type DrawGrassPrepass = (
     DrawGrassPrepassInstanced,
 );
 
-#[allow(private_bounds)]
 pub(crate) struct DrawGrassInstanced;
 impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
     type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMeshInstances>);
     type ViewQuery = ();
-    type ItemQuery = (Read<GrassChunkCullBindGroups>, Read<GrassChunkCullBindGroupsLOD>, Read<GrassLODMesh>);
+    type ItemQuery = Read<CompactBindGroups>;
     #[inline]
     fn render<'w>(
         item: &P,
@@ -36,19 +42,15 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
         (meshes, render_mesh_instances): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let Some((bind_groups, lod_bind_groups, lod_mesh)) = query_item else {
-            return RenderCommandResult::Failure;
-        };
-
-
         let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(item.entity()) else { 
             return RenderCommandResult::Failure; 
         };
-        let meshes_inner = meshes.into_inner();
-        let Some(gpu_mesh) = meshes_inner.get(mesh_instance.mesh_asset_id) else {
+        let Some(gpu_mesh) = meshes.into_inner().get(mesh_instance.mesh_asset_id) else {
             return RenderCommandResult::Failure;
         };
-
+        let Some(bind_groups) = query_item else {
+            return RenderCommandResult::Failure;
+        };
         
         pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
         
@@ -65,12 +67,34 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassInstanced {
             GpuBufferInfo::NonIndexed => unreachable!()
         }
         
+        RenderCommandResult::Success
+    }
+}
+
+pub(crate) struct DrawGrassLODInstanced;
+impl<P: PhaseItem> RenderCommand<P> for DrawGrassLODInstanced {
+    type Param = SRes<RenderAssets<GpuMesh>>;
+
+    type ViewQuery = ();
+    type ItemQuery = (Read<CompactBindGroupsLOD>, Read<GrassLODMesh>);
+    #[inline]
+    fn render<'w>(
+        _item: &P,
+        _view: ROQueryItem<'w, Self::ViewQuery>,
+        query_item: Option<ROQueryItem<'w, Self::ItemQuery>>,
+        meshes: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let Some((lod_bind_groups, lod_mesh)) = query_item else {
+            return RenderCommandResult::Failure;
+        };
         let Some(ref lod_mesh_handle) = lod_mesh.0 else {
             return RenderCommandResult::Success;
         };
-        let Some(lod_mesh) = meshes_inner.get(lod_mesh_handle.id()) else {
+        let Some(lod_mesh) = meshes.into_inner().get(lod_mesh_handle.id()) else {
             return RenderCommandResult::Success;
         };
+         
         pass.set_vertex_buffer(0, lod_mesh.vertex_buffer.slice(..));
         match &lod_mesh.buffer_info {
             GpuBufferInfo::Indexed {
