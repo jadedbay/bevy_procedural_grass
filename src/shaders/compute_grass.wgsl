@@ -11,12 +11,14 @@ const INFINITY = 3.402823e+38;
 @group(0) @binding(4) var<uniform> chunk_aabb: Aabb2d;
 @group(0) @binding(5) var<uniform> aabb: Aabb2d;
 
-@group(1) @binding(0) var<uniform> clump_aabb: Aabb2d;
-@group(1) @binding(1) var<uniform> clump_size: vec2<f32>;
-@group(1) @binding(2) var<storage, read> clump_positions: array<vec2<f32>>;
-@group(1) @binding(3) var<storage, read> clump_params: array<GrassClump>;
+@group(1) @binding(100) var<uniform> grass: GrassMaterial;
 
-#import bevy_procedural_grass::grass_material as grass
+#ifdef CLUMPS
+    @group(2) @binding(0) var<uniform> clump_aabb: Aabb2d;
+    @group(2) @binding(1) var<uniform> clump_size: vec2<f32>;
+    @group(2) @binding(2) var<storage, read> clump_positions: array<vec2<f32>>;
+    @group(2) @binding(3) var<storage, read> clump_params: array<GrassClump>;
+#endif
 
 @compute @workgroup_size(512)
 fn main(
@@ -45,82 +47,91 @@ fn main(
     instance.position = vec4<f32>(chunk_position.x, height * height_scale + height_offset, chunk_position.y, 1.0);
     instance.chunk_uv = local_uv;
 
-    let clump_cell = vec2<u32>(
-        u32(floor((instance.position.x - clump_aabb.min.x) / f32(clump_size.x))),
-        u32(floor((instance.position.z - clump_aabb.min.y) / f32(clump_size.y)))
-    );
+    #ifdef CLUMPS
+        let clump_cell = vec2<u32>(
+            u32(floor((instance.position.x - clump_aabb.min.x) / f32(clump_size.x))),
+            u32(floor((instance.position.z - clump_aabb.min.y) / f32(clump_size.y)))
+        );
 
-    let clump_count = vec2<u32>(
-        u32(ceil((clump_aabb.max.x - clump_aabb.min.x) / f32(clump_size.x))),
-        u32(ceil((clump_aabb.max.y - clump_aabb.min.y) / f32(clump_size.y)))
-    ); 
+        let clump_count = vec2<u32>(
+            u32(ceil((clump_aabb.max.x - clump_aabb.min.x) / f32(clump_size.x))),
+            u32(ceil((clump_aabb.max.y - clump_aabb.min.y) / f32(clump_size.y)))
+        ); 
 
-    var closest_distance: f32 = INFINITY;
-    var clump_index: u32 = 0u;
-    var clump_position: vec2<f32>;
-    for (var dx: i32 = -1; dx <= 1; dx++) {
-        for (var dy: i32 = -1; dy <= 1; dy++) {
-            let neighbor_x = i32(clump_cell.x) + dx;
-            let neighbor_y = i32(clump_cell.y) + dy;
-            
-            if (neighbor_x >= 0 && neighbor_x < i32(clump_count.x) && neighbor_y >= 0 && neighbor_y < i32(clump_count.y)) {
-                let neighbor_index = u32(neighbor_x) * clump_count.y + u32(neighbor_y);
-                let clump_pos = clump_positions[neighbor_index];
+        var closest_distance: f32 = INFINITY;
+        var clump_index: u32 = 0u;
+        var clump_position: vec2<f32>;
+        for (var dx: i32 = -1; dx <= 1; dx++) {
+            for (var dy: i32 = -1; dy <= 1; dy++) {
+                let neighbor_x = i32(clump_cell.x) + dx;
+                let neighbor_y = i32(clump_cell.y) + dy;
                 
-                let distance = distance(vec2<f32>(instance.position.x, instance.position.z), clump_pos);
-                
-                if (distance < closest_distance) {
-                    closest_distance = distance;
-                    clump_index = neighbor_index;
-                    clump_position = clump_pos;
+                if (neighbor_x >= 0 && neighbor_x < i32(clump_count.x) && neighbor_y >= 0 && neighbor_y < i32(clump_count.y)) {
+                    let neighbor_index = u32(neighbor_x) * clump_count.y + u32(neighbor_y);
+                    let clump_pos = clump_positions[neighbor_index];
+                    
+                    let distance = distance(vec2<f32>(instance.position.x, instance.position.z), clump_pos);
+                    
+                    if (distance < closest_distance) {
+                        closest_distance = distance;
+                        clump_index = neighbor_index;
+                        clump_position = clump_pos;
+                    }
                 }
             }
         }
-    }
 
-    let clump_facing = clump_params[clump_index].facing;
-    if (clump_facing.x == 2.0) {
-        let direction = vec2<f32>(
-            instance.position.x - clump_position.x,
-            -(instance.position.z - clump_position.y)
-        );
-        instance.facing = normalize(vec2<f32>(direction.y, -direction.x));        
-    } else if (clump_facing.x == 3.0) {
-        let direction = vec2<f32>(
-            instance.position.x - clump_position.x,
-            -(instance.position.z - clump_position.y)
-        );
-        
-        let max_influence_distance = 1.0;
-        let lerp_factor = max(0.0, 1.0 - closest_distance / max_influence_distance);
-        instance.position.x = mix(instance.position.x, clump_position.x, lerp_factor);
-        instance.position.z = mix(instance.position.z, clump_position.y, lerp_factor);        
+        let clump_facing = clump_params[clump_index].facing;
+        if (clump_facing.x == 2.0) {
+            let direction = vec2<f32>(
+                instance.position.x - clump_position.x,
+                -(instance.position.z - clump_position.y)
+            );
+            instance.facing = normalize(vec2<f32>(direction.y, -direction.x));        
+        } else if (clump_facing.x == 3.0) {
+            let direction = vec2<f32>(
+                instance.position.x - clump_position.x,
+                -(instance.position.z - clump_position.y)
+            );
+            
+            let max_influence_distance = 1.0;
+            let lerp_factor = max(0.0, 1.0 - closest_distance / max_influence_distance);
+            instance.position.x = mix(instance.position.x, clump_position.x, lerp_factor);
+            instance.position.z = mix(instance.position.z, clump_position.y, lerp_factor);        
 
-        let random_angle = (rand_f(&state) - 0.5) * 2.0;
-        let rotation_matrix = mat2x2<f32>(
-            cos(random_angle), -sin(random_angle),
-            sin(random_angle), cos(random_angle)
-        );
-        let base_facing = normalize(vec2<f32>(-direction.y, direction.x));
-        instance.facing = rotation_matrix * base_facing;  
-    } else if (clump_facing.x == 4.0) {
-        let facing_angle: f32 = rand_f(&state) * PI_2;
-        let facing = vec2<f32>(cos(facing_angle), sin(facing_angle));
-        instance.facing = facing;       
-    } else {
-        let random_angle = (rand_f(&state) - 0.5) * 2.0; 
-        let base_facing = clump_params[clump_index].facing;
-        let rotation_matrix = mat2x2<f32>(
-            cos(random_angle), -sin(random_angle),
-            sin(random_angle), cos(random_angle)
-        );
-        instance.facing = rotation_matrix * base_facing;
-    }
+            let random_angle = (rand_f(&state) - 0.5) * 2.0;
+            let rotation_matrix = mat2x2<f32>(
+                cos(random_angle), -sin(random_angle),
+                sin(random_angle), cos(random_angle)
+            );
+            let base_facing = normalize(vec2<f32>(-direction.y, direction.x));
+            instance.facing = rotation_matrix * base_facing;  
+        } else if (clump_facing.x == 4.0) {
+    #endif
+            let facing_angle: f32 = rand_f(&state) * PI_2;
+            let facing = vec2<f32>(cos(facing_angle), sin(facing_angle));
+            instance.facing = facing;
+    // TODO: give option if clumps disabled to use random facing or directional facing
+    #ifdef CLUMPS   
+        } else {
+            let random_angle = (rand_f(&state) - 0.5) * 2.0; 
+            let base_facing = clump_params[clump_index].facing;
+            let rotation_matrix = mat2x2<f32>(
+                cos(random_angle), -sin(random_angle),
+                sin(random_angle), cos(random_angle)
+            );
+            instance.facing = rotation_matrix * base_facing;
+        }
+    #endif
 
 
     var param_state: u32 = u32(instance.position.x * 500);
-    let length = clump_params[clump_index].length * grass.length;
-    instance.length = mix(length - 0.2, length + 0.2, rand_f(&param_state));
+    #ifdef CLUMPS
+        let length = clump_params[clump_index].length * grass.length;
+        instance.length = mix(length - 0.2, length + 0.2, rand_f(&param_state));
+    #else
+        instance.length = mix(grass.length - 0.2, grass.length + 0.2, rand_f(&param_state));
+    #endif
     param_state = u32(instance.position.y * 9000);
     instance.tilt = mix(grass.tilt - 0.2, grass.tilt + 0.2, rand_f(&state));
     param_state = u32(instance.facing.x * 100);

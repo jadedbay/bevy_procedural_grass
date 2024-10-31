@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, DynamicBindGroupEntries, PipelineCache, SpecializedComputePipelines}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}};
-use super::pipeline::{GrassComputePipeline, GrassCullPipeline, GrassCullPipelineId};
+use super::pipeline::{GrassComputePipeline, GrassCullPipeline, GrassCullPipelineId, GrassGeneratePipeline};
 use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigBuffer, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassLODMesh};
 
 
@@ -133,6 +133,7 @@ pub struct ShadowPrefixSumBindGroups(pub PrefixSumBindGroups);
 pub fn prepare_grass(
     mut commands: Commands,
     pipeline: Res<GrassComputePipeline>,
+    generate_pipeline: Res<GrassGeneratePipeline>,
     cull_pipeline: Res<GrassCullPipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,
     chunk_query: Query<(Entity, &GrassChunk, &GrassChunkBuffers)>,
@@ -144,7 +145,7 @@ pub fn prepare_grass(
     grass_config_buffers: Res<GrassConfigBuffer>,
 ) {
     let Some(_) = view_uniforms.uniforms.binding() else { return; };
-    let chunk_layout = pipeline.chunk_layout.clone();
+    let chunk_layout = generate_pipeline.chunk_layout.clone();
 
     for (entity, chunk, buffers) in chunk_query.iter() {
         let (grass, gpu_info) = grass_query.get(chunk.grass_entity).unwrap();

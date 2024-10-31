@@ -2,7 +2,7 @@ use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3
 
 use grass::{chunk::GrassChunk, clump::{clump_startup, prepare_clump, GrassClumpConfig, GrassClumps}, config::{init_config_buffers, toggle_shadows, update_config_buffers, GrassConfig, GrassConfigBuffer, GrassConfigGpu}, cull::cull_chunks, grass_setup, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
-use render::{compute::compute_grass, draw::{DrawGrassLOD, DrawGrassPrepass}, node::{ResetArgsNode, ResetArgsNodeLabel}, pipeline::{prepare_cull_pipeline, GrassComputePipeline, GrassCullPipeline}, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
+use render::{compute::compute_grass, draw::{DrawGrassLOD, DrawGrassPrepass}, node::{ResetArgsNode, ResetArgsNodeLabel}, pipeline::{prepare_cull_pipeline, prepare_generate_pipeline, GrassComputePipeline, GrassCullPipeline, GrassGeneratePipeline}, prepare::{update_computed_grass, ComputedGrassEntities}, queue::queue_grass_shadows};
 
 use crate::render::{draw::DrawGrass, node::{CullGrassNode, CullGrassNodeLabel}, prepare::prepare_grass, queue::queue_grass};
 
@@ -16,9 +16,17 @@ pub mod prelude {
     pub use crate::grass::{Grass, GrassBundle, GrassHeightMap, lod::GrassLODMesh, mesh::GrassMesh, config::{GrassConfig, GrassCastShadows, GrassLightTypes}, material::GrassMaterial, material::GrassMaterialExtension};
 }
 
-#[derive(Default)]
 pub struct ProceduralGrassPlugin {
-    pub config: GrassConfig
+    pub config: GrassConfig,
+    pub clump_config: Option<GrassClumpConfig>,
+}
+impl Default for ProceduralGrassPlugin {
+    fn default() -> Self {
+        Self {
+            config: GrassConfig::default(),
+            clump_config: Some(GrassClumpConfig::default()),
+        }
+    }
 }
 
 impl Plugin for ProceduralGrassPlugin {
@@ -38,7 +46,6 @@ impl Plugin for ProceduralGrassPlugin {
             .register_type::<GrassConfig>()
             .register_type::<GrassClumpConfig>()
             .insert_resource(self.config.clone())
-            .insert_resource(GrassClumpConfig::default())
             .add_plugins((
                 GrassMaterialPlugin,
                 ExtractComponentPlugin::<Grass>::default(),
@@ -48,12 +55,16 @@ impl Plugin for ProceduralGrassPlugin {
                 ExtractResourcePlugin::<GrassClumps>::default(),
                 ExtractResourcePlugin::<GrassClumpConfig>::default(),
             ))
-            .add_systems(Startup, (init_config_buffers, clump_startup))
+            .add_systems(Startup, (init_config_buffers, clump_startup.run_if(resource_exists::<GrassClumpConfig>)))
             .add_systems(Update, (
                 grass_setup,
                 update_config_buffers, 
                 (toggle_shadows, cull_chunks).chain()
             ));
+        
+        if let Some(clump_config) = &self.clump_config {
+            app.insert_resource(clump_config.clone());
+        }
         
         let render_app = app.sub_app_mut(RenderApp);
         
@@ -62,10 +73,11 @@ impl Plugin for ProceduralGrassPlugin {
                 Render, 
                 (
                     prepare_cull_pipeline.in_set(RenderSet::Prepare),
+                    prepare_generate_pipeline.in_set(RenderSet::Prepare),
                     update_computed_grass.after(RenderSet::ExtractCommands).before(RenderSet::PrepareResources),
                     prepare_grass.in_set(RenderSet::PrepareBindGroups),
-                    prepare_clump.in_set(RenderSet::PrepareBindGroups),
-                    compute_grass.after(RenderSet::PrepareBindGroups).before(RenderSet::Render), // dont know if .after is required?
+                    prepare_clump.in_set(RenderSet::PrepareBindGroups).run_if(resource_exists::<GrassClumpConfig>),
+                    compute_grass.after(RenderSet::PrepareBindGroups).before(RenderSet::Render),
                 )   
             );
         
@@ -91,7 +103,9 @@ impl Plugin for ProceduralGrassPlugin {
             .init_resource::<ComputedGrassEntities>()
             .init_resource::<PrefixSumPipeline>()
             .init_resource::<GrassComputePipeline>()
+            .init_resource::<GrassGeneratePipeline>()
             .init_resource::<GrassCullPipeline>()
+            .init_resource::<SpecializedComputePipelines<GrassGeneratePipeline>>()
             .init_resource::<SpecializedComputePipelines<GrassCullPipeline>>();
     }
 }

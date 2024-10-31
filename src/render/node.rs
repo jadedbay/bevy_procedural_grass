@@ -46,7 +46,6 @@ impl render_graph::Node for CullGrassNode {
                 let prefix_sum_pipeline = world.resource::<PrefixSumPipeline>();
                 
                 let pipeline_states = [
-                    pipeline_cache.get_compute_pipeline_state(compute_pipeline.compute_id),
                     pipeline_cache.get_compute_pipeline_state(compute_pipeline.compact_pipeline_id),
                     // pipeline_cache.get_compute_pipeline_state(compute_pipeline.cull_pipeline_id),
                     pipeline_cache.get_compute_pipeline_state(prefix_sum_pipeline.scan_pipeline),

@@ -1,7 +1,7 @@
 use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{AsBindGroup, BindGroup, BindGroupEntries, Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}, utils::HashMap};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{render::pipeline::GrassComputePipeline, util::aabb::Aabb2dGpu};
+use crate::{render::pipeline::{GrassComputePipeline, GrassGeneratePipeline}, util::aabb::Aabb2dGpu};
 
 #[derive(Resource, ExtractResource, Clone, Reflect)]
 #[reflect(Resource)]
@@ -56,7 +56,7 @@ impl GrassClumpConfig {
                     GrassClump {
                         color: LinearRgba::rgb(1.0, 1.0, 1.0).to_vec4(),
                         facing,
-                        length: rng.gen_range(0.7..1.2),
+                        length: rng.gen_range(0.8..1.2),
                         tilt: 0.8,
                     }
                 )
@@ -72,7 +72,33 @@ impl GrassClumpConfig {
 }
 
 pub struct ClumpColors {
-    colors: HashMap<Color, f32>,
+    colors: Vec<(LinearRgba, f32)>,
+}
+
+impl ClumpColors {
+    pub fn new() -> Self {
+        Self {
+            colors: Vec::new()
+        }
+    }
+
+    pub fn get_random_color(&self, rng: &mut StdRng) -> LinearRgba {
+        if self.colors.is_empty() {
+            return LinearRgba::rgb(1.0, 1.0, 1.0);
+        }
+
+        let total_weight: f32 = self.colors.iter().map(|(_, w)| w).sum();
+        let mut random = rng.gen_range(0.0..total_weight);
+
+        for (color, weight) in &self.colors {
+            random -= weight;
+            if random <= 0.0 {
+                return *color;
+            }
+        }
+
+        self.colors[0].0
+    }
 }
 
 
@@ -119,9 +145,9 @@ pub(crate) fn clump_startup(
 }
 
 #[derive(Resource)]
-pub struct GrassClumpsGpu {
-    positions_buffer: Buffer,
-    params_buffer: Buffer,
+pub struct GrassClumpsBindGroup {
+    _positions_buffer: Buffer,
+    _params_buffer: Buffer,
     pub bind_group: BindGroup,
 }
 
@@ -130,8 +156,11 @@ pub(crate) fn prepare_clump(
     render_device: Res<RenderDevice>,
     clumps: Res<GrassClumps>,
     clump_config: Res<GrassClumpConfig>,
-    pipeline: Res<GrassComputePipeline>,
+    pipeline: Res<GrassGeneratePipeline>,
+    clump_bind_group: Option<Res<GrassClumpsBindGroup>>,
 ) {
+    if clump_bind_group.is_some() { return; }
+
     let aabb_buffer = render_device.create_buffer_with_data(
         &BufferInitDescriptor {
             label: Some("clump_aabb_buffer"),
@@ -171,9 +200,9 @@ pub(crate) fn prepare_clump(
         )) 
     );
 
-    commands.insert_resource(GrassClumpsGpu {
-        positions_buffer,
-        params_buffer,
+    commands.insert_resource(GrassClumpsBindGroup {
+        _positions_buffer: positions_buffer,
+        _params_buffer: params_buffer,
         bind_group,
     });
 }

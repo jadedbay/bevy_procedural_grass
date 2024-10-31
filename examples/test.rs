@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use bevy::{color::palettes::css::{RED, WHITE}, math::NormedVectorSpace, pbr::{wireframe::WireframePlugin, DirectionalLightShadowMap}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
+use bevy::{color::palettes::css::{RED, WHITE}, pbr::{wireframe::WireframePlugin, DirectionalLightShadowMap}, prelude::*, render::{mesh::VertexAttributeValues, render_asset::RenderAssetUsages, render_resource::{AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat}}, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_procedural_grass::{grass::{config::{GrassCastShadows, GrassLightTypes}, material::create_grass_texture}, prelude::*};
 use bevy_flycam::prelude::*;
@@ -23,6 +23,10 @@ fn main() {
             ),
             PlayerPlugin,
             ProceduralGrassPlugin::default(),
+            // ProceduralGrassPlugin {
+            //     config: GrassConfig::default(),
+            //     clump_config: None,
+            // },
             WireframePlugin,
             MaterialPlugin::<NormalMaterial>::default(),
             ComputeNoisePlugin::<Perlin2d>::default(),
@@ -34,7 +38,7 @@ fn main() {
         ))
         .add_plugins((
             PerfUiPlugin, 
-            WorldInspectorPlugin::default(),
+            // WorldInspectorPlugin::default(),
         ))
         .insert_resource(DirectionalLightShadowMap { size: 4096 })
         .add_systems(Startup, setup)
@@ -67,7 +71,6 @@ fn setup(
                 double_sided: true,
                 ..default()
             }),
-            visibility: Visibility::Hidden,
             ..default()
         },
     )).with_children(|parent| {
