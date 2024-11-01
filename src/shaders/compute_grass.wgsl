@@ -138,6 +138,14 @@ fn main(
     instance.midpoint = mix(grass.midpoint - 0.2, grass.midpoint + 0.2, rand_f(&state));
     param_state = u32(instance.position.z * 200);
     instance.curve = mix(grass.curve - 0.2, grass.curve + 0.2, rand_f(&state));
+
+    #ifdef CLUMPS
+        instance.tip_color = clump_params[clump_index].tip_color;
+        instance.base_color = clump_params[clump_index].base_color;
+    #else
+        instance.tip_color = grass.tip_color;
+        instance.base_color = grass.base_color;
+    #endif
     
     output[global_id.x] = instance;
 }

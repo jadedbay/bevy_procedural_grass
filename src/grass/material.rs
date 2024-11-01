@@ -47,7 +47,8 @@ impl MaterialExtension for GrassMaterialExtension {
     fn prepass_vertex_shader() -> ShaderRef {
         "embedded://bevy_procedural_grass/shaders/grass_vertex.wgsl".into()
     }
-    
+
+    // TODO: Instead of using vertex attributes to move instance material data just use clump_index in vertex shader instead of compute
     fn specialize(
         _pipeline: &MaterialExtensionPipeline,
         descriptor: &mut RenderPipelineDescriptor,
@@ -74,24 +75,34 @@ impl MaterialExtension for GrassMaterialExtension {
                     shader_location: 5,
                 },
                 VertexAttribute {
-                    format: VertexFormat::Float32,
+                    format: VertexFormat::Float32x4,
                     offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2,
                     shader_location: 6,
                 },
                 VertexAttribute {
-                    format: VertexFormat::Float32,
-                    offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size(),
+                    format: VertexFormat::Float32x4,
+                    offset: VertexFormat::Float32x4.size() * 2 + VertexFormat::Float32x2.size() * 2,
                     shader_location: 7,
-                },
+                }, 
                 VertexAttribute {
                     format: VertexFormat::Float32,
-                    offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size() * 2,
+                    offset: VertexFormat::Float32x4.size() * 3 + VertexFormat::Float32x2.size() * 2,
                     shader_location: 8,
                 },
                 VertexAttribute {
                     format: VertexFormat::Float32,
-                    offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size() * 3,
+                    offset: VertexFormat::Float32x4.size() * 3 + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size(),
                     shader_location: 9,
+                },
+                VertexAttribute {
+                    format: VertexFormat::Float32,
+                    offset: VertexFormat::Float32x4.size() * 3 + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size() * 2,
+                    shader_location: 10,
+                },
+                VertexAttribute {
+                    format: VertexFormat::Float32,
+                    offset: VertexFormat::Float32x4.size() * 3 + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size() * 3,
+                    shader_location: 11,
                 },
             ],
         });

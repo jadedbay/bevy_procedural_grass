@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{render_graph::{self, RenderGraphContext, RenderL
 
 use crate::prefix_sum::{prefix_sum_pass, PrefixSumBindGroups, PrefixSumPipeline};
 
-use super::{pipeline::{GrassComputePipeline, GrassCullPipelineId}, prepare::{CompactBindGroups, CompactBindGroupsLOD, GrassChunkCullBindGroup, GrassShadowBindGroups, PrefixSumBindGroupsLOD, ShadowPrefixSumBindGroups}};
+use super::{pipeline::{GrassCompactPipeline, GrassCullPipelineId}, prepare::{CompactBindGroups, CompactBindGroupsLOD, GrassChunkCullBindGroup, GrassShadowBindGroups, PrefixSumBindGroupsLOD, ShadowPrefixSumBindGroups}};
 
 enum NodeState {
     Loading,
@@ -42,7 +42,7 @@ impl render_graph::Node for CullGrassNode {
         match self.state {
             NodeState::Loading => {
                 let pipeline_cache = world.resource::<PipelineCache>();
-                let compute_pipeline = world.resource::<GrassComputePipeline>();
+                let compute_pipeline = world.resource::<GrassCompactPipeline>();
                 let prefix_sum_pipeline = world.resource::<PrefixSumPipeline>();
                 
                 let pipeline_states = [
@@ -79,7 +79,7 @@ impl render_graph::Node for CullGrassNode {
             NodeState::Loaded => {
                 let Ok(view_offset) = self.view_offset_query.get_manual(world, graph.view_entity()) else { return Ok(()); };
                 
-                let pipeline_id = world.resource::<GrassComputePipeline>();
+                let pipeline_id = world.resource::<GrassCompactPipeline>();
                 let prefix_sum_pipeline = world.resource::<PrefixSumPipeline>();
                 let pipeline_cache = world.resource::<PipelineCache>();
  
@@ -208,7 +208,7 @@ impl render_graph::Node for ResetArgsNode {
         match self.state {
             NodeState::Loading => {
                 let pipeline_cache = world.resource::<PipelineCache>();
-                let compute_pipeline = world.resource::<GrassComputePipeline>();
+                let compute_pipeline = world.resource::<GrassCompactPipeline>();
 
                 match pipeline_cache.get_compute_pipeline_state(compute_pipeline.reset_args_pipeline_id) {
                     CachedPipelineState::Ok(_) => {
@@ -233,7 +233,7 @@ impl render_graph::Node for ResetArgsNode {
         match self.state {
             NodeState::Loading => {}
             NodeState::Loaded => {
-                let pipeline_id = world.resource::<GrassComputePipeline>();
+                let pipeline_id = world.resource::<GrassCompactPipeline>();
                 let pipeline_cache = world.resource::<PipelineCache>();
 
                 let Some(reset_args_pipeline) = pipeline_cache.get_compute_pipeline(pipeline_id.reset_args_pipeline_id) else {

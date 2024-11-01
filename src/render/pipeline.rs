@@ -4,7 +4,7 @@ use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers}, clump::GrassClumpCon
 use super::instance::GrassInstanceData;
 
 #[derive(Resource)]
-pub(crate) struct GrassComputePipeline {
+pub(crate) struct GrassCompactPipeline {
     pub compact_layout: BindGroupLayout,
     pub reset_args_layout: BindGroupLayout,
     pub compact_pipeline_id: CachedComputePipelineId,
@@ -13,7 +13,7 @@ pub(crate) struct GrassComputePipeline {
     _grass_util_shader: Handle<Shader>,
 }
 
-impl FromWorld for GrassComputePipeline {
+impl FromWorld for GrassCompactPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 

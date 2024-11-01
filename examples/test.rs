@@ -38,7 +38,7 @@ fn main() {
         ))
         .add_plugins((
             PerfUiPlugin, 
-            // WorldInspectorPlugin::default(),
+            WorldInspectorPlugin::default(),
         ))
         .insert_resource(DirectionalLightShadowMap { size: 4096 })
         .add_systems(Startup, setup)

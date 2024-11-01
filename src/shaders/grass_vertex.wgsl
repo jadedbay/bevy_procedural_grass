@@ -37,10 +37,10 @@
         @location(3) i_pos: vec4<f32>,
         @location(4) i_chunk_uv: vec2<f32>,
         @location(5) i_facing: vec2<f32>,
-        @location(6) i_length: f32,
-        @location(7) i_tilt: f32,
-        @location(8) i_midpoint: f32,
-        @location(9) i_curve: f32,
+        @location(8) i_length: f32,
+        @location(9) i_tilt: f32,
+        @location(10) i_midpoint: f32,
+        @location(11) i_curve: f32,
     }
 #else
     struct Vertex {
@@ -52,10 +52,12 @@
         @location(3) i_pos: vec4<f32>,
         @location(4) i_chunk_uv: vec2<f32>,
         @location(5) i_facing: vec2<f32>,
-        @location(6) i_length: f32,
-        @location(7) i_tilt: f32,
-        @location(8) i_midpoint: f32,
-        @location(9) i_curve: f32,
+        @location(6) i_tip_color: vec4<f32>,
+        @location(7) i_base_color: vec4<f32>,
+        @location(8) i_length: f32,
+        @location(9) i_tilt: f32,
+        @location(10) i_midpoint: f32,
+        @location(11) i_curve: f32,
     };
 #endif
 
@@ -141,6 +143,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         
         out.world_normal = normal;
         out.facing = vertex.i_facing;
+        out.tip_color = vertex.i_tip_color;
+        out.base_color = vertex.i_base_color;
     #endif
 
     out.uv = vertex.uv;

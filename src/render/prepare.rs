@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, DynamicBindGroupEntries, PipelineCache, SpecializedComputePipelines}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}};
-use super::pipeline::{GrassComputePipeline, GrassCullPipeline, GrassCullPipelineId, GrassGeneratePipeline};
+use super::pipeline::{GrassCompactPipeline, GrassCullPipeline, GrassCullPipelineId, GrassGeneratePipeline};
 use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigBuffer, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassLODMesh};
 
 
@@ -91,7 +91,7 @@ impl CompactBindGroups {
         buffers: &GrassChunkBuffers,
         compact_buffers: &GrassChunkCullBuffers,
         gpu_info: &GrassGpuInfo,
-        pipeline: &GrassComputePipeline,
+        pipeline: &GrassCompactPipeline,
     ) -> Self {
         let indirect_indexed_args_buffer = &compact_buffers.indirect_args_buffer; 
 
@@ -132,7 +132,7 @@ pub struct ShadowPrefixSumBindGroups(pub PrefixSumBindGroups);
 
 pub fn prepare_grass(
     mut commands: Commands,
-    pipeline: Res<GrassComputePipeline>,
+    pipeline: Res<GrassCompactPipeline>,
     generate_pipeline: Res<GrassGeneratePipeline>,
     cull_pipeline: Res<GrassCullPipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,

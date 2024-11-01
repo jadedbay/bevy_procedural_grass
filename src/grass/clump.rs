@@ -1,7 +1,7 @@
-use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{AsBindGroup, BindGroup, BindGroupEntries, Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}, utils::HashMap};
+use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{BindGroup, BindGroupEntries, Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}, utils::HashMap};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{render::pipeline::{GrassComputePipeline, GrassGeneratePipeline}, util::aabb::Aabb2dGpu};
+use crate::{render::pipeline::GrassGeneratePipeline, util::aabb::Aabb2dGpu};
 
 #[derive(Resource, ExtractResource, Clone, Reflect)]
 #[reflect(Resource)]
@@ -9,6 +9,7 @@ pub struct GrassClumpConfig {
     pub seed: u64,
     pub aabb: Aabb2d,
     pub count: UVec2,
+    pub colors: ClumpColors,
 }
 impl Default for GrassClumpConfig {
     fn default() -> Self {
@@ -19,6 +20,7 @@ impl Default for GrassClumpConfig {
                 max: Vec2::new(50.0, 50.0),
             },
             count: UVec2::new(40, 40),
+            colors: ClumpColors::default(),
         }
     }
 }
@@ -52,9 +54,12 @@ impl GrassClumpConfig {
                     }
                 }.to_vec2();
 
+                let color = self.colors.get_random_color(&mut rng);
+
                 clumps.push(
                     GrassClump {
-                        color: LinearRgba::rgb(1.0, 1.0, 1.0).to_vec4(),
+                        tip_color: color.tip.to_linear().to_vec4(),
+                        base_color: color.base.to_linear().to_vec4(),
                         facing,
                         length: rng.gen_range(0.8..1.2),
                         tilt: 0.8,
@@ -71,33 +76,57 @@ impl GrassClumpConfig {
     }
 }
 
+#[derive(Reflect, Clone)]
+pub struct ClumpColor {
+    tip: Color,
+    base: Color,
+    weight: f32,
+}
+
+#[derive(Reflect, Clone)]
 pub struct ClumpColors {
-    colors: Vec<(LinearRgba, f32)>,
+    colors: Vec<ClumpColor>,
+}
+impl Default for ClumpColors {
+    fn default() -> Self {
+        Self {
+            colors: vec![
+                ClumpColor {
+                    tip: Srgba::rgb(0.15, 0.17, 0.01).into(),
+                    base: Srgba::rgb(0.117, 0.20, 0.0).into(),
+                    weight: 1.0,
+                },
+                ClumpColor {
+                    tip: Srgba::rgb(0.18, 0.18, 0.1).into(),
+                    base: Srgba::rgb(0.17, 0.184, 0.085).into(),
+                    weight: 0.25,
+                },
+            ],
+        }
+    }
 }
 
 impl ClumpColors {
-    pub fn new() -> Self {
-        Self {
-            colors: Vec::new()
-        }
-    }
-
-    pub fn get_random_color(&self, rng: &mut StdRng) -> LinearRgba {
+    pub fn get_random_color(&self, rng: &mut StdRng) -> ClumpColor {
         if self.colors.is_empty() {
-            return LinearRgba::rgb(1.0, 1.0, 1.0);
+            return ClumpColor {
+                tip: Color::srgb(1.0, 1.0, 1.0),
+                base: Color::srgb(1.0, 1.0, 1.0),
+                weight: 1.0,
+            };
         }
 
-        let total_weight: f32 = self.colors.iter().map(|(_, w)| w).sum();
+        let total_weight: f32 = self.colors.iter().map(|c| c.weight).sum();
         let mut random = rng.gen_range(0.0..total_weight);
 
-        for (color, weight) in &self.colors {
-            random -= weight;
+        for color in &self.colors {
+            random -= color.weight;
             if random <= 0.0 {
-                return *color;
+                return color.clone();
             }
         }
 
-        self.colors[0].0
+        self.colors[0].clone()
     }
 }
 
@@ -119,12 +148,11 @@ impl GrassClumpDirection {
     }
 }
 
-
-
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 #[repr(C)]
 pub struct GrassClump {
-    color: Vec4,
+    tip_color: Vec4,
+    base_color: Vec4,
     facing: Vec2, 
     length: f32,
     tilt: f32,
@@ -159,7 +187,7 @@ pub(crate) fn prepare_clump(
     pipeline: Res<GrassGeneratePipeline>,
     clump_bind_group: Option<Res<GrassClumpsBindGroup>>,
 ) {
-    if clump_bind_group.is_some() { return; }
+    // if clump_bind_group.is_some() { return; }
 
     let aabb_buffer = render_device.create_buffer_with_data(
         &BufferInitDescriptor {
