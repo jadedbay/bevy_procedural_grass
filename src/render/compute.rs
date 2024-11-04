@@ -37,7 +37,7 @@ pub fn compute_grass(
             }
             pass.dispatch_workgroups(bind_group.workgroup_count, 1, 1);
             
-            grass_entities.0.push(entity);
+            // grass_entities.0.push(entity);
     }
     render_queue.submit([command_encoder.finish()]);
 }

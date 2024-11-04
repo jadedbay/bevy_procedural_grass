@@ -69,8 +69,17 @@ fn main(
                 if (neighbor_x >= 0 && neighbor_x < i32(clump_count.x) && neighbor_y >= 0 && neighbor_y < i32(clump_count.y)) {
                     let neighbor_index = u32(neighbor_x) * clump_count.y + u32(neighbor_y);
                     let clump_pos = clump_positions[neighbor_index];
-                    
-                    let distance = distance(vec2<f32>(instance.position.x, instance.position.z), clump_pos);
+
+                    let random_offset = vec2<f32>(
+                        (rand_f(&state) - 0.5) * grass.wind_speed,  // Small random offset in x
+                        (rand_f(&state) - 0.5) * grass.wind_speed,   // Small random offset in z
+                    );
+                    let offset_position = vec2<f32>(
+                        instance.position.x + random_offset.x,
+                        instance.position.z + random_offset.y
+                    );
+                    let distance = distance(offset_position, clump_pos); 
+                    // let distance = distance(vec2<f32>(instance.position.x, instance.position.z), clump_pos);
                     
                     if (distance < closest_distance) {
                         closest_distance = distance;
@@ -139,13 +148,13 @@ fn main(
     param_state = u32(instance.position.z * 200);
     instance.curve = mix(grass.curve - 0.2, grass.curve + 0.2, rand_f(&state));
 
-    #ifdef CLUMPS
-        instance.tip_color = clump_params[clump_index].tip_color;
-        instance.base_color = clump_params[clump_index].base_color;
-    #else
-        instance.tip_color = grass.tip_color;
-        instance.base_color = grass.base_color;
-    #endif
+    // #ifdef CLUMPS
+    //     instance.tip_color = clump_params[clump_index].tip_color;
+    //     instance.base_color = clump_params[clump_index].base_color;
+    // #else
+    //     instance.tip_color = grass.tip_color;
+    //     instance.base_color = grass.base_color;
+    // #endif
     
     output[global_id.x] = instance;
 }

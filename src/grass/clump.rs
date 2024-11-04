@@ -1,4 +1,4 @@
-use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{BindGroup, BindGroupEntries, Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice}, utils::HashMap};
+use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{binding_types::uniform_buffer, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntries, Buffer, BufferInitDescriptor, BufferUsages, ShaderStages}, renderer::RenderDevice}, utils::HashMap};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{render::pipeline::GrassGeneratePipeline, util::aabb::Aabb2dGpu};
@@ -187,7 +187,7 @@ pub(crate) fn prepare_clump(
     pipeline: Res<GrassGeneratePipeline>,
     clump_bind_group: Option<Res<GrassClumpsBindGroup>>,
 ) {
-    // if clump_bind_group.is_some() { return; }
+    if clump_bind_group.is_some() { return; }
 
     let aabb_buffer = render_device.create_buffer_with_data(
         &BufferInitDescriptor {
@@ -234,3 +234,25 @@ pub(crate) fn prepare_clump(
         bind_group,
     });
 }
+
+// #[derive(Resource)]
+// pub struct GrassClumpPipeline {
+    
+// }
+
+// impl FromWorld for GrassClumpPipeline {
+//     fn from_world(world: &mut World) -> Self {
+//         let render_device = world.resource::<RenderDevice>();
+
+//         let clump_bind_group = render_device.create_bind_group_layout(
+//             Some("clump_bind_group_layout"),
+//             &BindGroupLayoutEntries::sequential(
+//                 ShaderStages::COMPUTE,
+//                 (
+//                     uniform_buffer::<Aabb2dGpu>(false),
+//                     uniform_buffer::<Vec2>(false), // clump_size
+//                 )
+//             )
+//         );
+//     }
+// }

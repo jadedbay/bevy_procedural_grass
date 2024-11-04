@@ -74,35 +74,35 @@ impl MaterialExtension for GrassMaterialExtension {
                     offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size(),
                     shader_location: 5,
                 },
+                // VertexAttribute {
+                //     format: VertexFormat::Float32x4,
+                //     offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2,
+                //     shader_location: 6,
+                // },
+                // VertexAttribute {
+                //     format: VertexFormat::Float32x4,
+                //     offset: VertexFormat::Float32x4.size() * 2 + VertexFormat::Float32x2.size() * 2,
+                //     shader_location: 7,
+                // }, 
                 VertexAttribute {
-                    format: VertexFormat::Float32x4,
+                    format: VertexFormat::Float32,
                     offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2,
                     shader_location: 6,
                 },
                 VertexAttribute {
-                    format: VertexFormat::Float32x4,
-                    offset: VertexFormat::Float32x4.size() * 2 + VertexFormat::Float32x2.size() * 2,
+                    format: VertexFormat::Float32,
+                    offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size(),
                     shader_location: 7,
-                }, 
+                },
                 VertexAttribute {
                     format: VertexFormat::Float32,
-                    offset: VertexFormat::Float32x4.size() * 3 + VertexFormat::Float32x2.size() * 2,
+                    offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size() * 2,
                     shader_location: 8,
                 },
                 VertexAttribute {
                     format: VertexFormat::Float32,
-                    offset: VertexFormat::Float32x4.size() * 3 + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size(),
+                    offset: VertexFormat::Float32x4.size() + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size() * 3,
                     shader_location: 9,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Float32,
-                    offset: VertexFormat::Float32x4.size() * 3 + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size() * 2,
-                    shader_location: 10,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Float32,
-                    offset: VertexFormat::Float32x4.size() * 3 + VertexFormat::Float32x2.size() * 2 + VertexFormat::Float32.size() * 3,
-                    shader_location: 11,
                 },
             ],
         });

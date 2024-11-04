@@ -11,8 +11,8 @@ struct GrassInstance {
     position: vec4<f32>,
     chunk_uv: vec2<f32>,
     facing: vec2<f32>,
-    tip_color: vec4<f32>,
-    base_color: vec4<f32>,
+    // tip_color: vec4<f32>,
+    // base_color: vec4<f32>,
     length: f32,
     tilt: f32,
     midpoint: f32,
@@ -61,8 +61,8 @@ struct VertexOutput {
     @location(1) world_normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
     @location(3) facing: vec2<f32>,
-    @location(4) tip_color: vec4<f32>,
-    @location(5) base_color: vec4<f32>,
+    // @location(4) tip_color: vec4<f32>,
+    // @location(5) base_color: vec4<f32>,
 }
 
 struct GrassClump {

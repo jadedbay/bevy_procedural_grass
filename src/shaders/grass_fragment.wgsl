@@ -42,7 +42,8 @@ fn fragment(
     let sampled_texture = textureSampleBias(grass_texture, pbr_bindings::base_color_sampler, in.uv, view.mip_bias);
 
     let ao = mix(grass.min_ao, 1.0, in.uv.y);
-    let grass_color = mix(in.base_color, in.tip_color, in.uv.y);
+    // let grass_color = mix(in.base_color, in.tip_color, in.uv.y);
+    let grass_color = mix(pbr_input.material.base_color, grass.tip_color, in.uv.y);
     pbr_input.material.base_color = mix(
         grass_color * grass.texture_strength, 
         grass_color, 
