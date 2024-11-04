@@ -34,6 +34,7 @@ impl GrassChunkCullBuffers {
         render_device: &RenderDevice,
         instance_count: usize,
         scan_workgroup_count: u32,
+        index_count: u32,
     ) -> Self {
         Self {
             vote_buffer: render_device.create_buffer(&BufferDescriptor {
@@ -52,7 +53,7 @@ impl GrassChunkCullBuffers {
                 &BufferInitDescriptor {
                     label: Some("indirect_indexed_args"),
                     contents: DrawIndexedIndirectArgs {
-                        index_count: 39, // TODO
+                        index_count, // TODO
                         instance_count: 0,
                         first_index: 0,
                         base_vertex: 0,
@@ -74,18 +75,19 @@ impl GrassChunkBuffers {
         render_device: &RenderDevice,
         aabb: Aabb2d,
         instance_count: usize,
+        index_count: u32,
         scan_workgroup_count: u32,
-        grass_lod: bool,
+        lod_index_count: Option<u32>,
         grass_shadows: bool,
     ) -> Self {
-        let compact_buffers = GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count);
-        let lod_compact_buffers = if grass_lod {
-            Some(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count))
+        let compact_buffers = GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count, index_count);
+        let lod_compact_buffers = if let Some(lod_index_count) = lod_index_count {
+            Some(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count, lod_index_count))
         } else {
             None
         };
         let shadow_compact_buffers = if grass_shadows {
-            Some(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count))
+            Some(GrassChunkCullBuffers::create_buffers(render_device, instance_count, scan_workgroup_count, index_count))
         } else {
             None
         };

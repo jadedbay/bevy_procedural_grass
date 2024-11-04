@@ -53,7 +53,7 @@ fn setup(
     mut normal_materials: ResMut<Assets<NormalMaterial>>,
     mut grass_materials: ResMut<Assets<GrassMaterial>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(50).build();
+    let mut plane = Plane3d::default().mesh().size(1000., 1000.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
     let wind_image = ComputeNoiseImage::create_image(ComputeNoiseSize::D2(512, 512), ComputeNoiseFormat::Rgba);
     let wind_handle = images.add(wind_image);
@@ -77,8 +77,8 @@ fn setup(
         parent.spawn((
             GrassBundle {
                 grass: Grass {
-                    chunk_count: UVec2::splat(1),
-                    density: 40.0,
+                    chunk_count: UVec2::splat(10),
+                    density: 200.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
                         scale: 0.0,

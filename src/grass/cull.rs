@@ -10,11 +10,19 @@ pub(crate) struct GrassCullChunks(pub HashMap<UVec2, Entity>);
 pub(crate) fn cull_chunks(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
-    mut q_grass: Query<(Entity, &Grass, &GrassGpuInfo, &mut GrassCullChunks, &Handle<Mesh>, &GrassLODMesh, &Handle<GrassMaterial>, &Visibility)> ,
+    mut q_grass: Query<(Entity, &Grass, &GrassGpuInfo, &mut GrassCullChunks, &Handle<Mesh>, &GrassLODMesh, &Handle<GrassMaterial>, &Visibility)>,
+    meshes: Res<Assets<Mesh>>,
     camera_query: Query<(&Transform, &Frustum)>,
     grass_config: Res<GrassConfig>,
 ) {
     for (entity, grass, gpu_info, mut cull_chunks, mesh, lod_mesh, material, visibility) in &mut q_grass {
+        let index_count = meshes.get(mesh).unwrap().indices().unwrap().len() as u32;
+        let lod_index_count = if let Some(lod_mesh) = &lod_mesh.0 {
+            Some(meshes.get(lod_mesh).unwrap().indices().unwrap().len() as u32)
+        } else {
+            None
+        };
+
         let chunk_min = gpu_info.aabb.min;
         let chunk_max = chunk_min + gpu_info.chunk_size;
         
@@ -52,8 +60,9 @@ pub(crate) fn cull_chunks(
                                     &render_device,
                                     chunk_aabb,
                                     gpu_info.instance_count,
+                                    index_count,
                                     gpu_info.scan_workgroup_count,
-                                    lod_mesh.0.is_some(),
+                                    lod_index_count,
                                     grass_config.grass_shadows.enabled(),
                                 ),
                                 mesh.clone(),

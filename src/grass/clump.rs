@@ -1,4 +1,4 @@
-use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{binding_types::uniform_buffer, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntries, Buffer, BufferInitDescriptor, BufferUsages, ShaderStages}, renderer::RenderDevice}, utils::HashMap};
+use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{binding_types::{storage_buffer_sized, uniform_buffer}, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntries, Buffer, BufferInitDescriptor, BufferUsages, ShaderStages}, renderer::RenderDevice}, utils::HashMap};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{render::pipeline::GrassGeneratePipeline, util::aabb::Aabb2dGpu};
@@ -235,24 +235,40 @@ pub(crate) fn prepare_clump(
     });
 }
 
-// #[derive(Resource)]
-// pub struct GrassClumpPipeline {
-    
-// }
+#[derive(Resource)]
+pub struct GrassClumpPipeline {
+    clump_layout: BindGroupLayout,
+    chunk_layout: BindGroupLayout,
+}
 
-// impl FromWorld for GrassClumpPipeline {
-//     fn from_world(world: &mut World) -> Self {
-//         let render_device = world.resource::<RenderDevice>();
+impl FromWorld for GrassClumpPipeline {
+    fn from_world(world: &mut World) -> Self {
+        let render_device = world.resource::<RenderDevice>();
 
-//         let clump_bind_group = render_device.create_bind_group_layout(
-//             Some("clump_bind_group_layout"),
-//             &BindGroupLayoutEntries::sequential(
-//                 ShaderStages::COMPUTE,
-//                 (
-//                     uniform_buffer::<Aabb2dGpu>(false),
-//                     uniform_buffer::<Vec2>(false), // clump_size
-//                 )
-//             )
-//         );
-//     }
-// }
+        let clump_layout = render_device.create_bind_group_layout(
+            Some("clump_bind_group_layout"),
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    uniform_buffer::<Vec2>(false), // clump_size
+                    storage_buffer_sized(false, None),
+                )
+            )
+        );
+
+        let chunk_layout = render_device.create_bind_group_layout(
+            Some("chunk_layout"),
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    uniform_buffer::<Aabb2dGpu>(false),
+                )
+            )
+        );
+
+        Self {
+            clump_layout,
+            chunk_layout,
+        }
+    }
+}

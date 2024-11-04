@@ -36,7 +36,8 @@ pub struct GrassMaterialExtension {
     pub wind_speed: f32,
     pub wind_strength: f32,
     #[texture(102)] pub wind_texture: Handle<Image>,
-                                                    }
+}
+
 impl MaterialExtension for GrassMaterialExtension {
     fn vertex_shader() -> ShaderRef {
         "embedded://bevy_procedural_grass/shaders/grass_vertex.wgsl".into()
