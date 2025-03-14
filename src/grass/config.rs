@@ -17,7 +17,7 @@ impl Default for GrassConfig {
             cull_distance: 250.0,
             lod_distance: 50.0,
             grass_shadows: GrassCastShadows::default(),
-            shadow_distance: 20.0,
+            shadow_distance: 40.0,
         }
     }
 }
@@ -68,13 +68,21 @@ impl Default for GrassLightTypes {
 }
 
 impl GrassLightTypes {
+    pub fn all() -> Self {
+        Self {
+            directional: true,
+            point: true,
+            spot: true,
+        }
+    }
+
     pub fn is_enabled(&self, light_type: GrassLightType) -> bool {
         match light_type {
             GrassLightType::Directional => self.directional,
             GrassLightType::Point => self.point,
             GrassLightType::Spot => self.spot,
         }
-    }
+    } 
 }
 
 #[derive(Clone, Copy)]
@@ -150,6 +158,7 @@ pub(crate) fn update_config_buffers(
             bytemuck::cast_slice(&[GrassConfigGpu::from(config.clone())]),
         );
         *shadow_distance = config.shadow_distance;
+        *lod_distance = config.lod_distance;
     }
 }
 

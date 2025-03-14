@@ -23,10 +23,13 @@ fn main() {
             ),
             PlayerPlugin,
             ProceduralGrassPlugin::default(),
-            // ProceduralGrassPlugin {
-            //     config: GrassConfig::default(),
-            //     clump_config: None,
-            // },
+            ProceduralGrassPlugin {
+                config: GrassConfig {
+                    grass_shadows: GrassCastShadows::Enabled(GrassLightTypes::all()),
+                    ..default()
+                },
+                clump_config: None,
+            },
             WireframePlugin,
             MaterialPlugin::<NormalMaterial>::default(),
             ComputeNoisePlugin::<Perlin2d>::default(),
@@ -53,7 +56,7 @@ fn setup(
     mut normal_materials: ResMut<Assets<NormalMaterial>>,
     mut grass_materials: ResMut<Assets<GrassMaterial>>,
 ) {
-    let mut plane = Plane3d::default().mesh().size(1000., 1000.).subdivisions(50).build();
+    let mut plane = Plane3d::default().mesh().size(100., 100.).subdivisions(50).build();
     let noise_image = perlin_noise_texture(512, 2.0);
     let wind_image = ComputeNoiseImage::create_image(ComputeNoiseSize::D2(512, 512), ComputeNoiseFormat::Rgba);
     let wind_handle = images.add(wind_image);
@@ -66,7 +69,7 @@ fn setup(
             mesh: meshes.add(plane),
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             material: materials.add(StandardMaterial {
-                base_color: Srgba::rgb(0.05, 0.04, 0.0).into(),
+                base_color: Srgba::rgb(0.03, 0.05, 0.0).into(),
                 reflectance: 0.0,
                 double_sided: true,
                 ..default()
@@ -78,7 +81,7 @@ fn setup(
             GrassBundle {
                 grass: Grass {
                     chunk_count: UVec2::splat(10),
-                    density: 200.0,
+                    density: 50.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
                         scale: 0.0,
@@ -116,7 +119,7 @@ fn setup(
                             texture: Some(images.add(create_grass_texture(2048, 2048, [12.0, 4.0]))),
                             oscillation_speed: 5.0,
                             oscillation_flexibility: 2.0,
-                            oscillation_strength: 0.1,
+                            oscillation_strength: 0.05,
                             wind_direction: Vec2::new(-1.0, -1.0).normalize(),
                             wind_speed: 1.0,
                             wind_strength: 1.0,

@@ -85,12 +85,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var p1 = midpoint + blade_normal * vertex.i_curve * vertex.i_length;
 
     let r = rand_f(&state);
-    let oscillation = (sin(globals.time * grass.oscillation_speed + (1.0 - vertex.uv.y) * grass.oscillation_flexibility + r * PI_2) * 0.5 + 0.5) * grass.oscillation_strength;
-    // p1 -= blade_normal * oscillation;
-    // p2 -= blade_normal * oscillation;
+    let oscillation = (sin(globals.time * grass.oscillation_speed + (1.0 - vertex.uv.y) * grass.oscillation_flexibility + ipos.x * PI_2) * 0.5 + 0.5) * grass.oscillation_strength;
+    p1 -= blade_normal * oscillation;
+    p2 -= blade_normal * oscillation;
 
-    // let rad = wind.direction * PI / 180.0;
-    // let direction = vec2<f32>(cos(rad), sin(rad));
+    //let rad = wind.direction * PI / 180.0;
+    //let direction = vec2<f32>(cos(rad), sin(rad));
 
     var bezier = quadratic_bezier(vertex.uv.y, p0, p1, p2);
 
@@ -165,13 +165,10 @@ fn apply_wind(in: vec3<f32>, t: f32, y: f32) -> vec3<f32> {
 }
 
 fn rotate_around_direction(v: vec3<f32>, direction: vec2<f32>, angle: f32) -> vec3<f32> {
-    // Create a perpendicular direction by rotating -90 degrees (y, -x)
     let perp_direction = vec2<f32>(direction.y, -direction.x);
     
-    // Use the perpendicular direction as the rotation axis
     let dir_normalized = normalize(vec3<f32>(perp_direction.x, 0.0, perp_direction.y));
     
-    // Rodrigues rotation formula
     let cos_angle = cos(angle);
     let sin_angle = sin(angle);
     
