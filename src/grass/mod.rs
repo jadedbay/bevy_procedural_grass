@@ -1,4 +1,4 @@
-use bevy::{ecs::query::QueryItem, math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{extract_component::ExtractComponent, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
+use bevy::{ecs::query::QueryItem, math::bounding::{Aabb2d, BoundingVolume}, prelude::*, render::{extract_component::ExtractComponent, mesh::MeshAabb, render_resource::{Buffer, BufferInitDescriptor, BufferUsages}, renderer::RenderDevice, view::NoFrustumCulling}, utils::HashMap};
 
 pub mod chunk;
 pub mod cull;
@@ -17,9 +17,9 @@ use crate::{prefix_sum::calculate_workgroup_counts, util::aabb::Aabb2dGpu, Grass
 #[derive(Bundle, Default)]
 pub struct GrassBundle {
     pub grass: Grass,
-    pub mesh: Handle<Mesh>,
+    pub mesh: Mesh3d,
     pub lod_mesh: GrassLODMesh,
-    pub material: Handle<GrassMaterial>,
+    pub material: MeshMaterial3d<GrassMaterial>,
     #[bundle()]
     pub spatial_bundle: SpatialBundle,
     pub frustum_culling: NoFrustumCulling,
@@ -80,7 +80,7 @@ pub(crate) fn grass_setup(
     meshes: ResMut<Assets<Mesh>>,
     grass_query: Query<(Entity, &Grass, &Parent), Changed<Grass>>,
     mut chunk_query: Query<&mut GrassCullChunks>,
-    ground_query: Query<&Handle<Mesh>>,
+    ground_query: Query<&Mesh3d>,
     render_device: Res<RenderDevice>,
 ) {
     for (entity, grass, parent) in grass_query.iter() {

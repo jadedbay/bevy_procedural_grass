@@ -1,4 +1,4 @@
-use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{binding_types::{storage_buffer_sized, uniform_buffer}, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntries, Buffer, BufferInitDescriptor, BufferUsages, ShaderStages}, renderer::RenderDevice}, utils::HashMap};
+use bevy::{math::bounding::Aabb2d, prelude::*, render::{extract_resource::ExtractResource, render_resource::{binding_types::{storage_buffer_sized, uniform_buffer}, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutEntries, Buffer, BufferInitDescriptor, BufferUsages, ShaderStages}, renderer::RenderDevice}};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{render::pipeline::GrassGeneratePipeline, util::aabb::Aabb2dGpu};

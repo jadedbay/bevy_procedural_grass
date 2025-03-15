@@ -10,7 +10,7 @@ pub(crate) struct GrassCullChunks(pub HashMap<UVec2, Entity>);
 pub(crate) fn cull_chunks(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
-    mut q_grass: Query<(Entity, &Grass, &GrassGpuInfo, &mut GrassCullChunks, &Handle<Mesh>, &GrassLODMesh, &Handle<GrassMaterial>, &Visibility)>,
+    mut q_grass: Query<(Entity, &Grass, &GrassGpuInfo, &mut GrassCullChunks, &Mesh3d, &GrassLODMesh, &MeshMaterial3d<GrassMaterial>, &Visibility)>,
     meshes: Res<Assets<Mesh>>,
     camera_query: Query<(&Transform, &Frustum)>,
     grass_config: Res<GrassConfig>,
@@ -91,6 +91,6 @@ pub(crate) fn cull_chunks(
             }
         }
         
-        commands.entity(entity).push_children(new_chunks.as_slice());
+        commands.entity(entity).add_children(new_chunks.as_slice());
     }
 }

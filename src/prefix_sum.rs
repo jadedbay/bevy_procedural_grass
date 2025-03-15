@@ -51,6 +51,7 @@ impl FromWorld for PrefixSumPipeline {
                 shader: scan_shader.clone(),
                 shader_defs: vec![],
                 entry_point: "scan".into(),
+                zero_initialize_workgroup_memory: false,
         });
 
         let scan_blocks_pipeline = pipeline_cache.queue_compute_pipeline(
@@ -64,6 +65,7 @@ impl FromWorld for PrefixSumPipeline {
                 shader: scan_blocks_shader.clone(),
                 shader_defs: vec![],
                 entry_point: "scan_blocks".into(),
+                zero_initialize_workgroup_memory: false,
             });
          
         Self {

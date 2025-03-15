@@ -15,9 +15,10 @@ documentation = "https://docs.rs/bevy_procedural_grass/latest/bevy_procedural_gr
 bytemuck = "1.14.0"
 noise = "0.9.0"
 rand = "0.8.5"
+bevy_compute_noise = "0.4.0"
 
 [dependencies.bevy]
-version = "0.14.2"
+version = "0.15.3"
 default-features = false
 features = [ "bevy_core_pipeline", "bevy_render", "bevy_asset", "bevy_pbr", "bevy_gizmos" ]
 
@@ -26,11 +27,10 @@ version = "0.25.1"
 features = ["png", "jpeg"]
 
 [dev-dependencies]
-iyes_perf_ui = "0.3.0"
-bevy-inspector-egui = "0.26.0"
-bevy_flycam = "0.14.1"
-bevy = { version = "0.14.2", default-features = false, features = ["bevy_winit", "x11", "tonemapping_luts", "default_font", "trace", "embedded_watcher"] }
-bevy_compute_noise = "0.2.1"
+iyes_perf_ui = "0.4.0"
+bevy-inspector-egui = "0.29.0"
+bevy_flycam = "0.15.0"
+bevy = { version = "0.15.3", default-features = false, features = ["bevy_winit", "x11", "tonemapping_luts", "default_font", "trace", "embedded_watcher"] }
 
 [profile.dev]
 opt-level = 1

@@ -1,4 +1,4 @@
-use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::{graph::NodePbr, MaterialPipeline, PreparedMaterial, PrepassPipelinePlugin, Shadow}, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, extract_resource::ExtractResourcePlugin, render_asset::{prepare_assets, RenderAssetPlugin}, render_graph::RenderGraphApp, render_phase::{AddRenderCommand, DrawFunctions}, render_resource::{SpecializedComputePipelines, SpecializedMeshPipelines}, Render, RenderApp, RenderSet}};
+use bevy::{asset::embedded_asset, core_pipeline::core_3d::{graph::{Core3d, Node3d}, Opaque3d}, pbr::{extract_mesh_materials, graph::NodePbr, MaterialPipeline, PreparedMaterial, PrepassPipelinePlugin, RenderMaterialInstances, Shadow}, prelude::*, render::{extract_component::ExtractComponentPlugin, extract_instances::ExtractInstancesPlugin, extract_resource::ExtractResourcePlugin, render_asset::{prepare_assets, RenderAssetPlugin}, render_graph::RenderGraphApp, render_phase::{AddRenderCommand, DrawFunctions}, render_resource::{SpecializedComputePipelines, SpecializedMeshPipelines}, Render, RenderApp, RenderSet}};
 
 use grass::{chunk::GrassChunk, clump::{clump_startup, prepare_clump, GrassClumpConfig, GrassClumps}, config::{init_config_buffers, toggle_shadows, update_config_buffers, GrassConfig, GrassConfigBuffer, GrassConfigGpu}, cull::cull_chunks, grass_setup, material::GrassMaterial, Grass};
 use prefix_sum::PrefixSumPipeline;
@@ -118,7 +118,6 @@ impl Plugin for GrassMaterialPlugin {
             .init_asset::<GrassMaterial>()
             .register_asset_reflect::<GrassMaterial>() 
             .add_plugins((
-                ExtractInstancesPlugin::<AssetId<GrassMaterial>>::extract_visible(),
                 RenderAssetPlugin::<PreparedMaterial<GrassMaterial>>::default(),
                 PrepassPipelinePlugin::<GrassMaterial>::default(),
             ));
@@ -126,10 +125,12 @@ impl Plugin for GrassMaterialPlugin {
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app
                 .init_resource::<DrawFunctions<Shadow>>()
+                .init_resource::<RenderMaterialInstances<GrassMaterial>>()
                 .add_render_command::<Shadow, DrawGrassPrepass>()
                 .add_render_command::<Opaque3d, DrawGrass>()
                 .add_render_command::<Opaque3d, DrawGrassLOD>()
                 .init_resource::<SpecializedMeshPipelines<MaterialPipeline<GrassMaterial>>>()
+                .add_systems(ExtractSchedule, extract_mesh_materials::<GrassMaterial>)
                 .add_systems(
                     Render,
                     (

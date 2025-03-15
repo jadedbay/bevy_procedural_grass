@@ -1,5 +1,5 @@
-use bevy::{pbr::MaterialPipeline, prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer, uniform_buffer_sized}, BindGroup, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, SpecializedComputePipeline, SpecializedComputePipelines, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
-use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers}, clump::GrassClumpConfig, config::GrassConfigGpu, Grass}, prelude::{GrassConfig, GrassLODMesh, GrassMaterial}, util::aabb::Aabb2dGpu};
+use bevy::{pbr::MaterialPipeline, prelude::*, render::{render_resource::{binding_types::{storage_buffer, storage_buffer_read_only, storage_buffer_read_only_sized, storage_buffer_sized, texture_2d, uniform_buffer}, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, SpecializedComputePipeline, SpecializedComputePipelines, TextureSampleType}, renderer::RenderDevice, view::ViewUniform}};
+use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers}, clump::GrassClumpConfig, config::GrassConfigGpu}, prelude::GrassMaterial, util::aabb::Aabb2dGpu};
 
 use super::instance::GrassInstanceData;
 
@@ -53,6 +53,7 @@ impl FromWorld for GrassCompactPipeline {
                 shader: compact_shader.clone(),
                 shader_defs: vec![],
                 entry_point: "compact".into(),
+                zero_initialize_workgroup_memory: false,
         });
 
         let reset_args_pipeline_id = pipeline_cache
@@ -63,6 +64,7 @@ impl FromWorld for GrassCompactPipeline {
                 shader: reset_args_shader,
                 shader_defs: vec![],
                 entry_point: "reset_args".into(),
+                zero_initialize_workgroup_memory: false,
             });
         
         Self {
@@ -146,6 +148,7 @@ impl SpecializedComputePipeline for GrassGeneratePipeline {
             shader: self.shader.clone(),
             shader_defs,
             entry_point: "main".into(),
+            zero_initialize_workgroup_memory: false,
         }
     }
 }
@@ -269,6 +272,7 @@ impl SpecializedComputePipeline for GrassCullPipeline {
             shader: self.shader.clone(),
             shader_defs,
             entry_point: "main".into(),
+            zero_initialize_workgroup_memory: false,
         }
     }
 }

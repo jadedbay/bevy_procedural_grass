@@ -1,6 +1,6 @@
-use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, DynamicBindGroupEntries, PipelineCache, SpecializedComputePipelines}, renderer::RenderDevice, texture::GpuImage, view::ViewUniforms}};
-use super::pipeline::{GrassCompactPipeline, GrassCullPipeline, GrassCullPipelineId, GrassGeneratePipeline};
-use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigBuffer, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}, prelude::GrassLODMesh};
+use bevy::{prelude::*, render::{render_asset::RenderAssets, render_resource::{BindGroup, BindGroupEntries, Buffer, DynamicBindGroupEntries}, renderer::RenderDevice, sync_world::MainEntity, texture::GpuImage, view::ViewUniforms}};
+use super::pipeline::{GrassCompactPipeline, GrassCullPipeline, GrassGeneratePipeline};
+use crate::{grass::{chunk::{GrassChunk, GrassChunkBuffers, GrassChunkCullBuffers}, config::GrassConfigBuffer, Grass, GrassGpuInfo},prefix_sum::{PrefixSumBindGroups, PrefixSumPipeline}};
 
 
 // TODO: test whether this is actually improves performance or if its faster to recompute everyframe
@@ -137,7 +137,7 @@ pub fn prepare_grass(
     cull_pipeline: Res<GrassCullPipeline>,
     prefix_sum_pipeline: Res<PrefixSumPipeline>,
     chunk_query: Query<(Entity, &GrassChunk, &GrassChunkBuffers)>,
-    grass_query: Query<(&Grass, &GrassGpuInfo)>,
+    grass_query: Query<(&MainEntity, &Grass, &GrassGpuInfo)>,
     computed_grass: Res<ComputedGrassEntities>,
     images: Res<RenderAssets<GpuImage>>,
     render_device: Res<RenderDevice>,
@@ -148,7 +148,15 @@ pub fn prepare_grass(
     let chunk_layout = generate_pipeline.chunk_layout.clone();
 
     for (entity, chunk, buffers) in chunk_query.iter() {
-        let (grass, gpu_info) = grass_query.get(chunk.grass_entity).unwrap();
+
+        
+        let (grass, gpu_info) = grass_query
+            .iter()
+            .find(|(main_entity, _, _)| main_entity.id() == chunk.grass_entity)
+            .map(|(_, q_grass, q_gpu_info)| (q_grass, q_gpu_info))
+            .expect("grass parent entity not found.");
+        //let (main_entity, grass, gpu_info) = grass_query.get(chunk.grass_entity).unwrap();
+        
 
         if !computed_grass.0.contains(&entity) {
             let chunk_bind_group = render_device.create_bind_group(

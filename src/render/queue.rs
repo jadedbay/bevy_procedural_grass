@@ -1,4 +1,4 @@
-use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{CascadesVisibleEntities, CubemapVisibleEntities, ExtractedDirectionalLight, ExtractedPointLight, LightEntity, MaterialPipeline, MaterialPipelineKey, MeshPipelineKey, PreparedMaterial, PrepassPipeline, RenderMaterialInstances, RenderMeshInstanceFlags, RenderMeshInstances, Shadow, ShadowBinKey, ViewLightEntities}, prelude::*, render::{mesh::GpuMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, view::{ExtractedView, VisibleEntities, WithMesh}}};
+use bevy::{core_pipeline::core_3d::{Opaque3d, Opaque3dBinKey}, pbr::{ExtractedDirectionalLight, ExtractedPointLight, LightEntity, MaterialPipeline, MaterialPipelineKey, MeshPipelineKey, PreparedMaterial, PrepassPipeline, RenderCascadesVisibleEntities, RenderCubemapVisibleEntities, RenderMaterialInstances, RenderMeshInstanceFlags, RenderMeshInstances, RenderVisibleMeshEntities, Shadow, ShadowBinKey, ViewLightEntities}, prelude::*, render::{mesh::RenderMesh, render_asset::RenderAssets, render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases}, render_resource::{PipelineCache, SpecializedMeshPipelines}, sync_world::MainEntity, view::ExtractedView}};
 
 use crate::{grass::{chunk::GrassChunk, config::GrassLightType, material::GrassMaterial}, prelude::{GrassConfig, GrassLODMesh}};
 
@@ -7,37 +7,37 @@ use super::draw::{DrawGrass, DrawGrassLOD, DrawGrassPrepass};
 pub(crate) fn queue_grass(
     opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
     grass_pipeline: Res<MaterialPipeline<GrassMaterial>>,
-    msaa: Res<Msaa>,
     mut pipelines: ResMut<SpecializedMeshPipelines<MaterialPipeline<GrassMaterial>>>,
     pipeline_cache: Res<PipelineCache>,
-    meshes: Res<RenderAssets<GpuMesh>>,
+    meshes: Res<RenderAssets<RenderMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
     render_material_instances: Res<RenderMaterialInstances<GrassMaterial>>,
     render_materials: Res<RenderAssets<PreparedMaterial<GrassMaterial>>>,
-    material_meshes: Query<(Entity, &GrassLODMesh), With<GrassChunk>>,
+    material_meshes: Query<(Entity, &MainEntity, &GrassLODMesh), With<GrassChunk>>,
     mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
-    mut views: Query<(Entity, &ExtractedView)>,
+    mut views: Query<(Entity, &ExtractedView, &Msaa)>,
 ) {
     let draw_grass = opaque_3d_draw_functions.read().id::<DrawGrass>();
     let draw_grass_lod = opaque_3d_draw_functions.read().id::<DrawGrassLOD>();
 
-    let msaa_key = MeshPipelineKey::from_msaa_samples(msaa.samples());
 
-    for (view_entity, view) in &mut views {
+    for (view_entity, view, msaa) in &mut views {
         let Some(opaque_phase) = opaque_render_phases.get_mut(&view_entity) else {
             continue;
         };
 
+        let msaa_key = MeshPipelineKey::from_msaa_samples(msaa.samples());
+
         let view_key = msaa_key | MeshPipelineKey::from_hdr(view.hdr);
         
-        for (entity, lod) in &material_meshes {
-            let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(entity) else {
+        for (entity, main_entity, lod) in &material_meshes {
+            let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(*main_entity) else {
                 continue;
             };
             let Some(mesh) = meshes.get(mesh_instance.mesh_asset_id) else {
                 continue;
             };
-            let Some(material_asset_id) = render_material_instances.get(&entity) else {
+            let Some(material_asset_id) = render_material_instances.get(main_entity) else {
                 continue;
             };
             let Some(material) = render_materials.get(*material_asset_id) else {
@@ -71,7 +71,7 @@ pub(crate) fn queue_grass(
                     material_bind_group_id: material.get_bind_group_id().0,
                     lightmap_image: None,
                 },
-                entity,
+                (entity, *main_entity),
                 BinnedRenderPhaseType::UnbatchableMesh
             );
         }
@@ -82,7 +82,7 @@ pub(crate) fn queue_grass(
 pub fn queue_grass_shadows(
     shadow_draw_functions: Res<DrawFunctions<Shadow>>,
     prepass_pipeline: Res<PrepassPipeline<GrassMaterial>>,
-    render_meshes: Res<RenderAssets<GpuMesh>>,
+    render_meshes: Res<RenderAssets<RenderMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
     render_materials: Res<RenderAssets<PreparedMaterial<GrassMaterial>>>,
     render_material_instances: Res<RenderMaterialInstances<GrassMaterial>>,
@@ -91,9 +91,9 @@ pub fn queue_grass_shadows(
     pipeline_cache: Res<PipelineCache>,
     view_lights: Query<(Entity, &ViewLightEntities)>,
     mut view_light_entities: Query<&LightEntity>,
-    point_light_entities: Query<&CubemapVisibleEntities, With<ExtractedPointLight>>,
-    directional_light_entities: Query<&CascadesVisibleEntities, With<ExtractedDirectionalLight>>,
-    spot_light_entities: Query<&VisibleEntities, With<ExtractedPointLight>>,
+    point_light_entities: Query<&RenderCubemapVisibleEntities, With<ExtractedPointLight>>,
+    directional_light_entities: Query<&RenderCascadesVisibleEntities, With<ExtractedDirectionalLight>>,
+    spot_light_entities: Query<&RenderVisibleMeshEntities, With<ExtractedPointLight>>,
     grass_config: Res<GrassConfig>,
 ) {
     for (entity, view_lights) in &view_lights {
@@ -149,8 +149,8 @@ pub fn queue_grass_shadows(
             // NOTE: Lights with shadow mapping disabled will have no visible entities
             // so no meshes will be queued
 
-            for entity in visible_entities.iter::<WithMesh>().copied() {
-                let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(entity)
+            for (entity, main_entity) in visible_entities.iter().copied() {
+                let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(main_entity)
                 else {
                     continue;
                 };
@@ -161,7 +161,7 @@ pub fn queue_grass_shadows(
                     continue;
                 }
 
-                let Some(material_asset_id) = render_material_instances.get(&entity) else {
+                let Some(material_asset_id) = render_material_instances.get(&main_entity) else {
                     continue;
                 };
                 let Some(material) = render_materials.get(*material_asset_id) else {
@@ -214,7 +214,7 @@ pub fn queue_grass_shadows(
                         pipeline: pipeline_id,
                         asset_id: mesh_instance.mesh_asset_id.into(),
                     },
-                    entity,
+                    (entity, main_entity),
                     BinnedRenderPhaseType::UnbatchableMesh,
                 );
             }
