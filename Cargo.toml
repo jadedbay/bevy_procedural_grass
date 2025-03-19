@@ -28,7 +28,7 @@ features = ["png", "jpeg"]
 
 [dev-dependencies]
 iyes_perf_ui = "0.4.0"
-bevy-inspector-egui = "0.29.0"
+bevy-inspector-egui = "0.30.0"
 bevy_flycam = "0.15.0"
 bevy = { version = "0.15.3", default-features = false, features = ["bevy_winit", "x11", "tonemapping_luts", "default_font", "trace", "embedded_watcher"] }
 

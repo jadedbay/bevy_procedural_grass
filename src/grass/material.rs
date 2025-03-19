@@ -182,9 +182,9 @@ pub fn create_grass_texture(
             let noise_value = (simplex.get([nx * frequency[0], ny * frequency[1]]) + 1.0) / 2.0;
             let index = ((y * width + x) * 4) as usize;
 
-            texture_data[index] = (noise_value * 255.0) as u8;     // R
-            texture_data[index + 1] = (noise_value * 255.0) as u8; // G
-            texture_data[index + 2] = (noise_value * 255.0) as u8; // B
+            texture_data[index] = (noise_value * 255.0) as u8;
+            texture_data[index + 1] = (noise_value * 255.0) as u8;
+            texture_data[index + 2] = (noise_value * 255.0) as u8;
             texture_data[index + 3] = 255;
         }
     }

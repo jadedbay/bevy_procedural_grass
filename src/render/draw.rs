@@ -148,7 +148,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawGrassLODInstanced {
             }
             RenderMeshBufferInfo::NonIndexed => unreachable!()
         }
-        
+
         RenderCommandResult::Success
     }
 }

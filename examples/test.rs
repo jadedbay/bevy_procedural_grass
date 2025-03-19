@@ -25,10 +25,11 @@ fn main() {
             //ProceduralGrassPlugin::default(),
             ProceduralGrassPlugin {
                 config: GrassConfig {
-                    grass_shadows: GrassCastShadows::Enabled(GrassLightTypes::all()),
+                    //grass_shadows: GrassCastShadows::Enabled(GrassLightTypes::all()),
+                    grass_shadows: GrassCastShadows::Disabled,
                     ..default()
                 },
-                clump_config: None,
+                ..default()
             },
             WireframePlugin,
             MaterialPlugin::<NormalMaterial>::default(),
@@ -75,8 +76,8 @@ fn setup(
     )).with_children(|parent| {
             parent.spawn((
                 Grass {
-                    chunk_count: UVec2::splat(10),
-                    density: 50.0,
+                    chunk_count: UVec2::splat(1),
+                    density: 20.0,
                     height_map: Some(GrassHeightMap {
                         map: images.add(noise_image),
                         scale: 0.0,
@@ -84,7 +85,8 @@ fn setup(
                     y_offset: 0.0,
                 },
                 Mesh3d(meshes.add(GrassMesh::mesh(7))),
-                GrassLODMesh(Some(meshes.add(GrassMesh::mesh(3)))),
+                //GrassLODMesh(Some(meshes.add(GrassMesh::mesh(3)))),
+                GrassLODMesh(None),
                 MeshMaterial3d(grass_materials.add(
                     GrassMaterial {
                         base: StandardMaterial {

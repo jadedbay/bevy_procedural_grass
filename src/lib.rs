@@ -116,6 +116,7 @@ impl Plugin for GrassMaterialPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_asset::<GrassMaterial>()
+            .register_type::<GrassMaterial>()
             .register_asset_reflect::<GrassMaterial>() 
             .add_plugins((
                 RenderAssetPlugin::<PreparedMaterial<GrassMaterial>>::default(),

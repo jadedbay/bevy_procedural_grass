@@ -141,6 +141,7 @@ fn main(
     #else
         instance.length = mix(grass.length - 0.2, grass.length + 0.2, rand_f(&param_state));
     #endif
+
     param_state = u32(instance.position.y * 9000);
     instance.tilt = mix(grass.tilt - 0.2, grass.tilt + 0.2, rand_f(&state));
     param_state = u32(instance.facing.x * 100);
